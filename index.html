@@ -2,12 +2,14 @@
 <html lang="fr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Boîte à outils COA</title>
-<link rel="manifest" href="manifest.json">
+<link rel="manifest" href="manifest.json?v=2">
 <link rel="apple-touch-icon" href="apple-touch-icon.png?v=2">
 <link rel="icon" href="icon-192.png?v=2">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Outils COA">
 <meta name="theme-color" content="#5b3fa8">
 <style>
@@ -15,7 +17,7 @@
 @media (prefers-color-scheme:dark){:root{--bg:#121019;--card:#1c1a27;--ink:#ecebf3;--mute:#9a97ad;--line:#2d2a3d;--acc:#a58cf0;--acc2:#2a2442}}
 *{box-sizing:border-box}
 body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);font-size:15px}
-header{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);padding:10px 14px 0}
+header{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);padding:calc(10px + env(safe-area-inset-top)) calc(14px + env(safe-area-inset-right)) 0 calc(14px + env(safe-area-inset-left))}
 h1{font-size:17px;margin:0 0 8px;display:flex;align-items:center;gap:8px}
 h1 span{font-weight:400;color:var(--mute);font-size:13px}
 #q{width:100%;padding:11px 12px;font-size:16px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}
@@ -23,7 +25,7 @@ h1 span{font-weight:400;color:var(--mute);font-size:13px}
 nav{display:flex;gap:4px;overflow-x:auto;padding:8px 0;scrollbar-width:none}
 nav button{flex:none;border:0;background:transparent;color:var(--mute);padding:7px 11px;border-radius:999px;font-size:14px;cursor:pointer;white-space:nowrap}
 nav button.on{background:var(--acc2);color:var(--acc);font-weight:600}
-main{max-width:1000px;margin:0 auto;padding:12px}
+main{max-width:1000px;margin:0 auto;padding:12px calc(12px + env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left))}
 .info{color:var(--mute);font-size:13px;margin:4px 2px 10px}
 table{width:100%;border-collapse:collapse;background:var(--card);border-radius:10px;overflow:hidden;border:1px solid var(--line)}
 th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
@@ -64,6 +66,8 @@ mark{background:#ffe58a;color:#000;border-radius:2px}
 /* téléphone tenu droit : la fiche est pivotée d'un quart de tour pour s'afficher en paysage */
 #viewer.rot{inset:auto;top:0;left:0;transform-origin:top left;transform:rotate(90deg) translateY(-100%)}
 #vrot.on{background:#5b3fa8}
+#viewer.rot .vbar{padding:6px calc(8px + env(safe-area-inset-bottom)) 6px calc(8px + env(safe-area-inset-top))}
+#viewer:not(.rot) .vbar{padding-left:calc(8px + env(safe-area-inset-left));padding-right:calc(8px + env(safe-area-inset-right))}
 </style>
 </head>
 <body>
