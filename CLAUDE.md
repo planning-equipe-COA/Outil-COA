@@ -5,10 +5,14 @@ Appli en ligne et utilisée : https://planning-equipe-coa.github.io/Outil-COA/ �
 testé (Chrome sans affichage, 390 px de large) et publié (push sur `main` = en ligne en ~1 min).
 
 **En attente de l'utilisateur (Raph) — rien à coder tant qu'il ne l'a pas fait :**
-1. **NOTAM** : il crée un compte api.faa.gov (client_id / client_secret), puis un worker Cloudflare `coa-notam` avec le code de
-   `tools/notam-worker.js` et les secrets FAA_CLIENT_ID / FAA_CLIENT_SECRET. Ensuite : mettre l'adresse `.workers.dev` dans
-   `NOTAM_URL` (index.html), vérifier avec un vrai appel que l'API FAA renvoie bien les NOTAM de LFML (**pas encore confirmé**),
-   ajuster les champs lus dans `fetchFaa` si besoin, changer `CACHE` dans sw.js, publier.
+1. **NOTAM** (repris le 20 nov. 2026) : source conseillée **autorouter.aero** (base NOTAM européenne EAD d'Eurocontrol, donc les
+   NOTAM français ; la couverture de LFML par l'API FAA n'a jamais pu être confirmée et l'accès FAA est validé à la main). Raph :
+   crée un compte autorouter (gratuit), demande l'accès API par ticket de support, crée le worker Cloudflare `coa-notam` avec
+   `tools/notam-worker.js` et les secrets AR_EMAIL / AR_PASSWORD (mot de passe propre à autorouter). Ensuite : adresse
+   `.workers.dev` dans `NOTAM_URL` (index.html), vrai appel pour vérifier, changer `CACHE`, publier. Le worker garde la FAA en
+   secours (FAA_CLIENT_ID / FAA_CLIENT_SECRET) ; autorouter prioritaire si ses secrets existent. Testé seulement avec de fausses
+   réponses au format documenté (jeton OAuth client_credentials gardé 50 min, `GET /v1.0/notam?itemas=["LFML"]` par 100,
+   expirés et `suppressed` écartés, fin ≥ 2^31 = PERM, id `A1234/26`, q = `Q`+code23+code45, texte complet Q) A) B) C) D) E) F) G)).
 2. **Annuaire partagé** : il crée le dépôt public `planning-equipe-COA/Outil-COA-donnees` (avec README) et une clé fine-grained
    (Contents R/W sur ce seul dépôt), puis fait la configuration DANS l'appli (Contacts MRS → « Modifier l'annuaire (responsable) »).
    Rien à coder ; l'aider en cas d'erreur (messages de `adErr`).

@@ -697,16 +697,16 @@ function wxCard(full){
   ${full?`<div class="raw">METAR ${esc(WX.metar)}</div><div class="raw">TAF ${esc(WX.taf)}</div><p class="sub">Source : MET Norway (api.met.no), relevés officiels de LFML. ${WX.err?esc(WX.err)+" · ":""}Relevé chargé il y a ${age} min. Le décodage est une aide : le METAR et le TAF bruts font foi.</p>`:`<div class="sub" style="margin-top:6px">Toucher pour le METAR et le TAF complets${age>60?` · relevé d'il y a ${age} min`:""}</div>`}</div>`;
 }
 
-/* NOTAM LFML : relais Cloudflare (tools/notam-worker.js) qui garde les identifiants de l'API NOTAM de la FAA.
+/* NOTAM LFML : relais Cloudflare (tools/notam-worker.js) qui garde les identifiants de la source (autorouter.aero, sinon FAA).
    NOTAM_URL vide = pas encore branché. Dernière liste gardée (coa-notam) pour l'usage hors connexion. */
 const NOTAM_URL="";
-const NT={list:null,at:0,err:"",loading:false};
-try{const c=JSON.parse(store("coa-notam")||"null");if(c){NT.list=c.list;NT.at=c.at}}catch(e){}
+const NT={list:null,at:0,err:"",loading:false,src:""};
+try{const c=JSON.parse(store("coa-notam")||"null");if(c){NT.list=c.list;NT.at=c.at;NT.src=c.src||""}}catch(e){}
 async function notamLoad(force){
   if(!NOTAM_URL||NT.loading||(!force&&NT.list&&Date.now()-NT.at<30*60e3))return;
   NT.loading=true;NT.err="";
   try{const r=await fetch(NOTAM_URL+"?icao=LFML",{cache:"no-store"});const j=await r.json();if(!r.ok||j.error)throw new Error(j.error||r.status);
-    NT.list=j.notams||[];NT.at=Date.now();store("coa-notam",JSON.stringify({list:NT.list,at:NT.at}))}
+    NT.list=j.notams||[];NT.at=Date.now();NT.src=j.source||"";store("coa-notam",JSON.stringify({list:NT.list,at:NT.at,src:NT.src}))}
   catch(e){NT.err="NOTAM indisponibles ("+(e.message||"réseau")+")."}
   NT.loading=false;if(tab==="notam")render();
 }
@@ -715,7 +715,7 @@ const NQG=[["Postes et aires de trafic",/^M[NKP]/],["Voies de circulation",/^MX/
 const NQC={LC:"fermé",AS:"hors service",AU:"indisponible",CH:"modifié",CA:"activé",CS:"installé",CR:"remplacé",LT:"limité",AH:"horaires modifiés",AW:"retiré",LH:"fermé sauf…",LW:"travaux",HW:"travaux",XX:""};
 function ntDate(d){if(!d||/PERM/i.test(d))return "permanent";const t=new Date(d);return isNaN(t)?d:t.toLocaleString("fr-FR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit",timeZone:"UTC"})+" UTC"}
 function notamView(q){
-  if(!NOTAM_URL)return `<div class="card"><b>NOTAM LFML — pas encore branchés</b><p class="sub">Il faut un petit relais (gratuit) qui garde la clé de l'API NOTAM de la FAA. Les étapes sont prêtes : demande-les dans la conversation avec Claude.</p></div>`;
+  if(!NOTAM_URL)return `<div class="card"><b>NOTAM LFML — pas encore branchés</b><p class="sub">Il faut un petit relais (gratuit) qui garde les identifiants de la source des NOTAM. Les étapes sont prêtes : demande-les dans la conversation avec Claude.</p></div>`;
   if(!NT.list)return `<div class="info">${NT.err?esc(NT.err):"Chargement des NOTAM…"}</div>`;
   const now=Date.now();
   let list=NT.list.filter(n=>!n.end||/PERM/i.test(n.end)||new Date(n.end).getTime()>now);
@@ -727,7 +727,7 @@ function notamView(q){
   ${groups.filter(g=>g[1].length).map(([name,ns])=>`<details class="agrp"${q||/^(Postes|Voies|Pistes)/.test(name)?" open":""}><summary>${esc(name)} <span class="cnt">${ns.length}</span></summary><div class="abody">${ns.map(n=>{const c=NQC[(n.q||"").replace(/^Q/,"").slice(2,4)];const started=n.start&&new Date(n.start).getTime()>now;
     return `<div class="u-row" style="display:block;padding:8px 0"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b>${hl(n.id,q)}</b>${c?`<span class="u-ext" style="margin:0">${esc(c)}</span>`:""}${started?'<span class="u-ext" style="margin:0;color:#b26a00">à venir</span>':""}<span class="sub">${!n.end||/PERM/i.test(n.end)?"depuis le "+esc(ntDate(n.start))+" · permanent":"du "+esc(ntDate(n.start))+" au "+esc(ntDate(n.end))}</span></div>
     <div style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px;margin-top:4px;white-space:pre-wrap">${hl(n.text,q)}</div></div>`}).join("")}</div></details>`).join("")||'<div class="info">Aucun NOTAM.</div>'}
-  <p class="sub">Source : API NOTAM de la FAA (copie des NOTAM internationaux). Aide à la consultation uniquement : le briefing officiel du SIA (sofia-briefing.aviation-civile.gouv.fr) fait foi.</p>`;
+  <p class="sub">Source : ${esc(NT.src||"relais NOTAM")}. Aide à la consultation uniquement : le briefing officiel du SIA (sofia-briefing.aviation-civile.gouv.fr) fait foi.</p>`;
 }
 
 /* Favoris : « mua:<poste+fiche> » ou « annu:<groupe>|<libellé> » (localStorage coa-favs) */
