@@ -85,6 +85,9 @@ def main(src):
     before = old_dates(aes)
     enc = lambda data: (lambda iv: iv + aes.encrypt(iv, data, None))(os.urandom(12))
 
+    # dates lues à l'œil sur les fiches scannées (texte illisible) : DOSSIER/dates.json {"fichier.PDF": "jj/mm/aaaa"}
+    dpath = os.path.join(src, 'dates.json')
+    manual = json.load(open(dpath, encoding='utf-8')) if os.path.exists(dpath) else {}
     sheets, images = [], {}
     for f in sorted(os.listdir(src)):
         if not f.upper().endswith('.PDF'):
@@ -96,6 +99,7 @@ def main(src):
         pdf = os.path.join(src, f)
         text = subprocess.run(['pdftotext', '-layout', pdf, '-'], capture_output=True, text=True).stdout
         date = (re.search(r'(?:Dernière modification|Première édition)\s*:\s*(\d\d/\d\d/\d{4})', text) or [None, ''])[1]
+        date = date or manual.get(f, '')
         page = ''
         pm = re.search(r'aires de stationnement\s+(\d+\s?[a-z]?)\s*$', text, re.M)
         if pm: page = pm.group(1).replace(' ', '')
