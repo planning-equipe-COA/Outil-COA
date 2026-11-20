@@ -74,6 +74,31 @@ body.noscroll{overflow:hidden}
 .u-input{font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%;min-width:0}
 .u-link{border:0;background:none;color:var(--acc);font:inherit;font-size:14px;cursor:pointer;padding:4px 0;text-align:left}
 @media (max-width:380px){.u-edit-tel{grid-template-columns:1fr 2.2em}.u-edit-tel [data-f=note]{grid-column:1}.u-edit-tel>:last-child{grid-row:1;grid-column:2}}
+/* annuaire COA (chiffré) */
+.agrp{background:var(--card);border:1px solid var(--line);border-radius:12px;margin-bottom:10px;overflow:hidden}
+.agrp>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:11px 12px;font-weight:700}
+.agrp>summary::-webkit-details-marker{display:none}
+.agrp>summary::after{content:"›";margin-left:auto;color:var(--mute);transform:rotate(90deg);transition:transform .2s}
+.agrp:not([open])>summary::after{transform:none}
+.agrp .dot{width:12px;height:12px;border-radius:4px;flex:none}
+.agrp .cnt{color:var(--mute);font-weight:400;font-size:13px}
+.abody{padding:0 12px 6px;border-top:1px solid var(--line)}
+.abody .gnote{font-size:12px;color:var(--mute);padding:8px 0 2px}
+.asep{font-size:12px;font-weight:700;color:var(--mute);text-transform:uppercase;letter-spacing:.04em;padding:8px 0 2px;border-bottom:1px solid var(--line)}
+.u-label.imp{color:#d63031}
+.u-ext{font-size:11px;color:var(--mute);border:1px solid var(--line);border-radius:6px;padding:0 5px;margin-left:6px;vertical-align:1px}
+.u-act.ph{visibility:hidden}
+.abody .u-row{display:flex;gap:10px;align-items:flex-start;padding:5px 0}
+.abody .u-label{flex:0 0 40%;margin:0;padding-top:9px;font-size:14px;line-height:1.25}
+.abody .u-label small{display:block;font-weight:400;color:var(--mute);font-size:12px}
+.abody .u-nums{flex:1;min-width:0}
+.abody .u-tel{white-space:nowrap}
+@media (max-width:400px){.abody .u-label{flex-basis:34%}.abody .u-tel{font-size:14px}}
+.abody .u-line{padding:2px 0}
+.abody .u-act{width:40px;height:36px}
+.abody .u-none{padding-top:9px}
+.ahead{display:flex;align-items:center;gap:8px;margin:4px 2px 10px}
+.ahead h2{margin:0}
 /* menu par thème (Réglages → Navigation) */
 #menuBtn{display:none;align-items:center;gap:8px;width:100%;margin:8px 0;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit;font-size:15px;cursor:pointer;text-align:left}
 #menuBtn b{flex:1}
@@ -407,17 +432,58 @@ const telHref=t=>String(t).replace(/[^\d+]/g,"");
 function getContacts(){
   try{const s=store("coa-utiles");if(s){const v=JSON.parse(s);if(Array.isArray(v))return v}}catch(e){}
   try{const old=store("coa-contacts");if(old){const v=JSON.parse(old);if(Array.isArray(v)){const list=v.map(r=>({label:r.n||"",tels:r.t||r.r||r.f||r.x?[{tel:r.t||"",note:[r.r,r.f,r.x].filter(Boolean).join(" · ")}]:[]})).filter(u=>u.label);saveContacts(list);return list}}}catch(e){}
-  return HANDLERS.map(n=>({label:n,tels:[]}));
+  return [];
 }
 function saveContacts(c){store("coa-utiles",JSON.stringify(c.slice().sort(byLabel)))}
 const CT={draft:null,msg:""};
 function ctMatch(u,q){return !q||norm(u.label+" "+u.tels.map(t=>t.tel+" "+t.note).join(" ")).includes(q)}
+/* numéros : « 06 12 … » = appel + SMS (portables) ; 4 chiffres = poste interne (appel direct si le groupe a un préfixe) ;
+   « 131.9 » = fréquence radio ; autre nombre court = poste interne sans appel direct */
+function numParts(str,ext){return String(str||"").split("/").map(x=>x.trim()).filter(Boolean).map(t=>{
+  const d=t.replace(/\D/g,"");
+  if(/^\d{3}\.\d{1,3}$/.test(t))return {t,kind:"freq"};
+  if(d.length>=9)return {t,kind:"tel",dial:d,sms:/^0[67]/.test(d)};
+  if(d.length===4&&ext){const full=(ext.replace(/\D/g,"")+d);return {t,kind:"tel",dial:full,ext:true}}
+  return {t,kind:"poste"};})}
+function numLine(p,label,note,q){
+  const tag=p.kind==="freq"?'<span class="u-ext">fréquence</span>':p.kind==="poste"?'<span class="u-ext">poste</span>':p.ext?'<span class="u-ext">poste</span>':"";
+  const call=p.kind==="tel"?`<a class="u-act" href="tel:${esc(p.dial)}" aria-label="Appeler ${esc(label)}">${IC_PHONE}</a>`:'<span class="u-act ph"></span>';
+  const sms=p.kind==="tel"&&p.sms?`<a class="u-act" href="sms:${esc(p.dial)}" aria-label="SMS à ${esc(label)}">${IC_MSG}</a>`:'<span class="u-act ph"></span>';
+  return `<div class="u-line"><div class="u-text"><span class="u-tel">${hl(p.t,q)}${p.kind==="freq"?" MHz":""}${tag}</span>${note?`<span class="u-note">${hl(note,q)}</span>`:""}</div>${call}${sms}</div>`;
+}
+function annuView(q,limit){
+  const A=MUA.annu;if(!A)return "";
+  const qq=q||"";let total=0;
+  const html=A.groups.map(g=>{
+    const rows=g.items.map(it=>{
+      const [label,nums,extra]=it;
+      if(label.startsWith("—"))return qq?"":`<div class="asep">${esc(label.replace(/^—\s*/,""))}</div>`;
+      const title=g.gates?"Porte "+label:label;
+      const note=g.gates?extra:(extra&&extra!=="!"?extra:"");
+      if(qq&&!norm(g.name+" "+title+" "+nums+" "+(extra||"")).includes(qq))return "";
+      total++;
+      const parts=numParts(nums,g.gates?"":g.ext);
+      const sub=note?`<small>${hl(note,qq)}</small>`:"";
+      return `<div class="u-row"><span class="u-label${extra==="!"?" imp":""}">${hl(title,qq)}${sub}</span><div class="u-nums">${parts.length?parts.map(p=>numLine(p,title,"",qq)).join(""):'<div class="u-none">pas de numéro</div>'}</div></div>`;
+    }).join("");
+    if(qq&&!rows)return "";
+    const n=g.items.filter(it=>!it[0].startsWith("—")).length;
+    return `<details class="agrp"${qq?" open":""}><summary><span class="dot" style="background:${esc(g.color||"#888")}"></span>${esc(g.name)} <span class="cnt">${n}</span></summary><div class="abody">${g.note?`<div class="gnote">${esc(g.note)}</div>`:""}${rows}</div></details>`;
+  }).join("");
+  return {html,total};
+}
 function ctView(q){
   if(CT.draft)return ctEditView();
+  let annu="";
+  if(MUA.annu){const r=annuView(q);annu=`<div class="ahead"><h2>Annuaire COA</h2><span class="sub">mis à jour le ${esc(MUA.annu.maj||"")}</span></div>${r.html||(q?'<div class="info">Rien dans l\'annuaire pour cette recherche.</div>':"")}`}
+  else annu=`<div class="card"><b>Annuaire COA protégé</b><p class="sub">Les numéros des assistants, services et portes sont chiffrés avec le code du MUA. Ouvre l'onglet MUA et saisis le code pour les voir.</p></div>`;
+  return annu+`<div class="ahead" style="margin-top:18px"><h2>Mes numéros</h2><span class="sub">sur ce téléphone</span></div>`+ctMine(q);
+}
+function ctMine(q){
   const list=getContacts().slice().sort(byLabel).filter(u=>ctMatch(u,q));
   return `<div class="card">
   ${list.length?list.map(u=>`<div class="u-row"><span class="u-label">${hl(u.label,q)}</span>${u.tels.length?u.tels.map(t=>`<div class="u-line"><div class="u-text"><span class="u-tel">${hl(t.tel,q)}</span>${t.note?`<span class="u-note">${hl(t.note,q)}</span>`:""}</div>
-    <a class="u-act" href="tel:${esc(telHref(t.tel))}" aria-label="Appeler ${esc(u.label)}">${IC_PHONE}</a><a class="u-act" href="sms:${esc(telHref(t.tel))}" aria-label="SMS à ${esc(u.label)}">${IC_MSG}</a></div>`).join(""):'<div class="u-none">Pas encore de numéro</div>'}</div>`).join(""):`<p class="sub">${q?"Aucun contact pour cette recherche.":"Aucun numéro pour l'instant."}</p>`}
+    <a class="u-act" href="tel:${esc(telHref(t.tel))}" aria-label="Appeler ${esc(u.label)}">${IC_PHONE}</a><a class="u-act" href="sms:${esc(telHref(t.tel))}" aria-label="SMS à ${esc(u.label)}">${IC_MSG}</a></div>`).join(""):'<div class="u-none">Pas encore de numéro</div>'}</div>`).join(""):`<p class="sub">${q?"Aucun numéro perso pour cette recherche.":"Aucun numéro perso pour l'instant. Ajoute ici tes propres numéros, en plus de l'annuaire."}</p>`}
   </div>
   <p><button class="btn p" id="ctEdit">Ajouter ou modifier des numéros</button></p>
   <p><button class="btn" id="ctCopy">Copier (sauvegarde)</button> <button class="btn" id="ctImp">Coller une sauvegarde</button> <span id="ctMsg" class="sub">${esc(CT.msg)}</span></p>
@@ -468,6 +534,7 @@ async function muaOpenIndex(){
   const plain=await muaDecrypt(await muaFetch("index.enc"));
   MUA.sheets=JSON.parse(new TextDecoder().decode(plain)).sheets;
   MUA.sheets.forEach(s=>{s._n=norm(s.poste+" "+s.alias+" "+s.text)});
+  try{MUA.annu=JSON.parse(new TextDecoder().decode(await muaDecrypt(await muaFetch("annuaire.enc"))))}catch(e){MUA.annu=null}
   MUA.state="ok";
   setTimeout(muaPrefetch,1500);
 }
@@ -489,8 +556,8 @@ async function muaRestore(){
   render();
 }
 /* télécharge toutes les fiches une fois : le service worker les garde pour l'usage hors connexion */
-async function muaPrefetch(){for(const s of MUA.sheets||[]){try{await fetch("mua/"+s.id+".enc")}catch(e){return}}}
-function muaLock(){MUA.key=null;MUA.sheets=null;MUA.state="idle";Object.values(MUA.urls).forEach(u=>URL.revokeObjectURL(u));MUA.urls={};try{localStorage.removeItem("coa-mua-k")}catch(e){}render()}
+async function muaPrefetch(){try{await fetch("mua/annuaire.enc")}catch(e){}for(const s of MUA.sheets||[]){try{await fetch("mua/"+s.id+".enc")}catch(e){return}}}
+function muaLock(){MUA.key=null;MUA.sheets=null;MUA.annu=null;MUA.state="idle";Object.values(MUA.urls).forEach(u=>URL.revokeObjectURL(u));MUA.urls={};try{localStorage.removeItem("coa-mua-k")}catch(e){}render()}
 function muaMatch(q){
   if(!MUA.sheets)return [];
   if(!q)return MUA.sheets;
@@ -607,7 +674,8 @@ function render(){
       }
       const dm=DELAY.filter(r=>norm(r.join(" ")).includes(q));if(dm.length)parts.push(["Codes retard","dl",grouped(DELAY,q,1,"60px"),dm.some(r=>r[1]===Q)?3:1]);
       const am=ABBR.filter(r=>norm(r.join(" ")).includes(q));if(am.length)parts.push(["Abréviations","ab",grouped(ABBR,q,1,"150px"),am.some(r=>r[1].toUpperCase().split(/[ \/]+/).includes(Q))?3:1]);
-      if(getContacts().some(u=>ctMatch(u,q)))parts.push(["Contacts MRS","ct",ctView(q).split("<p><button class=\"btn p\" id=\"ctEdit\"")[0],1]);
+      if(MUA.annu){const r=annuView(q);if(r.total)parts.push(["Annuaire COA","ct",r.html,1])}
+      if(getContacts().some(u=>ctMatch(u,q)))parts.push(["Mes numéros","ct",ctMine(q).split("<p><button class=\"btn p\" id=\"ctEdit\"")[0],1]);
       if(MUA.sheets){const m=muaMatch(q);if(m.length)parts.push(["MUA · fiches de postes","mua",muaView(q,4),m.some(x=>x.poste===q.toUpperCase().replace(/\s+/g,""))?4:2])}
       STRICT=false;
       parts.sort((x,y)=>y[3]-x[3]);
