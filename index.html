@@ -59,8 +59,11 @@ mark{background:#ffe58a;color:#000;border-radius:2px}
 .vbar button{background:#2a2738;color:#fff;border:0;border-radius:8px;min-width:38px;height:34px;font-size:16px;cursor:pointer}
 #vscroll{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;display:flex}
 #vimg{display:block;margin:auto;max-width:none;background:#fff;user-select:none;-webkit-user-select:none}
-.vhint{position:absolute;left:50%;bottom:calc(14px + env(safe-area-inset-bottom));transform:translateX(-50%);background:rgba(0,0,0,.75);color:#fff;font-size:13px;padding:7px 12px;border-radius:999px;pointer-events:none;white-space:nowrap}
-@media (orientation:landscape){.vhint{display:none}}
+.vhint{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);background:rgba(0,0,0,.78);color:#fff;font-size:13px;padding:7px 12px;border-radius:999px;pointer-events:none;white-space:nowrap;transition:opacity .6s}
+.vhint.off{opacity:0}
+/* téléphone tenu droit : la fiche est pivotée d'un quart de tour pour s'afficher en paysage */
+#viewer.rot{inset:auto;top:0;left:0;transform-origin:top left;transform:rotate(90deg) translateY(-100%)}
+#vrot.on{background:#5b3fa8}
 </style>
 </head>
 <body>
@@ -71,9 +74,9 @@ mark{background:#ffe58a;color:#000;border-radius:2px}
 </header>
 <main id="out"></main>
 <div id="viewer" class="hide" role="dialog" aria-label="Fiche MUA">
- <div class="vbar"><b id="vtitle"></b><button id="vprev" aria-label="Fiche précédente">‹</button><button id="vnext" aria-label="Fiche suivante">›</button><button id="vout" aria-label="Dézoomer">−</button><button id="vin" aria-label="Zoomer">+</button><button id="vclose" aria-label="Fermer">✕</button></div>
+ <div class="vbar"><b id="vtitle"></b><button id="vprev" aria-label="Fiche précédente">‹</button><button id="vnext" aria-label="Fiche suivante">›</button><button id="vrot" aria-label="Paysage automatique" title="Paysage automatique">⟳</button><button id="vout" aria-label="Dézoomer">−</button><button id="vin" aria-label="Zoomer">+</button><button id="vclose" aria-label="Fermer">✕</button></div>
  <div id="vscroll"><img id="vimg" alt=""></div>
- <div class="vhint" id="vhint">Tourne le téléphone pour voir la fiche en grand</div>
+ <div class="vhint off" id="vhint">Tourne le téléphone ↻ pour lire la fiche</div>
 </div>
 <div id="set" class="hide" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20;display:flex;align-items:flex-start;justify-content:center;padding:40px 12px">
  <div class="card" style="max-width:420px;width:100%;margin:0">
@@ -424,7 +427,7 @@ async function muaShow(i){
   const s=MUA.sheets[i];if(!s)return;
   MUA.cur=i;MUA.zoom=1;
   $("#vtitle").textContent="Poste "+s.poste+(s.part?" · fiche "+s.part:"")+(s.date?" · "+s.date:"");
-  $("#viewer").classList.remove("hide");
+  $("#viewer").classList.remove("hide");vLayout();vHint();
   const img=$("#vimg");img.removeAttribute("src");img.alt="Chargement…";
   try{
     if(!MUA.urls[s.id]){const p=await muaDecrypt(await muaFetch(s.id+".enc"));MUA.urls[s.id]=URL.createObjectURL(new Blob([p],{type:"image/jpeg"}))}
@@ -433,10 +436,20 @@ async function muaShow(i){
   }catch(e){img.alt="Fiche indisponible hors connexion (ouvre-la une fois avec du réseau)."}
   vFit();
 }
+/* paysage automatique (réglage gardé : coa-rot, activé par défaut) */
+const vRotOn=()=>store("coa-rot")!=="0";
+const vRotated=()=>$("#viewer").classList.contains("rot");
+function vLayout(){const v=$("#viewer"),W=innerWidth,H=innerHeight,rot=vRotOn()&&H>W;
+  v.classList.toggle("rot",rot);v.style.width=rot?H+"px":"";v.style.height=rot?W+"px":"";
+  $("#vrot").classList.toggle("on",vRotOn());}
+/* coordonnées d'un toucher dans le repère de la visionneuse (pivotée ou non) */
+function vLocal(x,y){const box=$("#vscroll");if(!vRotated()){const r=box.getBoundingClientRect();return [x-r.left,y-r.top]}
+  const bar=$(".vbar").offsetHeight;return [y,(innerWidth-x)-bar];}
+let vHintT=0;function vHint(){const h=$("#vhint");if(!vRotated()){h.classList.add("off");return}h.classList.remove("off");clearTimeout(vHintT);vHintT=setTimeout(()=>h.classList.add("off"),2500)}
 function vFit(){const img=$("#vimg"),box=$("#vscroll");const W=box.clientWidth,H=box.clientHeight;const s=MUA.sheets&&MUA.sheets[MUA.cur];const r=s&&s.w?s.h/s.w:1754/2480;
   const base=Math.min(W,H/r);img.style.width=(base*MUA.zoom)+"px";}
 function vZoom(z,cx,cy){const box=$("#vscroll");const old=MUA.zoom;z=Math.max(1,Math.min(6,z));if(z===old)return;
-  const rect=box.getBoundingClientRect();cx=cx??rect.width/2;cy=cy??rect.height/2;
+  cx=cx??box.clientWidth/2;cy=cy??box.clientHeight/2;
   const fx=(box.scrollLeft+cx)/box.scrollWidth,fy=(box.scrollTop+cy)/box.scrollHeight;
   MUA.zoom=z;vFit();box.scrollLeft=fx*box.scrollWidth-cx;box.scrollTop=fy*box.scrollHeight-cy;}
 $("#vin").onclick=()=>vZoom(MUA.zoom*1.6);
@@ -444,16 +457,17 @@ $("#vout").onclick=()=>vZoom(MUA.zoom/1.6);
 $("#vclose").onclick=()=>{$("#viewer").classList.add("hide");MUA.cur=-1};
 $("#vprev").onclick=()=>{if(MUA.cur>0)muaShow(MUA.cur-1)};
 $("#vnext").onclick=()=>{if(MUA.sheets&&MUA.cur<MUA.sheets.length-1)muaShow(MUA.cur+1)};
-window.addEventListener("resize",()=>{if(MUA.cur>=0)vFit()});
+window.addEventListener("resize",()=>{if(MUA.cur>=0){vLayout();vFit();vHint()}});
+$("#vrot").onclick=()=>{store("coa-rot",vRotOn()?"0":"1");vLayout();vFit();vHint()};
 document.addEventListener("keydown",e=>{if(MUA.cur<0)return;if(e.key==="Escape")$("#vclose").click();if(e.key==="ArrowRight")$("#vnext").click();if(e.key==="ArrowLeft")$("#vprev").click()});
 {const box=$("#vscroll");let d0=0,z0=1,lastTap=0;
   const dist=t=>Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY);
   box.addEventListener("touchstart",e=>{if(e.touches.length===2){d0=dist(e.touches);z0=MUA.zoom}
-    else if(e.touches.length===1){const now=Date.now();if(now-lastTap<300){const r=box.getBoundingClientRect();vZoom(MUA.zoom>1.5?1:2.5,e.touches[0].clientX-r.left,e.touches[0].clientY-r.top);e.preventDefault()}lastTap=now}},{passive:false});
-  box.addEventListener("touchmove",e=>{if(e.touches.length===2&&d0){e.preventDefault();const r=box.getBoundingClientRect();
-    const cx=(e.touches[0].clientX+e.touches[1].clientX)/2-r.left,cy=(e.touches[0].clientY+e.touches[1].clientY)/2-r.top;vZoom(z0*dist(e.touches)/d0,cx,cy)}},{passive:false});
+    else if(e.touches.length===1){const now=Date.now();if(now-lastTap<300){const [lx,ly]=vLocal(e.touches[0].clientX,e.touches[0].clientY);vZoom(MUA.zoom>1.5?1:2.5,lx,ly);e.preventDefault()}lastTap=now}},{passive:false});
+  box.addEventListener("touchmove",e=>{if(e.touches.length===2&&d0){e.preventDefault();
+    const [cx,cy]=vLocal((e.touches[0].clientX+e.touches[1].clientX)/2,(e.touches[0].clientY+e.touches[1].clientY)/2);vZoom(z0*dist(e.touches)/d0,cx,cy)}},{passive:false});
   box.addEventListener("touchend",e=>{if(e.touches.length<2)d0=0});
-  box.addEventListener("dblclick",e=>{const r=box.getBoundingClientRect();vZoom(MUA.zoom>1.5?1:2.5,e.clientX-r.left,e.clientY-r.top)});
+  box.addEventListener("dblclick",e=>{const [lx,ly]=vLocal(e.clientX,e.clientY);vZoom(MUA.zoom>1.5?1:2.5,lx,ly)});
 }
 $("#muaLock").onclick=()=>{muaLock();$("#set").classList.add("hide")};
 function muaSettings(){const on=!!MUA.sheets;$("#muaLock").classList.toggle("hide",!on);
