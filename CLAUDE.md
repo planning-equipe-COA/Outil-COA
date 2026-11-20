@@ -10,8 +10,15 @@ L'utilisateur échange en français.
 - `index.html` — toute l'appli (HTML + CSS + JS). Onglets : MUA (1er), Tout, Aéroports, Compagnies, Avions, Codes retard,
   Abréviations, Alphabet, Contacts MRS. Une barre de recherche ; codes exacts (IATA/OACI) en premier. Onglet dans le `#hash`.
   Codes retard IATA (AHM 730), abréviations, alphabet OTAN, `ACX` (code OACI d'envergure, sillage, envergure indicative)
-  écrits dans le fichier. Contacts MRS éditables, localStorage `coa-contacts` (copier/coller pour transférer).
-  Réglages (roue) : QR code statique (SVG), adresse, « Envoyer le lien » (feuille de partage, sinon copie), aide installation.
+  écrits dans le fichier. **Contacts MRS = numéros utiles comme dans le Planning** (demandé) : services triés par ordre
+  alphabétique, plusieurs numéros par service avec précision, boutons Appeler (tel:) / SMS ; « Ajouter ou modifier des numéros »
+  → édition (+ Autre numéro, + Ajouter un service, corbeille, Enregistrer/Annuler). Gardés **sur le téléphone seulement**
+  (localStorage `coa-utiles` = [{label, tels:[{tel, note}]}] ; l'ancien `coa-contacts` {n,r,t,f,x} est converti une fois),
+  « Copier (sauvegarde) » / « Coller une sauvegarde » (JSON, accepte aussi l'ancien format). Pas de partage ni de verrou responsable.
+  Réglages (roue, panneau défilant) : **Affichage** Auto / Clair / Sombre (`coa-theme` → `html[data-theme]`, appliqué dans le
+  `<head>`), **Navigation** Onglets / Menu par thème (`coa-nav` → `html[data-nav=menu]` : bouton ☰ « rubrique » qui ouvre
+  `#menu`, rubriques rangées par thème : Recherche, Escale MRS, Référentiels, Codes et langage — `THEMES`), QR code statique (SVG),
+  adresse, « Envoyer le lien » (feuille de partage, sinon copie), aide installation, MUA (verrouiller), sauvegarde des contacts.
 - `airports.json` (OurAirports, domaine public : IATA, OACI, nom, ville, pays, type L/M/S, vols réguliers),
   `airlines.json`, `aircraft.json` (OpenFlights, ODbL, plus mis à jour). Un enregistrement par ligne.
 - `sw.js` — hors connexion, réseau d'abord puis copie ; caches `coa-outils-*` ; changer `CACHE` à chaque mise en ligne

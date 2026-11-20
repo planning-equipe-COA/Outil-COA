@@ -12,9 +12,12 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Outils COA">
 <meta name="theme-color" content="#5b3fa8">
+<script>try{var t=localStorage.getItem("coa-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t;if(localStorage.getItem("coa-nav")==="menu")document.documentElement.dataset.nav="menu"}catch(e){}</script>
 <style>
 :root{--bg:#f4f3f8;--card:#fff;--ink:#1d1b2e;--mute:#6b6880;--line:#e2e0ec;--acc:#5b3fa8;--acc2:#ece6fb;--ok:#1f8a4c;--warn:#b26a00}
-@media (prefers-color-scheme:dark){:root{--bg:#121019;--card:#1c1a27;--ink:#ecebf3;--mute:#9a97ad;--line:#2d2a3d;--acc:#a58cf0;--acc2:#2a2442}}
+@media (prefers-color-scheme:dark){html:not([data-theme=light]){--bg:#121019;--card:#1c1a27;--ink:#ecebf3;--mute:#9a97ad;--line:#2d2a3d;--acc:#a58cf0;--acc2:#2a2442;color-scheme:dark}}
+html[data-theme=dark]{--bg:#121019;--card:#1c1a27;--ink:#ecebf3;--mute:#9a97ad;--line:#2d2a3d;--acc:#a58cf0;--acc2:#2a2442;color-scheme:dark}
+html[data-theme=light]{color-scheme:light}
 *{box-sizing:border-box}
 body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);font-size:15px}
 header{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px solid var(--line);padding:calc(10px + env(safe-area-inset-top)) calc(14px + env(safe-area-inset-right)) 0 calc(14px + env(safe-area-inset-left))}
@@ -50,6 +53,39 @@ mark{background:#ffe58a;color:#000;border-radius:2px}
 #set .setcard{max-width:420px;width:100%;margin:0 auto}
 body.noscroll{overflow:hidden}
 #set.hide{display:none!important}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:4px 0}
+.seg button{border:0;background:var(--card);color:var(--ink);padding:8px 12px;font:inherit;font-size:14px;cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button.on{background:var(--acc);color:#fff;font-weight:600}
+/* numéros utiles (même présentation que le Planning) */
+.u-row{padding:10px 0;border-bottom:1px solid var(--line)}
+.u-row:last-child{border-bottom:0}
+.u-label{display:block;font-weight:600;margin-bottom:4px}
+.u-line{display:flex;align-items:center;gap:8px;padding:3px 0}
+.u-text{flex:1;min-width:0;display:flex;flex-direction:column}
+.u-tel{font-variant-numeric:tabular-nums}
+.u-note{color:var(--mute);font-size:.8rem}
+.u-act{display:inline-grid;place-items:center;width:44px;height:40px;border-radius:10px;background:var(--bg);border:1px solid var(--line);color:var(--acc);text-decoration:none}
+.u-act svg{width:18px;height:18px}
+.u-none{color:var(--mute);font-size:13px}
+.u-edit{display:grid;gap:6px;padding:10px 0;border-bottom:1px solid var(--line)}
+.u-edit-head{display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center}
+.u-edit-tel{display:grid;grid-template-columns:1fr 1fr 2.2em;gap:6px;align-items:center;padding-left:10px}
+.u-input{font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%;min-width:0}
+.u-link{border:0;background:none;color:var(--acc);font:inherit;font-size:14px;cursor:pointer;padding:4px 0;text-align:left}
+@media (max-width:380px){.u-edit-tel{grid-template-columns:1fr 2.2em}.u-edit-tel [data-f=note]{grid-column:1}.u-edit-tel>:last-child{grid-row:1;grid-column:2}}
+/* menu par thème (Réglages → Navigation) */
+#menuBtn{display:none;align-items:center;gap:8px;width:100%;margin:8px 0;padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font:inherit;font-size:15px;cursor:pointer;text-align:left}
+#menuBtn b{flex:1}
+html[data-nav=menu] #menuBtn{display:flex}
+html[data-nav=menu] nav#tabs{display:none}
+#menu{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:25;overflow-y:auto;padding:calc(60px + env(safe-area-inset-top)) 12px 24px}
+#menu.hide{display:none}
+#menu .card{max-width:460px;margin:0 auto}
+.mtheme{margin:10px 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--acc);font-weight:700}
+.mitem{display:block;width:100%;text-align:left;border:0;border-radius:10px;background:transparent;color:var(--ink);font:inherit;padding:9px 10px;cursor:pointer}
+.mitem:hover,.mitem.on{background:var(--acc2)}
+.mitem small{display:block;color:var(--mute);font-size:12px}
 /* MUA */
 .mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
 .mcard{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;cursor:pointer;text-align:left;color:var(--ink);font:inherit;width:100%}
@@ -78,8 +114,10 @@ body.noscroll{overflow:hidden}
 <header>
   <h1>Boîte à outils COA <span>MRS · LFML</span><button id="gear" class="btn" style="margin-left:auto;padding:4px 8px;display:flex" title="Réglages" aria-label="Réglages"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></h1>
   <input id="q" type="search" placeholder="Rechercher : 5B, A321, MRS, LFML, AFR, 93, WCHR…" autocomplete="off" autofocus>
+  <button id="menuBtn" type="button" aria-haspopup="true"><span aria-hidden="true">☰</span><b id="menuCur"></b><span aria-hidden="true">▾</span></button>
   <nav id="tabs"></nav>
 </header>
+<div id="menu" class="hide" role="dialog" aria-label="Rubriques"><div class="card" id="menuList"></div></div>
 <main id="out"></main>
 <div id="viewer" class="hide" role="dialog" aria-label="Fiche MUA">
  <div class="vbar"><b id="vtitle"></b><button id="vprev" aria-label="Fiche précédente">‹</button><button id="vnext" aria-label="Fiche suivante">›</button><button id="vrot" aria-label="Paysage automatique" title="Paysage automatique">⟳</button><button id="vout" aria-label="Dézoomer">−</button><button id="vin" aria-label="Zoomer">+</button><button id="vclose" aria-label="Fermer">✕</button></div>
@@ -89,6 +127,12 @@ body.noscroll{overflow:hidden}
 <div id="set" class="hide">
  <div class="card setcard">
   <div style="display:flex;align-items:center"><b style="font-size:16px">Réglages</b><button class="btn" id="setX" style="margin-left:auto">✕</button></div>
+  <h2>Affichage</h2>
+  <div class="seg" id="themeSeg"><button data-v="auto">Auto</button><button data-v="light">Clair</button><button data-v="dark">Sombre</button></div>
+  <p class="sub">Auto suit le réglage du téléphone.</p>
+  <h2>Navigation</h2>
+  <div class="seg" id="navSeg"><button data-v="tabs">Onglets</button><button data-v="menu">Menu par thème</button></div>
+  <p class="sub">Menu par thème : un bouton en haut ouvre les rubriques rangées par thème.</p>
   <h2>Partager l'application</h2>
   <p class="sub">Fais scanner ce QR code avec l'appareil photo du téléphone.</p>
   <div style="background:#fff;padding:14px;border-radius:12px;width:min(220px,100%);margin:10px auto"><svg viewBox="0 0 33 33" role="img" aria-label="QR code vers la Boîte à outils COA" shape-rendering="crispEdges" style="display:block;width:100%;height:auto;fill:#000"><path d="M0 0h1v1h-1zM1 0h1v1h-1zM2 0h1v1h-1zM3 0h1v1h-1zM4 0h1v1h-1zM5 0h1v1h-1zM6 0h1v1h-1zM16 0h1v1h-1zM19 0h1v1h-1zM20 0h1v1h-1zM21 0h1v1h-1zM23 0h1v1h-1zM26 0h1v1h-1zM27 0h1v1h-1zM28 0h1v1h-1zM29 0h1v1h-1zM30 0h1v1h-1zM31 0h1v1h-1zM32 0h1v1h-1zM0 1h1v1h-1zM6 1h1v1h-1zM9 1h1v1h-1zM12 1h1v1h-1zM15 1h1v1h-1zM16 1h1v1h-1zM18 1h1v1h-1zM20 1h1v1h-1zM24 1h1v1h-1zM26 1h1v1h-1zM32 1h1v1h-1zM0 2h1v1h-1zM2 2h1v1h-1zM3 2h1v1h-1zM4 2h1v1h-1zM6 2h1v1h-1zM8 2h1v1h-1zM10 2h1v1h-1zM11 2h1v1h-1zM12 2h1v1h-1zM14 2h1v1h-1zM16 2h1v1h-1zM21 2h1v1h-1zM22 2h1v1h-1zM23 2h1v1h-1zM26 2h1v1h-1zM28 2h1v1h-1zM29 2h1v1h-1zM30 2h1v1h-1zM32 2h1v1h-1zM0 3h1v1h-1zM2 3h1v1h-1zM3 3h1v1h-1zM4 3h1v1h-1zM6 3h1v1h-1zM8 3h1v1h-1zM9 3h1v1h-1zM11 3h1v1h-1zM15 3h1v1h-1zM18 3h1v1h-1zM19 3h1v1h-1zM21 3h1v1h-1zM22 3h1v1h-1zM23 3h1v1h-1zM24 3h1v1h-1zM26 3h1v1h-1zM28 3h1v1h-1zM29 3h1v1h-1zM30 3h1v1h-1zM32 3h1v1h-1zM0 4h1v1h-1zM2 4h1v1h-1zM3 4h1v1h-1zM4 4h1v1h-1zM6 4h1v1h-1zM8 4h1v1h-1zM10 4h1v1h-1zM13 4h1v1h-1zM14 4h1v1h-1zM15 4h1v1h-1zM16 4h1v1h-1zM20 4h1v1h-1zM26 4h1v1h-1zM28 4h1v1h-1zM29 4h1v1h-1zM30 4h1v1h-1zM32 4h1v1h-1zM0 5h1v1h-1zM6 5h1v1h-1zM8 5h1v1h-1zM10 5h1v1h-1zM12 5h1v1h-1zM18 5h1v1h-1zM19 5h1v1h-1zM21 5h1v1h-1zM26 5h1v1h-1zM32 5h1v1h-1zM0 6h1v1h-1zM1 6h1v1h-1zM2 6h1v1h-1zM3 6h1v1h-1zM4 6h1v1h-1zM5 6h1v1h-1zM6 6h1v1h-1zM8 6h1v1h-1zM10 6h1v1h-1zM12 6h1v1h-1zM14 6h1v1h-1zM16 6h1v1h-1zM18 6h1v1h-1zM20 6h1v1h-1zM22 6h1v1h-1zM24 6h1v1h-1zM26 6h1v1h-1zM27 6h1v1h-1zM28 6h1v1h-1zM29 6h1v1h-1zM30 6h1v1h-1zM31 6h1v1h-1zM32 6h1v1h-1zM8 7h1v1h-1zM9 7h1v1h-1zM10 7h1v1h-1zM11 7h1v1h-1zM14 7h1v1h-1zM16 7h1v1h-1zM18 7h1v1h-1zM19 7h1v1h-1zM20 7h1v1h-1zM21 7h1v1h-1zM22 7h1v1h-1zM0 8h1v1h-1zM2 8h1v1h-1zM3 8h1v1h-1zM4 8h1v1h-1zM5 8h1v1h-1zM6 8h1v1h-1zM9 8h1v1h-1zM10 8h1v1h-1zM13 8h1v1h-1zM14 8h1v1h-1zM17 8h1v1h-1zM19 8h1v1h-1zM22 8h1v1h-1zM23 8h1v1h-1zM24 8h1v1h-1zM26 8h1v1h-1zM27 8h1v1h-1zM28 8h1v1h-1zM29 8h1v1h-1zM30 8h1v1h-1zM0 9h1v1h-1zM1 9h1v1h-1zM2 9h1v1h-1zM8 9h1v1h-1zM9 9h1v1h-1zM12 9h1v1h-1zM13 9h1v1h-1zM14 9h1v1h-1zM16 9h1v1h-1zM17 9h1v1h-1zM18 9h1v1h-1zM19 9h1v1h-1zM20 9h1v1h-1zM23 9h1v1h-1zM26 9h1v1h-1zM27 9h1v1h-1zM29 9h1v1h-1zM30 9h1v1h-1zM32 9h1v1h-1zM0 10h1v1h-1zM1 10h1v1h-1zM2 10h1v1h-1zM6 10h1v1h-1zM7 10h1v1h-1zM9 10h1v1h-1zM13 10h1v1h-1zM14 10h1v1h-1zM15 10h1v1h-1zM17 10h1v1h-1zM20 10h1v1h-1zM22 10h1v1h-1zM24 10h1v1h-1zM25 10h1v1h-1zM26 10h1v1h-1zM28 10h1v1h-1zM30 10h1v1h-1zM31 10h1v1h-1zM2 11h1v1h-1zM3 11h1v1h-1zM4 11h1v1h-1zM7 11h1v1h-1zM9 11h1v1h-1zM10 11h1v1h-1zM11 11h1v1h-1zM13 11h1v1h-1zM16 11h1v1h-1zM17 11h1v1h-1zM18 11h1v1h-1zM20 11h1v1h-1zM21 11h1v1h-1zM22 11h1v1h-1zM23 11h1v1h-1zM25 11h1v1h-1zM26 11h1v1h-1zM28 11h1v1h-1zM29 11h1v1h-1zM30 11h1v1h-1zM31 11h1v1h-1zM3 12h1v1h-1zM4 12h1v1h-1zM6 12h1v1h-1zM11 12h1v1h-1zM14 12h1v1h-1zM16 12h1v1h-1zM20 12h1v1h-1zM21 12h1v1h-1zM22 12h1v1h-1zM23 12h1v1h-1zM24 12h1v1h-1zM25 12h1v1h-1zM27 12h1v1h-1zM29 12h1v1h-1zM31 12h1v1h-1zM0 13h1v1h-1zM5 13h1v1h-1zM8 13h1v1h-1zM10 13h1v1h-1zM11 13h1v1h-1zM13 13h1v1h-1zM15 13h1v1h-1zM18 13h1v1h-1zM23 13h1v1h-1zM24 13h1v1h-1zM25 13h1v1h-1zM26 13h1v1h-1zM30 13h1v1h-1zM31 13h1v1h-1zM32 13h1v1h-1zM0 14h1v1h-1zM2 14h1v1h-1zM5 14h1v1h-1zM6 14h1v1h-1zM7 14h1v1h-1zM11 14h1v1h-1zM14 14h1v1h-1zM15 14h1v1h-1zM16 14h1v1h-1zM20 14h1v1h-1zM22 14h1v1h-1zM24 14h1v1h-1zM25 14h1v1h-1zM26 14h1v1h-1zM28 14h1v1h-1zM31 14h1v1h-1zM1 15h1v1h-1zM3 15h1v1h-1zM5 15h1v1h-1zM8 15h1v1h-1zM11 15h1v1h-1zM13 15h1v1h-1zM15 15h1v1h-1zM21 15h1v1h-1zM25 15h1v1h-1zM26 15h1v1h-1zM28 15h1v1h-1zM30 15h1v1h-1zM0 16h1v1h-1zM1 16h1v1h-1zM5 16h1v1h-1zM6 16h1v1h-1zM9 16h1v1h-1zM10 16h1v1h-1zM11 16h1v1h-1zM14 16h1v1h-1zM15 16h1v1h-1zM17 16h1v1h-1zM18 16h1v1h-1zM20 16h1v1h-1zM22 16h1v1h-1zM23 16h1v1h-1zM24 16h1v1h-1zM25 16h1v1h-1zM27 16h1v1h-1zM28 16h1v1h-1zM32 16h1v1h-1zM0 17h1v1h-1zM2 17h1v1h-1zM4 17h1v1h-1zM7 17h1v1h-1zM8 17h1v1h-1zM9 17h1v1h-1zM10 17h1v1h-1zM11 17h1v1h-1zM13 17h1v1h-1zM18 17h1v1h-1zM19 17h1v1h-1zM20 17h1v1h-1zM21 17h1v1h-1zM23 17h1v1h-1zM25 17h1v1h-1zM26 17h1v1h-1zM27 17h1v1h-1zM29 17h1v1h-1zM30 17h1v1h-1zM31 17h1v1h-1zM32 17h1v1h-1zM6 18h1v1h-1zM10 18h1v1h-1zM11 18h1v1h-1zM12 18h1v1h-1zM15 18h1v1h-1zM16 18h1v1h-1zM18 18h1v1h-1zM20 18h1v1h-1zM21 18h1v1h-1zM25 18h1v1h-1zM27 18h1v1h-1zM28 18h1v1h-1zM30 18h1v1h-1zM31 18h1v1h-1zM3 19h1v1h-1zM4 19h1v1h-1zM7 19h1v1h-1zM8 19h1v1h-1zM9 19h1v1h-1zM12 19h1v1h-1zM13 19h1v1h-1zM15 19h1v1h-1zM21 19h1v1h-1zM22 19h1v1h-1zM24 19h1v1h-1zM25 19h1v1h-1zM27 19h1v1h-1zM28 19h1v1h-1zM29 19h1v1h-1zM30 19h1v1h-1zM2 20h1v1h-1zM3 20h1v1h-1zM6 20h1v1h-1zM11 20h1v1h-1zM12 20h1v1h-1zM13 20h1v1h-1zM15 20h1v1h-1zM18 20h1v1h-1zM24 20h1v1h-1zM25 20h1v1h-1zM27 20h1v1h-1zM28 20h1v1h-1zM29 20h1v1h-1zM32 20h1v1h-1zM0 21h1v1h-1zM1 21h1v1h-1zM2 21h1v1h-1zM3 21h1v1h-1zM4 21h1v1h-1zM7 21h1v1h-1zM8 21h1v1h-1zM9 21h1v1h-1zM12 21h1v1h-1zM14 21h1v1h-1zM15 21h1v1h-1zM16 21h1v1h-1zM17 21h1v1h-1zM20 21h1v1h-1zM21 21h1v1h-1zM23 21h1v1h-1zM25 21h1v1h-1zM26 21h1v1h-1zM27 21h1v1h-1zM29 21h1v1h-1zM32 21h1v1h-1zM0 22h1v1h-1zM4 22h1v1h-1zM5 22h1v1h-1zM6 22h1v1h-1zM7 22h1v1h-1zM8 22h1v1h-1zM10 22h1v1h-1zM11 22h1v1h-1zM19 22h1v1h-1zM22 22h1v1h-1zM28 22h1v1h-1zM31 22h1v1h-1zM0 23h1v1h-1zM2 23h1v1h-1zM5 23h1v1h-1zM11 23h1v1h-1zM12 23h1v1h-1zM14 23h1v1h-1zM16 23h1v1h-1zM19 23h1v1h-1zM20 23h1v1h-1zM21 23h1v1h-1zM22 23h1v1h-1zM24 23h1v1h-1zM28 23h1v1h-1zM29 23h1v1h-1zM30 23h1v1h-1zM0 24h1v1h-1zM4 24h1v1h-1zM5 24h1v1h-1zM6 24h1v1h-1zM7 24h1v1h-1zM9 24h1v1h-1zM10 24h1v1h-1zM12 24h1v1h-1zM17 24h1v1h-1zM19 24h1v1h-1zM20 24h1v1h-1zM23 24h1v1h-1zM24 24h1v1h-1zM25 24h1v1h-1zM26 24h1v1h-1zM27 24h1v1h-1zM28 24h1v1h-1zM8 25h1v1h-1zM11 25h1v1h-1zM14 25h1v1h-1zM16 25h1v1h-1zM17 25h1v1h-1zM18 25h1v1h-1zM19 25h1v1h-1zM20 25h1v1h-1zM24 25h1v1h-1zM28 25h1v1h-1zM30 25h1v1h-1zM32 25h1v1h-1zM0 26h1v1h-1zM1 26h1v1h-1zM2 26h1v1h-1zM3 26h1v1h-1zM4 26h1v1h-1zM5 26h1v1h-1zM6 26h1v1h-1zM10 26h1v1h-1zM11 26h1v1h-1zM13 26h1v1h-1zM15 26h1v1h-1zM16 26h1v1h-1zM17 26h1v1h-1zM20 26h1v1h-1zM22 26h1v1h-1zM23 26h1v1h-1zM24 26h1v1h-1zM26 26h1v1h-1zM28 26h1v1h-1zM30 26h1v1h-1zM31 26h1v1h-1zM0 27h1v1h-1zM6 27h1v1h-1zM8 27h1v1h-1zM10 27h1v1h-1zM11 27h1v1h-1zM16 27h1v1h-1zM17 27h1v1h-1zM18 27h1v1h-1zM20 27h1v1h-1zM21 27h1v1h-1zM22 27h1v1h-1zM23 27h1v1h-1zM24 27h1v1h-1zM28 27h1v1h-1zM29 27h1v1h-1zM30 27h1v1h-1zM0 28h1v1h-1zM2 28h1v1h-1zM3 28h1v1h-1zM4 28h1v1h-1zM6 28h1v1h-1zM8 28h1v1h-1zM9 28h1v1h-1zM13 28h1v1h-1zM16 28h1v1h-1zM21 28h1v1h-1zM24 28h1v1h-1zM25 28h1v1h-1zM26 28h1v1h-1zM27 28h1v1h-1zM28 28h1v1h-1zM29 28h1v1h-1zM31 28h1v1h-1zM0 29h1v1h-1zM2 29h1v1h-1zM3 29h1v1h-1zM4 29h1v1h-1zM6 29h1v1h-1zM8 29h1v1h-1zM11 29h1v1h-1zM14 29h1v1h-1zM15 29h1v1h-1zM18 29h1v1h-1zM24 29h1v1h-1zM25 29h1v1h-1zM28 29h1v1h-1zM31 29h1v1h-1zM32 29h1v1h-1zM0 30h1v1h-1zM2 30h1v1h-1zM3 30h1v1h-1zM4 30h1v1h-1zM6 30h1v1h-1zM8 30h1v1h-1zM9 30h1v1h-1zM10 30h1v1h-1zM11 30h1v1h-1zM12 30h1v1h-1zM14 30h1v1h-1zM15 30h1v1h-1zM16 30h1v1h-1zM17 30h1v1h-1zM18 30h1v1h-1zM21 30h1v1h-1zM22 30h1v1h-1zM23 30h1v1h-1zM26 30h1v1h-1zM27 30h1v1h-1zM29 30h1v1h-1zM30 30h1v1h-1zM0 31h1v1h-1zM6 31h1v1h-1zM10 31h1v1h-1zM11 31h1v1h-1zM12 31h1v1h-1zM13 31h1v1h-1zM15 31h1v1h-1zM21 31h1v1h-1zM22 31h1v1h-1zM25 31h1v1h-1zM28 31h1v1h-1zM29 31h1v1h-1zM30 31h1v1h-1zM0 32h1v1h-1zM1 32h1v1h-1zM2 32h1v1h-1zM3 32h1v1h-1zM4 32h1v1h-1zM5 32h1v1h-1zM6 32h1v1h-1zM8 32h1v1h-1zM10 32h1v1h-1zM12 32h1v1h-1zM13 32h1v1h-1zM15 32h1v1h-1zM17 32h1v1h-1zM22 32h1v1h-1zM23 32h1v1h-1zM24 32h1v1h-1zM27 32h1v1h-1zM31 32h1v1h-1z"/></svg></div>
@@ -99,7 +143,7 @@ body.noscroll{overflow:hidden}
   <p class="sub" id="muaSetInfo"></p>
   <p><button class="btn hide" id="muaLock">Verrouiller le MUA sur ce téléphone</button></p>
   <h2>Sauvegarde des contacts</h2>
-  <p class="sub">Les contacts restent dans ce navigateur. Utilise l'onglet Contacts MRS → « Copier (sauvegarde) » pour les transférer.</p>
+  <p class="sub">Les numéros restent sur ce téléphone. Onglet Contacts MRS → « Copier (sauvegarde) » pour les transférer sur un autre appareil.</p>
  </div>
 </div>
 
@@ -276,6 +320,20 @@ function hl(text,q){const t=esc(text);if(!q)return t;const n=norm(text);const i=
 function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
 
 $("#tabs").innerHTML=TABS.map(([k,l])=>`<button data-k="${k}">${l}</button>`).join("");
+const THEMES=[["Recherche",[["all","Tout","Une seule recherche dans toutes les rubriques"]]],
+  ["Escale MRS",[["mua","MUA · fiches de postes","Postes, avions autorisés, plans"],["ct","Contacts MRS","Assistants et services, appeler ou SMS"]]],
+  ["Référentiels",[["ap","Aéroports","Codes IATA et OACI"],["al","Compagnies","Codes IATA, OACI et indicatifs"],["pl","Avions","Types, envergure, sillage"]]],
+  ["Codes et langage",[["dl","Codes retard","Codes IATA 00 à 99"],["ab","Abréviations","A-CDM, messages, PMR, météo"],["nato","Alphabet","Alphabet OTAN, épellation"]]]];
+const tabName=k=>{for(const [,it] of THEMES)for(const [kk,l] of it)if(kk===k)return l;return ""};
+function openMenu(){$("#menuList").innerHTML=THEMES.map(([t,it])=>`<div class="mtheme">${t}</div>`+it.map(([k,l,d])=>`<button class="mitem${k===tab?" on":""}" data-k="${k}">${l}<small>${d}</small></button>`).join("")).join("");$("#menu").classList.remove("hide")}
+$("#menuBtn").onclick=openMenu;
+$("#menu").onclick=e=>{const b=e.target.closest(".mitem");if(b){tab=b.dataset.k;location.hash=tab;render()}if(b||e.target.id==="menu")$("#menu").classList.add("hide")};
+function setSeg(id,v){document.querySelectorAll(`#${id} button`).forEach(b=>b.classList.toggle("on",b.dataset.v===v))}
+function applyTheme(v){if(v==="light"||v==="dark")document.documentElement.dataset.theme=v;else delete document.documentElement.dataset.theme;store("coa-theme",v);setSeg("themeSeg",v)}
+function applyNav(v){if(v==="menu")document.documentElement.dataset.nav="menu";else delete document.documentElement.dataset.nav;store("coa-nav",v);setSeg("navSeg",v)}
+$("#themeSeg").onclick=e=>{const b=e.target.closest("button");if(b)applyTheme(b.dataset.v)};
+$("#navSeg").onclick=e=>{const b=e.target.closest("button");if(b)applyNav(b.dataset.v)};
+setSeg("themeSeg",store("coa-theme")||"auto");setSeg("navSeg",store("coa-nav")||"tabs");
 $("#tabs").onclick=e=>{const k=e.target.dataset.k;if(k){tab=k;location.hash=k;render()}};
 $("#q").oninput=()=>render();
 window.addEventListener("hashchange",()=>{const h=location.hash.slice(1);if(TABS.some(t=>t[0]===h)){tab=h;render()}});
@@ -339,27 +397,65 @@ function natoTable(q){
   return spell+`<table>${rows.map(r=>`<tr><td class="code" style="width:60px">${r[0]}</td><td>${r[1]}</td></tr>`).join("")}</table>`;
 }
 
-/* Contacts éditables, gardés dans ce navigateur */
-function getContacts(){try{const s=store("coa-contacts");if(s)return JSON.parse(s)}catch(e){}return HANDLERS.map(n=>({n,r:"Assistant en escale",t:"",f:"",x:""}))}
-function saveContacts(c){store("coa-contacts",JSON.stringify(c))}
-function ctView(q){
-  const c=getContacts();
-  const rows=c.map((r,i)=>[r,i]).filter(([r])=>!q||norm(Object.values(r).join(" ")).includes(q));
-  return `<div class="info">Remplis directement les cases. Enregistré uniquement dans ce navigateur : utilise « Copier » pour sauvegarder ou transférer vers un autre appareil.</div>
-  <table><tr><th>Nom</th><th class="hm">Rôle</th><th>Téléphone</th><th class="hm">Fréquence</th><th class="hm">Note</th><th></th></tr>
-  ${rows.map(([r,i])=>`<tr data-i="${i}">${["n","r","t","f","x"].map(k=>`<td class="${k==="r"||k==="f"||k==="x"?"hm":""}"><input class="e" data-k="${k}" value="${esc(r[k])}"></td>`).join("")}<td><button class="btn" data-del="${i}" title="Supprimer">✕</button></td></tr>`).join("")}
-  </table>
-  <p><button class="btn p" id="ctAdd">+ Ajouter</button> <button class="btn" id="ctCopy">Copier (sauvegarde)</button> <button class="btn" id="ctImp">Coller une sauvegarde</button></p>
-  <div id="ctBox" class="hide"><textarea id="ctTxt" placeholder="Colle ici le texte copié depuis un autre appareil"></textarea><p><button class="btn p" id="ctOk">Importer</button> <span id="ctMsg" class="sub"></span></p></div>`;
+/* Numéros utiles (Contacts MRS) — même présentation que le Planning : services, plusieurs numéros, Appeler / SMS.
+   Gardés sur ce téléphone (localStorage coa-utiles) ; l'ancien format coa-contacts est repris une fois. */
+const IC_PHONE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M5 3.5h3.5l1.8 4.6-2.3 1.4a11.5 11.5 0 0 0 5.5 5.5l1.4-2.3 4.6 1.8V18a2.5 2.5 0 0 1-2.5 2.5A15.5 15.5 0 0 1 2.5 6 2.5 2.5 0 0 1 5 3.5z"/></svg>';
+const IC_MSG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M20.5 11.5a8.5 8.5 0 0 1-12.4 7.6L3.5 20.5l1.4-4.4A8.5 8.5 0 1 1 20.5 11.5z"/></svg>';
+const IC_TRASH='<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M9.5 7V4.5h5V7M6.5 7l1 13h9l1-13M10 11v5M14 11v5"/></svg>';
+const byLabel=(a,b)=>String(a.label||"").localeCompare(String(b.label||""),"fr",{sensitivity:"base"});
+const telHref=t=>String(t).replace(/[^\d+]/g,"");
+function getContacts(){
+  try{const s=store("coa-utiles");if(s){const v=JSON.parse(s);if(Array.isArray(v))return v}}catch(e){}
+  try{const old=store("coa-contacts");if(old){const v=JSON.parse(old);if(Array.isArray(v)){const list=v.map(r=>({label:r.n||"",tels:r.t||r.r||r.f||r.x?[{tel:r.t||"",note:[r.r,r.f,r.x].filter(Boolean).join(" · ")}]:[]})).filter(u=>u.label);saveContacts(list);return list}}}catch(e){}
+  return HANDLERS.map(n=>({label:n,tels:[]}));
 }
+function saveContacts(c){store("coa-utiles",JSON.stringify(c.slice().sort(byLabel)))}
+const CT={draft:null,msg:""};
+function ctMatch(u,q){return !q||norm(u.label+" "+u.tels.map(t=>t.tel+" "+t.note).join(" ")).includes(q)}
+function ctView(q){
+  if(CT.draft)return ctEditView();
+  const list=getContacts().slice().sort(byLabel).filter(u=>ctMatch(u,q));
+  return `<div class="card">
+  ${list.length?list.map(u=>`<div class="u-row"><span class="u-label">${hl(u.label,q)}</span>${u.tels.length?u.tels.map(t=>`<div class="u-line"><div class="u-text"><span class="u-tel">${hl(t.tel,q)}</span>${t.note?`<span class="u-note">${hl(t.note,q)}</span>`:""}</div>
+    <a class="u-act" href="tel:${esc(telHref(t.tel))}" aria-label="Appeler ${esc(u.label)}">${IC_PHONE}</a><a class="u-act" href="sms:${esc(telHref(t.tel))}" aria-label="SMS à ${esc(u.label)}">${IC_MSG}</a></div>`).join(""):'<div class="u-none">Pas encore de numéro</div>'}</div>`).join(""):`<p class="sub">${q?"Aucun contact pour cette recherche.":"Aucun numéro pour l'instant."}</p>`}
+  </div>
+  <p><button class="btn p" id="ctEdit">Ajouter ou modifier des numéros</button></p>
+  <p><button class="btn" id="ctCopy">Copier (sauvegarde)</button> <button class="btn" id="ctImp">Coller une sauvegarde</button> <span id="ctMsg" class="sub">${esc(CT.msg)}</span></p>
+  <div id="ctBox" class="hide"><textarea id="ctTxt" placeholder="Colle ici le texte copié depuis un autre appareil"></textarea><p><button class="btn p" id="ctOk">Importer</button></p></div>
+  <p class="sub">Les numéros restent sur ce téléphone. « Copier (sauvegarde) » permet de les transférer sur un autre appareil.</p>`;
+}
+function ctEditView(){
+  return `<div class="card"><p class="sub" style="margin-top:0">Ajoute, modifie ou supprime des services et leurs numéros. La liste est rangée par ordre alphabétique.</p>
+  ${CT.draft.map((u,i)=>`<div class="u-edit" data-i="${i}">
+    <div class="u-edit-head"><input class="u-input" data-f="label" value="${esc(u.label)}" placeholder="Service (ex. Aviapartner, PC opérations)" aria-label="Service"><button class="btn" type="button" data-del="${i}" aria-label="Supprimer le service" style="height:40px">${IC_TRASH}</button></div>
+    ${u.tels.map((t,j)=>`<div class="u-edit-tel" data-j="${j}"><input class="u-input" data-f="tel" value="${esc(t.tel)}" placeholder="Numéro" inputmode="tel" aria-label="Numéro"><input class="u-input" data-f="note" value="${esc(t.note)}" placeholder="Précision (facultatif)" aria-label="Précision">${u.tels.length>1?`<button type="button" class="u-link" data-deltel="${i},${j}" aria-label="Retirer ce numéro">✕</button>`:"<span></span>"}</div>`).join("")}
+    <button type="button" class="u-link" data-addtel="${i}" style="padding-left:10px">+ Autre numéro</button></div>`).join("")}
+  <p><button class="btn" id="uAdd" type="button">+ Ajouter un service</button></p>
+  <p><button class="btn p" id="uSave" type="button">Enregistrer</button> <button class="btn" id="uCancel" type="button">Annuler</button> <span class="sub" id="uMsg" style="color:#c0392b"></span></p></div>`;
+}
+function ctReadDraft(){document.querySelectorAll(".u-edit").forEach(el=>{const u=CT.draft[+el.dataset.i];u.label=el.querySelector('[data-f=label]').value;
+  el.querySelectorAll(".u-edit-tel").forEach(r=>{const t=u.tels[+r.dataset.j];t.tel=r.querySelector('[data-f=tel]').value;t.note=r.querySelector('[data-f=note]').value})})}
 function bindContacts(){
-  const out=$("#out");
-  out.querySelectorAll("input.e").forEach(inp=>inp.onchange=()=>{const c=getContacts();const i=+inp.closest("tr").dataset.i;c[i][inp.dataset.k]=inp.value;saveContacts(c)});
-  out.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{const c=getContacts();c.splice(+b.dataset.del,1);saveContacts(c);render()});
-  $("#ctAdd").onclick=()=>{const c=getContacts();c.push({n:"",r:"",t:"",f:"",x:""});saveContacts(c);$("#q").value="";render()};
-  $("#ctCopy").onclick=async()=>{try{await navigator.clipboard.writeText(JSON.stringify(getContacts()));$("#ctCopy").textContent="Copié ✓"}catch(e){$("#ctBox").classList.remove("hide");$("#ctTxt").value=JSON.stringify(getContacts());$("#ctMsg").textContent="Copie auto refusée : sélectionne le texte ci-dessus."}};
+  if(CT.draft){
+    const out=$("#out");
+    out.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{ctReadDraft();CT.draft.splice(+b.dataset.del,1);render()});
+    out.querySelectorAll("[data-addtel]").forEach(b=>b.onclick=()=>{ctReadDraft();CT.draft[+b.dataset.addtel].tels.push({tel:"",note:""});render();const r=document.querySelector(`.u-edit[data-i="${b.dataset.addtel}"] .u-edit-tel:last-of-type [data-f=tel]`);if(r)r.focus()});
+    out.querySelectorAll("[data-deltel]").forEach(b=>b.onclick=()=>{ctReadDraft();const [i,j]=b.dataset.deltel.split(",").map(Number);CT.draft[i].tels.splice(j,1);render()});
+    $("#uAdd").onclick=()=>{ctReadDraft();CT.draft.push({label:"",tels:[{tel:"",note:""}]});render();const a=document.querySelectorAll('.u-edit [data-f=label]');a[a.length-1].focus()};
+    $("#uCancel").onclick=()=>{CT.draft=null;render()};
+    $("#uSave").onclick=()=>{ctReadDraft();
+      const list=CT.draft.map(u=>({label:u.label.trim(),tels:u.tels.map(t=>({tel:t.tel.trim(),note:t.note.trim()})).filter(t=>t.tel||t.note)})).filter(u=>u.label||u.tels.length);
+      if(list.some(u=>!u.label)){$("#uMsg").textContent="Chaque numéro doit avoir un nom de service.";return}
+      if(list.some(u=>u.tels.some(t=>(t.tel.match(/\d/g)||[]).length<2))){$("#uMsg").textContent="Un numéro n'est pas valide.";return}
+      saveContacts(list);CT.draft=null;CT.msg="✓ Numéros enregistrés.";render();setTimeout(()=>{CT.msg=""},3000)};
+    return;
+  }
+  $("#ctEdit").onclick=()=>{CT.draft=getContacts().slice().sort(byLabel).map(u=>({label:u.label,tels:u.tels.length?u.tels.map(t=>({...t})):[{tel:"",note:""}]}));$("#q").value="";render()};
+  $("#ctCopy").onclick=async()=>{const txt=JSON.stringify(getContacts());try{await navigator.clipboard.writeText(txt);$("#ctCopy").textContent="Copié ✓"}catch(e){$("#ctBox").classList.remove("hide");$("#ctTxt").value=txt;$("#ctMsg").textContent="Copie auto refusée : sélectionne le texte ci-dessous."}};
   $("#ctImp").onclick=()=>$("#ctBox").classList.toggle("hide");
-  $("#ctOk").onclick=()=>{try{const v=JSON.parse($("#ctTxt").value);if(!Array.isArray(v))throw 0;saveContacts(v);render()}catch(e){$("#ctMsg").textContent="Texte invalide."}};
+  $("#ctOk").onclick=()=>{try{let v=JSON.parse($("#ctTxt").value);if(!Array.isArray(v))throw 0;
+    if(v.length&&v[0].n!==undefined)v=v.map(r=>({label:r.n||"",tels:r.t?[{tel:r.t,note:[r.r,r.f,r.x].filter(Boolean).join(" · ")}]:[]}));
+    saveContacts(v.filter(u=>u&&u.label).map(u=>({label:String(u.label),tels:(u.tels||[]).map(t=>({tel:String(t.tel||""),note:String(t.note||"")}))})));CT.msg="✓ Sauvegarde importée.";render()}catch(e){$("#ctMsg").textContent="Texte invalide."}};
 }
 
 /* ---------- MUA (fiches chiffrées, code d'accès) ---------- */
@@ -484,6 +580,8 @@ muaRestore();
 
 function render(){
   document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.k===tab));
+  $("#menuCur").textContent=tabName(tab);
+  if(tab!=="ct")CT.draft=null;
   const q=norm($("#q").value.trim());
   const out=$("#out");
   const needData=["all","ap","al","pl"].includes(tab);
@@ -509,7 +607,7 @@ function render(){
       }
       const dm=DELAY.filter(r=>norm(r.join(" ")).includes(q));if(dm.length)parts.push(["Codes retard","dl",grouped(DELAY,q,1,"60px"),dm.some(r=>r[1]===Q)?3:1]);
       const am=ABBR.filter(r=>norm(r.join(" ")).includes(q));if(am.length)parts.push(["Abréviations","ab",grouped(ABBR,q,1,"150px"),am.some(r=>r[1].toUpperCase().split(/[ \/]+/).includes(Q))?3:1]);
-      if(getContacts().some(r=>norm(Object.values(r).join(" ")).includes(q)))parts.push(["Contacts MRS","ct","",1]);
+      if(getContacts().some(u=>ctMatch(u,q)))parts.push(["Contacts MRS","ct",ctView(q).split("<p><button class=\"btn p\" id=\"ctEdit\"")[0],1]);
       if(MUA.sheets){const m=muaMatch(q);if(m.length)parts.push(["MUA · fiches de postes","mua",muaView(q,4),m.some(x=>x.poste===q.toUpperCase().replace(/\s+/g,""))?4:2])}
       STRICT=false;
       parts.sort((x,y)=>y[3]-x[3]);
