@@ -42,6 +42,15 @@ L'utilisateur échange en français.
 - **Météo LFML** (rubrique `wx`, thème Escale MRS, + carte en tête de l'accueil) : api.met.no tafmetar (CORS autorisé ;
   aviationweather.gov refuse le navigateur), dernière ligne des fichiers METAR/TAF, décodage français `wxDecode` (vent, visibilité,
   temps présent, nuages, T/Td, QNH, tendance), METAR/TAF bruts affichés et « font foi ». Cache `coa-wx`, relu toutes les 10 min.
+- **Fréquences LFML** (`FREQ`, `freqView`, rubrique Météo et fréquences + ligne ATIS/Tour/Sol/Prévol dans la carte météo) :
+  AIP France AD 2 LFML.18, eAIP AIRAC du 19 mars 2026 (ATIS 125.355, Tour 133.100 aux. 123.725, Sol 121.905, Prévol 121.730,
+  Approche par secteurs). À revérifier à chaque cycle AIRAC. Pas d'ATIS texte public pour LFML (radio seulement).
+- **NOTAM LFML** (rubrique `notam`, thème Escale MRS) : relais Cloudflare `tools/notam-worker.js` (secrets FAA_CLIENT_ID /
+  FAA_CLIENT_SECRET de api.faa.gov, cache 30 min, CORS limité à l'appli, codes autorisés LFML/LFMM) → `NOTAM_URL` (vide = carte
+  « pas encore branchés »). L'API OACI a été écartée : 100 appels gratuits seulement, puis payant. Groupes par Q-code (`NQG` :
+  postes/aires de trafic MN-MK-MP, voies MX, pistes, balisage, radionav, aérodrome, procédures, obstacles, espace aérien),
+  état (`NQC` : LC fermé, AS hors service…), NOTAM expirés masqués, « à venir », texte brut. Cache `coa-notam`. **Couverture
+  LFML par l'API FAA à confirmer au premier vrai appel.** Le briefing officiel SIA fait foi (écrit dans l'appli).
 - **Favoris** (`coa-favs`, ☆/★) sur les cartes MUA et les lignes de l'annuaire ; section « Favoris » sur l'accueil (fiches en
   tuiles, numéros avec Appeler/SMS). Gestionnaire global en phase de capture (`data-fav`).
 

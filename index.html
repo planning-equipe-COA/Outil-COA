@@ -377,7 +377,7 @@ const HANDLERS=["Aviapartner","Alyzia","Air France Handling","Onet","WFS","Jetex
 
 /* ---------- État ---------- */
 let AP=[],AL=[],PL=[],loaded=false;
-const TABS=[["home","Accueil"],["mua","MUA"],["ap","Aéroports"],["al","Compagnies"],["pl","Avions"],["wx","Météo"],["ct","Contacts MRS"],["dl","Codes retard"],["ab","Abréviations"],["nato","Alphabet"],["all","Tout"]];
+const TABS=[["home","Accueil"],["mua","MUA"],["ap","Aéroports"],["al","Compagnies"],["pl","Avions"],["wx","Météo"],["notam","NOTAM"],["ct","Contacts MRS"],["dl","Codes retard"],["ab","Abréviations"],["nato","Alphabet"],["all","Tout"]];
 let tab="home";let STRICT=false;
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -387,7 +387,7 @@ function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localSto
 
 $("#tabs").innerHTML=TABS.map(([k,l])=>`<button data-k="${k}">${l}</button>`).join("");
 const THEMES=[["Référentiels",[["mua","MUA · fiches de postes","Postes, avions autorisés, plans"],["ap","Aéroports","Codes IATA et OACI"],["al","Compagnies","Codes IATA, OACI et indicatifs"],["pl","Avions","Types, envergure, sillage"]]],
-  ["Escale MRS",[["wx","Météo LFML","METAR et TAF décodés"],["ct","Contacts MRS","Assistants et services, appeler ou SMS"]]],
+  ["Escale MRS",[["wx","Météo et fréquences","METAR, TAF, ATIS, tour, sol"],["notam","NOTAM LFML","Pistes, voies, postes, balisage"],["ct","Contacts MRS","Assistants et services, appeler ou SMS"]]],
   ["Codes et langage",[["dl","Codes retard","Codes IATA 00 à 99"],["ab","Abréviations","A-CDM, messages, PMR, météo"],["nato","Alphabet","Alphabet OTAN, épellation"]]],
   ["Recherche",[["home","Accueil","Toutes les rubriques en tuiles"],["all","Tout","Une seule recherche dans toutes les rubriques"]]]];
 const tabName=k=>{for(const [,it] of THEMES)for(const [kk,l] of it)if(kk===k)return l;return ""};
@@ -404,7 +404,8 @@ const TI={
  dl:'<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/>',
  ab:'<path d="M4 6h16M4 12h10M4 18h13"/>',
  nato:'<path d="M5 19 9.5 5h1L15 19M6.5 14.5h7M17 9h4M19 7v4"/>',
- wx:'<path d="M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.2 9.6 4.2 4.2 0 0 0 7 18z"/>'};
+ wx:'<path d="M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.2 9.6 4.2 4.2 0 0 0 7 18z"/>',
+ notam:'<path d="M12 3.5 2.5 20h19zM12 10v4.5"/><circle cx="12" cy="17.3" r=".9" fill="currentColor"/>'};
 function favsView(){
   const f=getFavs();if(!f.length)return "";
   const muaF=f.filter(k=>k.startsWith("mua:")).map(k=>MUA.sheets&&MUA.sheets.find(s=>"mua:"+s.poste+s.part===k)).filter(Boolean);
@@ -539,6 +540,14 @@ function wxDecode(raw){
   }
   return o;
 }
+/* Fréquences LFML : AIP France AD 2 LFML.18 (eAIP AIRAC du 19 mars 2026) — à vérifier sur l'AIP en vigueur */
+const FREQ=[["ATIS","PROVENCE","125.355",""],["Tour","PROVENCE Tour","133.100","auxiliaire 123.725"],["Sol","PROVENCE Sol","121.905",""],
+  ["Prévol","PROVENCE Prévol","121.730",""],["Approche","PROVENCE Approche","120.205","secteurs MZ 1 à 3"],["Approche","PROVENCE Approche","120.880 / 121.430","secteurs MAC 1 à 10"],
+  ["Approche","PROVENCE Approche","124.350","secteurs ME 1 et 2"],["Approche","PROVENCE Approche","132.300","secteur MB"],["Approche","PROVENCE Approche","127.725 / 129.475","auxiliaires"],
+  ["Information","PROVENCE Information","124.350 / 126.260 / 132.300 / 132.950","SIV"],["Urgence","","121.500","détresse"]];
+function freqView(){return `<div class="wx"><div class="wxh"><b>Fréquences LFML</b><span class="sub">AIP · AD 2 LFML.18</span></div>
+  ${FREQ.map(([s,cs,f,n])=>`<div class="u-line" style="padding:5px 0;border-bottom:1px solid var(--line)"><div class="u-text"><span><b>${s}</b> <span class="sub">${esc(cs)}</span></span>${n?`<span class="u-note">${esc(n)}</span>`:""}</div><span class="u-tel" style="font-weight:700">${esc(f)}</span></div>`).join("")}
+  <p class="sub">Source : AIP France, AD 2 LFML.18 (AIRAC du 19 mars 2026), toutes H24. Les fréquences peuvent changer à chaque cycle AIRAC : vérifie l'AIP en vigueur sur sia.aviation-civile.gouv.fr. L'ATIS n'existe qu'en radio (pas de version texte publique).</p></div>`}
 function wxCard(full){
   if(!WX.metar&&!WX.loading)wxLoad();
   if(!WX.metar)return `<div class="wx"><div class="wxh"><b>Météo LFML</b></div><div class="sub">${WX.err?esc(WX.err):"Chargement…"}</div></div>`;
@@ -548,7 +557,41 @@ function wxCard(full){
   return `<div class="wx"><div class="wxh"><b>Météo LFML</b><span class="sub">${esc(o.time)}</span>${full?'<button class="btn" id="wxRefresh" style="margin-left:auto;font-size:12px;padding:4px 8px">Actualiser</button>':""}</div>
   <div class="wxgrid">${cell("Vent",o.wind)}${cell("Visibilité",o.vis)}${cell("Temps",o.wx.join(", "))}${cell("Nuages",o.clouds.join(", "))}${cell("Température",o.temp)}${cell("Point de rosée",o.dew)}${cell("QNH",o.qnh)}</div>
   ${o.trend?`<div class="sub" style="margin-top:6px">Tendance : ${esc(o.trend)}</div>`:""}
+  <div class="sub" style="margin-top:6px">ATIS <b>125.355</b> · Tour <b>133.100</b> · Sol <b>121.905</b> · Prévol <b>121.730</b></div>
   ${full?`<div class="raw">METAR ${esc(WX.metar)}</div><div class="raw">TAF ${esc(WX.taf)}</div><p class="sub">Source : MET Norway (api.met.no), relevés officiels de LFML. ${WX.err?esc(WX.err)+" · ":""}Relevé chargé il y a ${age} min. Le décodage est une aide : le METAR et le TAF bruts font foi.</p>`:`<div class="sub" style="margin-top:6px">Toucher pour le METAR et le TAF complets${age>60?` · relevé d'il y a ${age} min`:""}</div>`}</div>`;
+}
+
+/* NOTAM LFML : relais Cloudflare (tools/notam-worker.js) qui garde les identifiants de l'API NOTAM de la FAA.
+   NOTAM_URL vide = pas encore branché. Dernière liste gardée (coa-notam) pour l'usage hors connexion. */
+const NOTAM_URL="";
+const NT={list:null,at:0,err:"",loading:false};
+try{const c=JSON.parse(store("coa-notam")||"null");if(c){NT.list=c.list;NT.at=c.at}}catch(e){}
+async function notamLoad(force){
+  if(!NOTAM_URL||NT.loading||(!force&&NT.list&&Date.now()-NT.at<30*60e3))return;
+  NT.loading=true;NT.err="";
+  try{const r=await fetch(NOTAM_URL+"?icao=LFML",{cache:"no-store"});const j=await r.json();if(!r.ok||j.error)throw new Error(j.error||r.status);
+    NT.list=j.notams||[];NT.at=Date.now();store("coa-notam",JSON.stringify({list:NT.list,at:NT.at}))}
+  catch(e){NT.err="NOTAM indisponibles ("+(e.message||"réseau")+")."}
+  NT.loading=false;if(tab==="notam")render();
+}
+const NQG=[["Postes et aires de trafic",/^M[NKP]/],["Voies de circulation",/^MX/],["Pistes",/^M[RSTDUA]/],["Balisage",/^L/],["Radionavigation et ILS",/^[ING]/],
+  ["Aérodrome et services",/^[FSC]/],["Procédures",/^P/],["Obstacles",/^O/],["Espace aérien",/^[ARW]/],["Autres",/./]];
+const NQC={LC:"fermé",AS:"hors service",AU:"indisponible",CH:"modifié",CA:"activé",CS:"installé",CR:"remplacé",LT:"limité",AH:"horaires modifiés",AW:"retiré",LH:"fermé sauf…",LW:"travaux",HW:"travaux",XX:""};
+function ntDate(d){if(!d||/PERM/i.test(d))return "permanent";const t=new Date(d);return isNaN(t)?d:t.toLocaleString("fr-FR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit",timeZone:"UTC"})+" UTC"}
+function notamView(q){
+  if(!NOTAM_URL)return `<div class="card"><b>NOTAM LFML — pas encore branchés</b><p class="sub">Il faut un petit relais (gratuit) qui garde la clé de l'API NOTAM de la FAA. Les étapes sont prêtes : demande-les dans la conversation avec Claude.</p></div>`;
+  if(!NT.list)return `<div class="info">${NT.err?esc(NT.err):"Chargement des NOTAM…"}</div>`;
+  const now=Date.now();
+  let list=NT.list.filter(n=>!n.end||/PERM/i.test(n.end)||new Date(n.end).getTime()>now);
+  if(q)list=list.filter(n=>norm(n.id+" "+n.text+" "+n.full).includes(q));
+  const groups=NQG.map(([name,re])=>[name,[]]);
+  list.forEach(n=>{const subj=(n.q||"").replace(/^Q/,"").slice(0,2);const i=NQG.findIndex(([,re])=>re.test(subj));groups[i<0?groups.length-1:i][1].push(n)});
+  const age=Math.round((now-NT.at)/60e3);
+  return `<div class="info">${list.length} NOTAM en vigueur ou à venir pour LFML · mis à jour il y a ${age} min${NT.err?" · "+esc(NT.err):""} <button class="btn" id="ntRefresh" style="font-size:12px;padding:3px 8px">Actualiser</button></div>
+  ${groups.filter(g=>g[1].length).map(([name,ns])=>`<details class="agrp"${q||/^(Postes|Voies|Pistes)/.test(name)?" open":""}><summary>${esc(name)} <span class="cnt">${ns.length}</span></summary><div class="abody">${ns.map(n=>{const c=NQC[(n.q||"").replace(/^Q/,"").slice(2,4)];const started=n.start&&new Date(n.start).getTime()>now;
+    return `<div class="u-row" style="display:block;padding:8px 0"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b>${hl(n.id,q)}</b>${c?`<span class="u-ext" style="margin:0">${esc(c)}</span>`:""}${started?'<span class="u-ext" style="margin:0;color:#b26a00">à venir</span>':""}<span class="sub">${!n.end||/PERM/i.test(n.end)?"depuis le "+esc(ntDate(n.start))+" · permanent":"du "+esc(ntDate(n.start))+" au "+esc(ntDate(n.end))}</span></div>
+    <div style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px;margin-top:4px;white-space:pre-wrap">${hl(n.text,q)}</div></div>`}).join("")}</div></details>`).join("")||'<div class="info">Aucun NOTAM.</div>'}
+  <p class="sub">Source : API NOTAM de la FAA (copie des NOTAM internationaux). Aide à la consultation uniquement : le briefing officiel du SIA (sofia-briefing.aviation-civile.gouv.fr) fait foi.</p>`;
 }
 
 /* Favoris : « mua:<poste+fiche> » ou « annu:<groupe>|<libellé> » (localStorage coa-favs) */
@@ -928,7 +971,8 @@ function render(){
     case "nato":h=natoTable(q);break;
     case "ct":h=ctView(q);break;
     case "home":if(q){tab="all";return render()}h=homeView();break;
-    case "wx":h=wxCard(true);wxLoad();break;
+    case "wx":h=wxCard(true)+freqView();wxLoad();break;
+    case "notam":h=notamView(q);notamLoad();break;
     case "mua":h=muaView(q);break;
     default:{
       if(!q){h=`<div class="card"><b>Recherche globale</b><p class="sub">Une seule barre pour tout : poste MUA, code aéroport, compagnie, type d'avion, code retard, abréviation ou contact. Les onglets filtrent par rubrique.</p></div>`;break}
@@ -954,6 +998,7 @@ function render(){
   bindMua();
   document.querySelectorAll("[data-go]").forEach(b=>b.onclick=e=>{if(e.target.closest("a,button:not(.tile)"))return;tab=b.dataset.go;location.hash=tab;render();scrollTo(0,0)});
   const wr=$("#wxRefresh");if(wr)wr.onclick=()=>{wr.textContent="…";wxLoad(true)};
+  const nr=$("#ntRefresh");if(nr)nr.onclick=()=>{nr.textContent="…";notamLoad(true)};
 }
 render();
 if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").catch(()=>{})}
