@@ -82,6 +82,11 @@ L'utilisateur échange en français.
   **À relever de nouveau à chaque saison IATA** (`MRS_DEST_DATE`). Avec recherche, une carte par aéroport (`flCard` : départ MRS → X,
   arrivée X → MRS, km et NM, étiquette « ligne MRS ») ; noms français des villes MRS reconnus (« Londres », « Alger ») ;
   tri : code exact ou nom français exact, puis lignes MRS, puis nom/ville, puis pays. Même calcul `flightInfo`.
+- **Pays en français** (demandé le 20 nov. 2026) : `COUNTRY_FR` (175 noms anglais → français, générés avec Intl.DisplayNames
+  + corrections à la main pour les noms propres aux bases), `pfr()`. Ajouté aux textes cherchés des aéroports et compagnies
+  (Aéroports, Temps de vol, Tout) : « Tunisie », « Royaume-Uni », « États-Unis » marchent, l'anglais aussi. Pays affiché en français
+  dans Aéroports et Temps de vol. En Temps de vol, les aéroports MRS qui correspondent sont toujours ajoutés en tête (sinon
+  « États-Unis » ne montrait que les 40 premiers aéroports trouvés).
 - **Météo LFML** (rubrique `wx`, thème Escale MRS, + carte en tête de l'accueil) : api.met.no tafmetar (CORS autorisé ;
   aviationweather.gov refuse le navigateur), dernière ligne des fichiers METAR/TAF, décodage français `wxDecode` (vent, visibilité,
   temps présent, nuages, T/Td, QNH, tendance), METAR/TAF bruts affichés et « font foi ». Cache `coa-wx`, relu toutes les 10 min.
