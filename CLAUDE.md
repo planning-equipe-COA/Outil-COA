@@ -72,9 +72,16 @@ L'utilisateur échange en français.
 - **Temps de vol MRS ↔ aéroport** : `airports.json` a maintenant lat/lon (colonnes 8 et 9). `flightInfo` : orthodromie,
   30 min + distance à 800 km/h, vent moyen d'ouest −6,5 %/+6,5 % selon la composante est ; affiché sous chaque aéroport
   (« MRS → JFK ≈ 8 h 48 · retour ≈ 7 h 53 · 6 274 km »), avec rappel « estimation, vérifier l'horaire ». Calé : ORY 1 h 18, ALG 1 h 29.
-- **Thème « Temps de vol »** (demandé, rubrique `fl`, entre Référentiels et Escale MRS) : `flView` — sans recherche, exemples
-  (`FL_EX`, pas une liste de lignes desservies) ; avec recherche, une carte par aéroport (`flCard` : départ MRS → X, arrivée X → MRS,
-  km et NM), tri : code exact, puis nom/ville, puis pays ; vols réguliers et grands aéroports d'abord. Même calcul `flightInfo`.
+- **Thème « Temps de vol »** (demandé, rubrique `fl`, entre Référentiels et Escale MRS) : `flView` — sans recherche, **liste des
+  destinations au départ de MRS** (`MRS_DEST`, `destList`, demandé le 20 nov. 2026) : 114 villes relevées sur
+  marseille.aeroport.fr → Vols et destinations → Toutes les destinations (la version anglaise omet la France métropolitaine),
+  saisonnières comprises, rangées par région (France et Corse, Outre-mer, Europe, Maghreb, Afrique/Moyen-Orient/Asie, Amérique
+  du Nord), une ligne par ville avec aller/retour ; toucher une ligne = recherche du code. Le site ne donne ni codes ni
+  compagnies : codes choisis ici, plusieurs codes quand la ville a plusieurs aéroports possibles (Paris ORY·CDG, Londres
+  LGW·LHR·STN, Milan MXP·BGY·LIN, Istanbul IST·SAW, Bruxelles BRU·CRL, New York EWR·JFK), le 1er sert au calcul.
+  **À relever de nouveau à chaque saison IATA** (`MRS_DEST_DATE`). Avec recherche, une carte par aéroport (`flCard` : départ MRS → X,
+  arrivée X → MRS, km et NM, étiquette « ligne MRS ») ; noms français des villes MRS reconnus (« Londres », « Alger ») ;
+  tri : code exact ou nom français exact, puis lignes MRS, puis nom/ville, puis pays. Même calcul `flightInfo`.
 - **Météo LFML** (rubrique `wx`, thème Escale MRS, + carte en tête de l'accueil) : api.met.no tafmetar (CORS autorisé ;
   aviationweather.gov refuse le navigateur), dernière ligne des fichiers METAR/TAF, décodage français `wxDecode` (vent, visibilité,
   temps présent, nuages, T/Td, QNH, tendance), METAR/TAF bruts affichés et « font foi ». Cache `coa-wx`, relu toutes les 10 min.
