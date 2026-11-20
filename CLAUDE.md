@@ -7,7 +7,10 @@ Le Planning COA est dans le dépôt `planning-equipe-COA/horaires` et a seulemen
 L'utilisateur échange en français.
 
 ## Fichiers
-- `index.html` — toute l'appli (HTML + CSS + JS). Onglets : MUA (1er), Tout, Aéroports, Compagnies, Avions, Codes retard,
+- `index.html` — toute l'appli (HTML + CSS + JS). **Page d'accueil** (onglet « Accueil », ouverte au lancement, bouton maison en
+  haut à droite ; demandée le 20 nov. 2026) : thèmes de haut en bas (`THEMES` sauf Recherche), tuiles encadrées 2 par ligne en
+  portrait (`.tiles`, minmax 150 px), icône au trait (`TI`), toucher = rubrique ; taper une recherche depuis l'accueil bascule
+  sur « Tout ». Onglets : Accueil, MUA, Tout, Aéroports, Compagnies, Avions, Codes retard,
   Abréviations, Alphabet, Contacts MRS. Une barre de recherche ; codes exacts (IATA/OACI) en premier. Onglet dans le `#hash`.
   Codes retard IATA (AHM 730), abréviations, alphabet OTAN, `ACX` (code OACI d'envergure, sillage, envergure indicative)
   écrits dans le fichier. **Contacts MRS = numéros utiles comme dans le Planning** (demandé) : services triés par ordre
@@ -46,7 +49,7 @@ L'utilisateur échange en français.
   Le sel existant est réutilisé (même code). Poste lu dans le nom du fichier (`05-B` → 5B, `09-B-b` → 9B fiche b).
   Pour ajouter des fiches : relancer avec TOUTES les fiches (l'index est refait), supprimer les anciens `mua/*.enc` d'abord.
   Changer le code = supprimer `mua/meta.json` (nouveau sel) puis tout reconstruire ; les téléphones redemandent le code.
-- Appli : onglet MUA (ouvert par défaut) → code demandé une fois, clé AES dérivée gardée dans localStorage `coa-mua-k`
+- Appli : onglet MUA → code demandé une fois, clé AES dérivée gardée dans localStorage `coa-mua-k`
   (« Verrouiller le MUA sur ce téléphone » dans Réglages). Cartes par fiche (poste en badge jaune sur noir, avions, consignes) ;
   recherche par poste exact (5B) ou type (A321, 777 : alias développés « A318 / 319 » → A319) ; aussi dans « Tout ».
   Visionneuse plein écran (`#viewer`) : **paysage automatique** (demandé) — téléphone tenu droit, toute la visionneuse est
