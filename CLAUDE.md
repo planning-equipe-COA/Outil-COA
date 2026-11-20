@@ -11,7 +11,7 @@ L'utilisateur échange en français.
   haut à droite ; demandée le 20 nov. 2026) : thèmes de haut en bas (`THEMES` sauf Recherche), tuiles encadrées 2 par ligne en
   portrait (`.tiles`, minmax 150 px), icône au trait (`TI`), toucher = rubrique ; taper une recherche depuis l'accueil bascule
   sur « Tout ». Thèmes (`THEMES`, même ordre pour l'accueil, le menu et les onglets ; demandé le 20 nov.) : **Référentiels** (MUA, Aéroports,
-  Compagnies, Avions) en premier, Escale MRS (Contacts MRS), Codes et langage (Codes retard, Abréviations, Alphabet), Recherche
+  Compagnies, Avions) en premier, Temps de vol, Escale MRS (Météo et fréquences, NOTAM, (Contacts MRS), Codes et langage (Codes retard, Abréviations, Alphabet), Recherche
   (Accueil, Tout ; absente de l'accueil). Onglets : Accueil, MUA, Aéroports, Compagnies, Avions, Contacts MRS, Codes retard,
   Abréviations, Alphabet, Tout. Une barre de recherche ; codes exacts (IATA/OACI) en premier. Onglet dans le `#hash`.
   Codes retard IATA (AHM 730), abréviations, alphabet OTAN, `ACX` (code OACI d'envergure, sillage, envergure indicative)
@@ -39,6 +39,9 @@ L'utilisateur échange en français.
 - **Temps de vol MRS ↔ aéroport** : `airports.json` a maintenant lat/lon (colonnes 8 et 9). `flightInfo` : orthodromie,
   30 min + distance à 800 km/h, vent moyen d'ouest −6,5 %/+6,5 % selon la composante est ; affiché sous chaque aéroport
   (« MRS → JFK ≈ 8 h 48 · retour ≈ 7 h 53 · 6 274 km »), avec rappel « estimation, vérifier l'horaire ». Calé : ORY 1 h 18, ALG 1 h 29.
+- **Thème « Temps de vol »** (demandé, rubrique `fl`, entre Référentiels et Escale MRS) : `flView` — sans recherche, exemples
+  (`FL_EX`, pas une liste de lignes desservies) ; avec recherche, une carte par aéroport (`flCard` : départ MRS → X, arrivée X → MRS,
+  km et NM), tri : code exact, puis nom/ville, puis pays ; vols réguliers et grands aéroports d'abord. Même calcul `flightInfo`.
 - **Météo LFML** (rubrique `wx`, thème Escale MRS, + carte en tête de l'accueil) : api.met.no tafmetar (CORS autorisé ;
   aviationweather.gov refuse le navigateur), dernière ligne des fichiers METAR/TAF, décodage français `wxDecode` (vent, visibilité,
   temps présent, nuages, T/Td, QNH, tendance), METAR/TAF bruts affichés et « font foi ». Cache `coa-wx`, relu toutes les 10 min.

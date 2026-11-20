@@ -114,6 +114,13 @@ body.noscroll{overflow:hidden}
 .ftab td,.ftab th{padding:8px;border-bottom:1px solid var(--line);font-size:14px;text-align:left;vertical-align:top}
 .ftab .mbadge{font-size:15px;min-width:44px;padding:2px 6px;cursor:pointer;display:inline-block}
 .ft{margin-top:4px;font-size:13px;color:var(--ink)}
+.flc{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:12px;margin-bottom:10px}
+.flc .fh{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.flc .fh b{font-size:16px}
+.flrow{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+.flbox{background:var(--bg);border-radius:10px;padding:8px 10px}
+.flbox span{display:block;font-size:12px;color:var(--mute)}
+.flbox strong{font-size:20px;color:var(--acc)}
 .ft b{color:var(--acc)}
 .wx{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:12px;margin-bottom:6px}
 .wxh{display:flex;align-items:center;gap:8px;margin-bottom:6px}
@@ -377,7 +384,7 @@ const HANDLERS=["Aviapartner","Alyzia","Air France Handling","Onet","WFS","Jetex
 
 /* ---------- État ---------- */
 let AP=[],AL=[],PL=[],loaded=false;
-const TABS=[["home","Accueil"],["mua","MUA"],["ap","Aéroports"],["al","Compagnies"],["pl","Avions"],["wx","Météo"],["notam","NOTAM"],["ct","Contacts MRS"],["dl","Codes retard"],["ab","Abréviations"],["nato","Alphabet"],["all","Tout"]];
+const TABS=[["home","Accueil"],["mua","MUA"],["ap","Aéroports"],["al","Compagnies"],["pl","Avions"],["fl","Temps de vol"],["wx","Météo"],["notam","NOTAM"],["ct","Contacts MRS"],["dl","Codes retard"],["ab","Abréviations"],["nato","Alphabet"],["all","Tout"]];
 let tab="home";let STRICT=false;
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -387,6 +394,7 @@ function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localSto
 
 $("#tabs").innerHTML=TABS.map(([k,l])=>`<button data-k="${k}">${l}</button>`).join("");
 const THEMES=[["Référentiels",[["mua","MUA · fiches de postes","Postes, avions autorisés, plans"],["ap","Aéroports","Codes IATA et OACI"],["al","Compagnies","Codes IATA, OACI et indicatifs"],["pl","Avions","Types, envergure, sillage"]]],
+  ["Temps de vol",[["fl","Temps de vol","Depuis et vers Marseille"]]],
   ["Escale MRS",[["wx","Météo et fréquences","METAR, TAF, ATIS, tour, sol"],["notam","NOTAM LFML","Pistes, voies, postes, balisage"],["ct","Contacts MRS","Assistants et services, appeler ou SMS"]]],
   ["Codes et langage",[["dl","Codes retard","Codes IATA 00 à 99"],["ab","Abréviations","A-CDM, messages, PMR, météo"],["nato","Alphabet","Alphabet OTAN, épellation"]]],
   ["Recherche",[["home","Accueil","Toutes les rubriques en tuiles"],["all","Tout","Une seule recherche dans toutes les rubriques"]]]];
@@ -405,6 +413,7 @@ const TI={
  ab:'<path d="M4 6h16M4 12h10M4 18h13"/>',
  nato:'<path d="M5 19 9.5 5h1L15 19M6.5 14.5h7M17 9h4M19 7v4"/>',
  wx:'<path d="M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.2 9.6 4.2 4.2 0 0 0 7 18z"/>',
+ fl:'<circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9.5 2.5h5"/><path d="M18.5 4.5l1.5 1.5"/>',
  notam:'<path d="M12 3.5 2.5 20h19zM12 10v4.5"/><circle cx="12" cy="17.3" r=".9" fill="currentColor"/>'};
 function favsView(){
   const f=getFavs();if(!f.length)return "";
@@ -468,6 +477,24 @@ function flightInfo(lat,lon){
   return {d:Math.round(d),go,back};
 }
 const hm=m=>`${Math.floor(m/60)} h ${String(m%60).padStart(2,"0")}`;
+/* Rubrique « Temps de vol » : une carte par aéroport, aller MRS → X et retour X → MRS */
+/* exemples affichés sans recherche (pas une liste des lignes desservies) */
+const FL_EX=["ORY","CDG","NTE","LIL","BES","BIA","AJA","ALG","TUN","CMN","LHR","AMS","FRA","MAD","IST","DXB","JFK","YUL"];
+function flCard(r,q){const f=flightInfo(r[7],r[8]);if(!f)return "";const code=r[0]||r[1];
+  return `<div class="flc"><div class="fh"><b>${hl(code,q)}</b><span>${hl(r[2],q)}</span><span class="sub">${hl(r[3],q)} · ${hl(r[4],q)}</span></div>
+  <div class="flrow"><div class="flbox"><span>Départ MRS → ${esc(code)}</span><strong>≈ ${hm(f.go)}</strong></div><div class="flbox"><span>Arrivée ${esc(code)} → MRS</span><strong>≈ ${hm(f.back)}</strong></div></div>
+  <div class="sub" style="margin-top:6px">${f.d.toLocaleString("fr")} km · ${Math.round(f.d/1.852).toLocaleString("fr")} NM</div></div>`}
+function flView(q){
+  if(loaded!==true)return `<div class="info">Chargement des aéroports…</div>`;
+  const note='<p class="sub">Temps porte à porte estimés à partir de la distance (croisière ~800 km/h + 30 min de roulage, montée et descente), avec un vent moyen d\'ouest : un peu plus long vers l\'ouest, plus court vers l\'est. Vérifie toujours l\'horaire de la compagnie.</p>';
+  if(!q){const ex=FL_EX.map(c=>AP.find(r=>r[0]===c)).filter(Boolean);
+    return `<div class="info">Tape une destination ou une provenance dans la barre de recherche : code IATA (ORY), OACI (LFPO), ville ou pays.</div><h2>Exemples</h2>${ex.map(r=>flCard(r,"")).join("")}${note}`}
+  STRICT=true;const {total,rows}=search(AP,r=>[r[0],r[1]],r=>[r[2],r[3],r[4]],q,40);STRICT=false;
+  const Q=q.toUpperCase(),rel=r=>(r[0]===Q||r[1]===Q)?3:(norm(r[2]+" "+r[3]).includes(q)?2:1);
+  const list=rows.filter(r=>r[0]||r[1]).sort((a,b)=>(rel(b)-rel(a))||(b[6]-a[6])||("LMS".indexOf(a[5])-"LMS".indexOf(b[5])));
+  if(!list.length)return `<div class="info">Aucun aéroport pour « ${esc(q)} ».</div>`;
+  return list.slice(0,20).map(r=>flCard(r,q)).join("")+(total>20?`<div class="info">${total} résultats : précise la recherche.</div>`:"")+note;
+}
 function apTable(q,limit){
   if(!q)return `<div class="info">Tape un code IATA (MRS), OACI (LFML), une ville ou un pays. ${AP.length.toLocaleString("fr")} aéroports.</div>`;
   const {total,rows}=search(AP,r=>[r[0],r[1]],r=>[r[2],r[3],r[4]],q,limit);
@@ -959,7 +986,7 @@ function render(){
   if(tab!=="ct"){CT.draft=null;if(AD.step!=="busy"){AD.step="";AD.draft=null}}
   const q=norm($("#q").value.trim());
   const out=$("#out");
-  const needData=["all","ap","al","pl"].includes(tab);
+  const needData=["all","ap","al","pl","fl"].includes(tab);
   if(needData&&loaded!==true){out.innerHTML=`<div class="info">${loaded==="err"?"Impossible de charger les bases de codes.":"Chargement des bases…"}</div>`;if(tab!=="all")return}
   let h="";
   switch(tab){
@@ -973,6 +1000,7 @@ function render(){
     case "home":if(q){tab="all";return render()}h=homeView();break;
     case "wx":h=wxCard(true)+freqView();wxLoad();break;
     case "notam":h=notamView(q);notamLoad();break;
+    case "fl":h=flView(q);break;
     case "mua":h=muaView(q);break;
     default:{
       if(!q){h=`<div class="card"><b>Recherche globale</b><p class="sub">Une seule barre pour tout : poste MUA, code aéroport, compagnie, type d'avion, code retard, abréviation ou contact. Les onglets filtrent par rubrique.</p></div>`;break}
