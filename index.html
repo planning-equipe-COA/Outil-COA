@@ -72,6 +72,9 @@ body.noscroll{overflow:hidden}
 .u-edit-head{display:grid;grid-template-columns:1fr auto;gap:6px;align-items:center}
 .u-edit-tel{display:grid;grid-template-columns:1fr 1fr 2.2em;gap:6px;align-items:center;padding-left:10px}
 .u-input{font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%;min-width:0}
+.adline{grid-template-columns:1fr 1fr 2.2em;grid-template-areas:"a a x" "b c x";padding:6px 0 6px 10px;border-top:1px dashed var(--line)}
+.adline [data-f="0"]{grid-area:a;font-weight:600}.adline [data-f="1"]{grid-area:b}.adline [data-f="2"]{grid-area:c}.adline .u-link{grid-area:x}
+@media (max-width:380px){.adline{grid-template-columns:1fr 2.2em;grid-template-areas:"a x" "b x" "c x"}}
 .u-link{border:0;background:none;color:var(--acc);font:inherit;font-size:14px;cursor:pointer;padding:4px 0;text-align:left}
 @media (max-width:380px){.u-edit-tel{grid-template-columns:1fr 2.2em}.u-edit-tel [data-f=note]{grid-column:1}.u-edit-tel>:last-child{grid-row:1;grid-column:2}}
 /* annuaire COA (chiffré) */
@@ -615,7 +618,8 @@ function annuView(q,limit){
 function ctView(q){
   if(CT.draft)return ctEditView();
   let annu="";
-  if(MUA.annu){const r=annuView(q);annu=`<div class="ahead"><h2>Annuaire COA</h2><span class="sub">mis à jour le ${esc(MUA.annu.maj||"")}</span></div>${r.html||(q?'<div class="info">Rien dans l\'annuaire pour cette recherche.</div>':"")}`}
+  if(MUA.annu&&AD.step&&AD.step!=="busy")return adView();
+  if(MUA.annu){const r=annuView(q);annu=`<div class="ahead"><h2>Annuaire COA</h2><span class="sub">mis à jour le ${esc(MUA.annu.maj||"")}</span></div>${r.html||(q?'<div class="info">Rien dans l\'annuaire pour cette recherche.</div>':"")}${q?"":`<p><button class="btn" id="adStart">${AD.step==="busy"?"…":"Modifier l'annuaire (responsable)"}</button></p>`}`}
   else annu=`<div class="card"><b>Annuaire COA protégé</b><p class="sub">Les numéros des assistants, services et portes sont chiffrés avec le code du MUA. Ouvre l'onglet MUA et saisis le code pour les voir.</p></div>`;
   return annu+`<div class="ahead" style="margin-top:18px"><h2>Mes numéros</h2><span class="sub">sur ce téléphone</span></div>`+ctMine(q);
 }
@@ -642,6 +646,9 @@ function ctEditView(){
 function ctReadDraft(){document.querySelectorAll(".u-edit").forEach(el=>{const u=CT.draft[+el.dataset.i];u.label=el.querySelector('[data-f=label]').value;
   el.querySelectorAll(".u-edit-tel").forEach(r=>{const t=u.tels[+r.dataset.j];t.tel=r.querySelector('[data-f=tel]').value;t.note=r.querySelector('[data-f=note]').value})})}
 function bindContacts(){
+  bindAdmin();
+  const as=document.getElementById("adStart");if(as)as.onclick=adStart;
+  if(AD.step&&AD.step!=="busy")return;
   if(CT.draft){
     const out=$("#out");
     out.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{ctReadDraft();CT.draft.splice(+b.dataset.del,1);render()});
@@ -656,6 +663,7 @@ function bindContacts(){
       saveContacts(list);CT.draft=null;CT.msg="✓ Numéros enregistrés.";render();setTimeout(()=>{CT.msg=""},3000)};
     return;
   }
+  if(!$("#ctEdit"))return;
   $("#ctEdit").onclick=()=>{CT.draft=getContacts().slice().sort(byLabel).map(u=>({label:u.label,tels:u.tels.length?u.tels.map(t=>({...t})):[{tel:"",note:""}]}));$("#q").value="";render()};
   $("#ctCopy").onclick=async()=>{const txt=JSON.stringify(getContacts());try{await navigator.clipboard.writeText(txt);$("#ctCopy").textContent="Copié ✓"}catch(e){$("#ctBox").classList.remove("hide");$("#ctTxt").value=txt;$("#ctMsg").textContent="Copie auto refusée : sélectionne le texte ci-dessous."}};
   $("#ctImp").onclick=()=>$("#ctBox").classList.toggle("hide");
@@ -674,7 +682,7 @@ async function muaOpenIndex(){
   const plain=await muaDecrypt(await muaFetch("index.enc"));
   MUA.sheets=JSON.parse(new TextDecoder().decode(plain)).sheets;
   MUA.sheets.forEach(s=>{s._n=norm(s.poste+" "+s.alias+" "+s.text)});
-  try{MUA.annu=JSON.parse(new TextDecoder().decode(await muaDecrypt(await muaFetch("annuaire.enc"))))}catch(e){MUA.annu=null}
+  MUA.annu=await annuLoad();
   MUA.state="ok";
   setTimeout(muaPrefetch,1500);
 }
@@ -683,7 +691,7 @@ async function muaUnlock(code){
   try{
     const meta=await (await fetch("mua/meta.json",{cache:"no-cache"})).json();
     const base=await crypto.subtle.importKey("raw",new TextEncoder().encode(code.trim().toLowerCase()),"PBKDF2",false,["deriveKey"]);
-    MUA.key=await crypto.subtle.deriveKey({name:"PBKDF2",hash:"SHA-256",salt:unb64(meta.salt),iterations:meta.iter},base,{name:"AES-GCM",length:256},true,["decrypt"]);
+    MUA.key=await crypto.subtle.deriveKey({name:"PBKDF2",hash:"SHA-256",salt:unb64(meta.salt),iterations:meta.iter},base,{name:"AES-GCM",length:256},true,["encrypt","decrypt"]);
     await muaOpenIndex();
     store("coa-mua-k",b64(await crypto.subtle.exportKey("raw",MUA.key)));
   }catch(e){MUA.key=null;MUA.state="idle";MUA.err=(e&&e.name==="OperationError")?"Code incorrect.":"Impossible de charger les fiches (pas de réseau ?).";}
@@ -691,10 +699,106 @@ async function muaUnlock(code){
 }
 async function muaRestore(){
   const k=store("coa-mua-k");if(!k)return;
-  try{MUA.key=await crypto.subtle.importKey("raw",unb64(k),{name:"AES-GCM"},false,["decrypt"]);MUA.state="busy";render();await muaOpenIndex()}
+  try{MUA.key=await crypto.subtle.importKey("raw",unb64(k),{name:"AES-GCM"},false,["encrypt","decrypt"]);MUA.state="busy";render();await muaOpenIndex()}
   catch(e){MUA.state="idle";if(e&&e.name==="OperationError"){try{localStorage.removeItem("coa-mua-k")}catch(_){}MUA.err="Le code du MUA a changé : saisis le nouveau."}}
   render();
 }
+/* ---------- Annuaire partagé, modifiable par le responsable ----------
+   Dépôt de données séparé (public) : annuaire.enc (même chiffrement que le MUA) et cle.enc (clé GitHub « fine-grained »,
+   Contents en écriture sur CE dépôt seulement, chiffrée avec le code du MUA). Le code responsable n'est gardé que sous forme
+   d'empreinte PBKDF2 dans l'annuaire chiffré (verrou applicatif). Sans dépôt de données : annuaire livré avec l'appli. */
+const DATA_REPO="planning-equipe-COA/Outil-COA-donnees";
+const ghUrl=f=>`https://api.github.com/repos/${DATA_REPO}/contents/${f}`;
+const ghHead=tok=>({Accept:"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28",...(tok?{Authorization:"Bearer "+tok}:{})});
+/* lecture par raw.githubusercontent (pas de limite d'appels, cache ~5 min) ; l'API n'est utilisée que pour écrire */
+async function ghRaw(f){const r=await fetch(`https://raw.githubusercontent.com/${DATA_REPO}/main/${f}?t=${Date.now()}`,{cache:"no-store"});if(r.status===404)return null;if(!r.ok)throw new Error("gh "+r.status);return r.arrayBuffer()}
+async function muaEncrypt(bytes){const iv=crypto.getRandomValues(new Uint8Array(12));const ct=new Uint8Array(await crypto.subtle.encrypt({name:"AES-GCM",iv},MUA.key,bytes));const out=new Uint8Array(12+ct.length);out.set(iv);out.set(ct,12);return out}
+const u8b64=u=>{let s="";for(let i=0;i<u.length;i+=8192)s+=String.fromCharCode(...u.subarray(i,i+8192));return btoa(s)};
+async function annuLoad(){
+  const dec=async buf=>JSON.parse(new TextDecoder().decode(await muaDecrypt(buf)));
+  let remote=null,cached=null;
+  try{const b=await ghRaw("annuaire.enc");if(b)remote={a:await dec(b),b:new Uint8Array(b)}}catch(e){}
+  try{const c=store("coa-annu-enc");if(c)cached=await dec(unb64(c).buffer)}catch(e){}
+  /* le fichier en ligne peut avoir jusqu'à 5 min de retard : on garde la version la plus récente (champ at) */
+  if(remote&&(!cached||(remote.a.at||"")>=(cached.at||""))){store("coa-annu-enc",u8b64(remote.b));remote.a._remote=true;return remote.a}
+  if(cached){cached._remote=true;return cached}
+  try{return await dec(await muaFetch("annuaire.enc"))}catch(e){return null}
+}
+async function adminHash(code,saltB64){const salt=saltB64?unb64(saltB64):crypto.getRandomValues(new Uint8Array(16));
+  const base=await crypto.subtle.importKey("raw",new TextEncoder().encode(code.trim().toLowerCase()),"PBKDF2",false,["deriveBits"]);
+  const bits=await crypto.subtle.deriveBits({name:"PBKDF2",hash:"SHA-256",salt,iterations:200000},base,256);
+  return {salt:b64(salt),hash:b64(bits)}}
+async function ghPut(tok,file,bytes,message){
+  let sha;const g=await fetch(ghUrl(file),{headers:ghHead(tok),cache:"no-store"});if(g.ok)sha=(await g.json()).sha;else if(g.status!==404)throw new Error(g.status===401||g.status===403?"cle":"gh "+g.status);
+  const r=await fetch(ghUrl(file),{method:"PUT",headers:{...ghHead(tok),"Content-Type":"application/json"},body:JSON.stringify({message,content:u8b64(bytes),...(sha?{sha}:{})})});
+  if(!r.ok)throw new Error(r.status===401||r.status===403?"cle":r.status===409?"conflit":"gh "+r.status);
+}
+async function ghToken(){const b=await ghRaw("cle.enc");if(!b)return null;return JSON.parse(new TextDecoder().decode(await muaDecrypt(b))).token}
+async function annuPublish(annu,tok){
+  annu.maj=new Date().toLocaleDateString("fr-FR");annu.at=new Date().toISOString();const clean={...annu};delete clean._remote;
+  const bytes=await muaEncrypt(new TextEncoder().encode(JSON.stringify(clean)));
+  await ghPut(tok,"annuaire.enc",bytes,"Annuaire mis à jour");
+  store("coa-annu-enc",u8b64(bytes));MUA.annu=Object.assign(clean,{_remote:true});
+}
+const AD={step:"",draft:null,msg:"",tok:null};
+function adErr(e){const m=String(e&&e.message||e);return m==="cle"?"La clé de publication est refusée par GitHub (expirée ou sans droit d'écriture sur le dépôt de données).":m==="conflit"?"Quelqu'un a modifié l'annuaire en même temps : réessaie.":m.startsWith("gh 404")?"Dépôt de données introuvable.":"Pas envoyé (réseau ?)."}
+function adView(){
+  if(AD.step==="setup")return `<div class="card"><b>Première configuration (responsable)</b>
+    <p class="sub">1. Crée sur GitHub une clé « fine-grained » limitée au dépôt <b>${DATA_REPO}</b>, permission <b>Contents : Read and write</b>.<br>2. Colle-la ci-dessous et choisis un <b>code responsable</b> (au moins 3 mots, différent du code du MUA). Il sera demandé pour chaque modification.</p>
+    <input class="u-input" id="adTok" placeholder="Clé GitHub (github_pat_…)" autocomplete="off" autocapitalize="none" spellcheck="false" style="margin-bottom:6px">
+    <input class="u-input" id="adC1" type="password" placeholder="Code responsable" autocomplete="new-password" style="margin-bottom:6px">
+    <input class="u-input" id="adC2" type="password" placeholder="Confirme le code responsable" autocomplete="new-password">
+    <p><button class="btn p" id="adSetup">Configurer</button> <button class="btn" id="adBack">Annuler</button></p><p class="sub" style="color:#c0392b">${esc(AD.msg)}</p></div>`;
+  if(AD.step==="unlock")return `<div class="card"><b>Modifier l'annuaire</b><p class="sub">Réservé au responsable de l'annuaire.</p>
+    <input class="u-input" id="adCode" type="password" placeholder="Code responsable" autocomplete="off">
+    <p><button class="btn p" id="adUnlock">Déverrouiller</button> <button class="btn" id="adBack">Annuler</button></p><p class="sub" style="color:#c0392b">${esc(AD.msg)}</p></div>`;
+  if(AD.step==="edit")return `<div class="card"><b>Modifier l'annuaire</b><p class="sub">Chaque groupe : nom, puis une ligne par service. Numéros séparés par « / » (ex. « 06 12 34 56 78 / 2190 »). Pour les portes : porte, poste, passerelle. Une ligne qui commence par « — » est un intertitre (ex. « — Cloison D »).</p>
+    ${AD.draft.groups.map((g,i)=>`<div class="u-edit" data-g="${i}" style="border-bottom:2px solid var(--line)">
+      <div class="u-edit-head"><input class="u-input" data-f="name" value="${esc(g.name)}" placeholder="Nom du groupe" style="font-weight:700"><button class="btn" type="button" data-delg="${i}" aria-label="Supprimer le groupe" style="height:40px">${IC_TRASH}</button></div>
+      ${g.items.map((it,j)=>`<div class="u-edit-tel adline" data-j="${j}"><input class="u-input" data-f="0" value="${esc(it[0])}" placeholder="${g.gates?"Porte":"Service"}"><input class="u-input" data-f="1" value="${esc(it[1]||"")}" placeholder="Numéro(s)" inputmode="tel"><input class="u-input" data-f="2" value="${esc(it[2]||"")}" placeholder="${g.gates?"Passerelle":"Précision"}"><button type="button" class="u-link" data-deli="${i},${j}" aria-label="Retirer la ligne">✕</button></div>`).join("")}
+      <button type="button" class="u-link" data-addi="${i}" style="padding-left:10px">+ Ajouter une ligne</button></div>`).join("")}
+    <p><button class="btn" id="adAddG">+ Ajouter un groupe</button></p>
+    <p><button class="btn p" id="adSave">Enregistrer pour l'équipe</button> <button class="btn" id="adBack">Annuler</button></p><p class="sub" style="color:#c0392b">${esc(AD.msg)}</p></div>`;
+  return "";
+}
+function adRead(){document.querySelectorAll("[data-g]").forEach(el=>{const g=AD.draft.groups[+el.dataset.g];g.name=el.querySelector('[data-f=name]').value;
+  el.querySelectorAll("[data-j]").forEach(r=>{const it=g.items[+r.dataset.j];[0,1,2].forEach(k=>{it[k]=r.querySelector(`[data-f="${k}"]`).value})})})}
+async function adStart(){AD.msg="";AD.step="busy";render();
+  try{AD.tok=await ghToken();AD.step=AD.tok?"unlock":"setup"}catch(e){AD.step="";AD.msg="";alertMsg("Dépôt de données injoignable (réseau ?).")}
+  render()}
+function alertMsg(m){CT.msg=m;render()}
+function bindAdmin(){
+  const q=id=>document.getElementById(id);
+  if(q("adBack"))q("adBack").onclick=()=>{AD.step="";AD.draft=null;AD.msg="";render()};
+  if(q("adSetup"))q("adSetup").onclick=async()=>{const tok=q("adTok").value.trim(),c1=q("adC1").value,c2=q("adC2").value;
+    if(!tok){AD.msg="Colle la clé GitHub.";return render()}
+    if(c1.trim().split(/[\s-]+/).filter(Boolean).length<3){AD.msg="Le code responsable doit faire au moins 3 mots.";return render()}
+    if(c1!==c2){AD.msg="Les deux codes ne sont pas identiques.";return render()}
+    q("adSetup").disabled=true;q("adSetup").textContent="Configuration…";
+    try{const r=await fetch(`https://api.github.com/repos/${DATA_REPO}`,{headers:ghHead(tok)});if(!r.ok)throw new Error(r.status===404?"gh 404":"cle");
+      const j=await r.json();if(j.permissions&&!j.permissions.push)throw new Error("cle");
+      await ghPut(tok,"cle.enc",await muaEncrypt(new TextEncoder().encode(JSON.stringify({token:tok,at:new Date().toISOString()}))),"Clé de publication");
+      const annu=JSON.parse(JSON.stringify(MUA.annu));annu.admin=await adminHash(c1);await annuPublish(annu,tok);
+      AD.step="";AD.msg="";CT.msg="✓ Annuaire partagé configuré. Tu peux maintenant le modifier.";render()}
+    catch(e){AD.msg=adErr(e);render()}};
+  if(q("adUnlock"))q("adUnlock").onclick=async()=>{const c=q("adCode").value;if(!c)return;q("adUnlock").disabled=true;
+    const a=MUA.annu.admin;const h=a&&await adminHash(c,a.salt);
+    if(!a||h.hash!==a.hash){AD.msg="Code responsable incorrect.";return render()}
+    AD.draft=JSON.parse(JSON.stringify(MUA.annu));AD.step="edit";AD.msg="";render()};
+  if(AD.step!=="edit")return;
+  document.querySelectorAll("[data-delg]").forEach(b=>b.onclick=()=>{adRead();if(confirmDel(b))return;AD.draft.groups.splice(+b.dataset.delg,1);render()});
+  document.querySelectorAll("[data-deli]").forEach(b=>b.onclick=()=>{adRead();const [i,j]=b.dataset.deli.split(",").map(Number);AD.draft.groups[i].items.splice(j,1);render()});
+  document.querySelectorAll("[data-addi]").forEach(b=>b.onclick=()=>{adRead();AD.draft.groups[+b.dataset.addi].items.push(["","",""]);render()});
+  q("adAddG").onclick=()=>{adRead();AD.draft.groups.push({name:"Nouveau groupe",color:"#8c8c8c",items:[["","",""]]});render()};
+  q("adSave").onclick=async()=>{adRead();
+    AD.draft.groups=AD.draft.groups.map(g=>({...g,name:g.name.trim(),items:g.items.map(it=>it.map(x=>String(x||"").trim())).filter(it=>it[0]||it[1])})).filter(g=>g.name);
+    q("adSave").disabled=true;q("adSave").textContent="Envoi…";
+    try{await annuPublish(AD.draft,AD.tok);AD.step="";AD.draft=null;CT.msg="✓ Annuaire enregistré et partagé avec l'équipe.";render()}
+    catch(e){AD.msg=adErr(e);render()}};
+}
+/* supprimer un groupe : deuxième toucher pour confirmer */
+function confirmDel(b){if(b.dataset.armed)return false;b.dataset.armed="1";b.textContent="Sûr ?";setTimeout(()=>{b.removeAttribute("data-armed");b.innerHTML=IC_TRASH},2500);return true}
+
 /* télécharge toutes les fiches une fois : le service worker les garde pour l'usage hors connexion */
 async function muaPrefetch(){try{await fetch("mua/annuaire.enc")}catch(e){}for(const s of MUA.sheets||[]){try{await fetch("mua/"+s.id+".enc")}catch(e){return}}}
 function muaLock(){MUA.key=null;MUA.sheets=null;MUA.annu=null;MUA.state="idle";Object.values(MUA.urls).forEach(u=>URL.revokeObjectURL(u));MUA.urls={};try{localStorage.removeItem("coa-mua-k")}catch(e){}render()}
@@ -809,7 +913,7 @@ muaRestore();
 function render(){
   document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.k===tab));
   $("#menuCur").textContent=tabName(tab);
-  if(tab!=="ct")CT.draft=null;
+  if(tab!=="ct"){CT.draft=null;if(AD.step!=="busy"){AD.step="";AD.draft=null}}
   const q=norm($("#q").value.trim());
   const out=$("#out");
   const needData=["all","ap","al","pl"].includes(tab);
