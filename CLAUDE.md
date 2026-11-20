@@ -18,6 +18,18 @@ L'utilisateur échange en français.
   qui ajoute un fichier. `manifest.json`, icônes `icon-192.png`, `icon-512.png`, `apple-touch-icon.png` (avion qui décolle
   au-dessus d'une piste + « COA », fond violet ; demandé le 20 nov. 2026 ; `?v=2` dans les liens, à changer si l'icône change).
 
-## À faire
-- MUA : en attente du PDF de l'utilisateur → extraire le texte par chapitres, consultable par la recherche
-  (pas de PDF intégré tel quel).
+## MUA (fiches de postes) — chiffré
+- Source : fiches PDF « Annexe au manuel des aires de stationnement » (iTarmac / aéroport), **document interne** : dépôt
+  public → **jamais de PDF, d'image ou de texte en clair dans le dépôt**. Choix de l'utilisateur (20 nov. 2026) : chiffré
+  avec un code d'accès donné de vive voix (jamais écrit dans le dépôt ni dans le code).
+- `tools/mua_build.py` : `MUA_CODE="…" python3 tools/mua_build.py DOSSIER_PDF` → `mua/meta.json` (sel, 600 000 itérations),
+  `mua/index.enc` (liste : poste, fiche a/b, date, page, avions [type, RdN, infos], consignes, alias de types, texte) et
+  `mua/<id>.enc` (JPEG 150 dpi, marges blanches coupées). PBKDF2-SHA256 → AES-GCM 256, fichier = IV 12 o + chiffré.
+  Le sel existant est réutilisé (même code). Poste lu dans le nom du fichier (`05-B` → 5B, `09-B-b` → 9B fiche b).
+  Pour ajouter des fiches : relancer avec TOUTES les fiches (l'index est refait), supprimer les anciens `mua/*.enc` d'abord.
+  Changer le code = supprimer `mua/meta.json` (nouveau sel) puis tout reconstruire ; les téléphones redemandent le code.
+- Appli : onglet MUA (ouvert par défaut) → code demandé une fois, clé AES dérivée gardée dans localStorage `coa-mua-k`
+  (« Verrouiller le MUA sur ce téléphone » dans Réglages). Cartes par fiche (poste en badge jaune sur noir, avions, consignes) ;
+  recherche par poste exact (5B) ou type (A321, 777 : alias développés « A318 / 319 » → A319) ; aussi dans « Tout ».
+  Visionneuse plein écran (`#viewer`) : paysage conseillé (bulle en portrait), zoom −/+, double-toucher, pincement,
+  fiche précédente/suivante, Échap. Après ouverture, toutes les fiches sont téléchargées une fois (hors connexion via sw.js).

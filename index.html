@@ -44,15 +44,37 @@ textarea{width:100%;min-height:90px;font-family:ui-monospace,monospace;font-size
 mark{background:#ffe58a;color:#000;border-radius:2px}
 @media (max-width:640px){.hm{display:none}th,td{padding:7px 8px}}
 #set.hide{display:none!important}
+/* MUA */
+.mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.mcard{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:12px;cursor:pointer;text-align:left;color:var(--ink);font:inherit;width:100%}
+.mcard:active{transform:scale(.99)}
+.mhead{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.mbadge{background:#111;color:#ffd200;font-weight:800;font-size:20px;letter-spacing:.04em;padding:4px 10px;border-radius:6px;min-width:58px;text-align:center}
+.mav{font-size:13px;line-height:1.35;margin:2px 0;color:var(--ink)}
+.mav .sub{font-size:12px}
+#viewer{position:fixed;inset:0;background:#0b0a10;z-index:30;display:flex;flex-direction:column}
+#viewer.hide{display:none}
+.vbar{display:flex;align-items:center;gap:6px;padding:6px 8px;padding-top:max(6px,env(safe-area-inset-top));background:#17151f;color:#fff}
+.vbar b{font-size:15px;margin-right:auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vbar button{background:#2a2738;color:#fff;border:0;border-radius:8px;min-width:38px;height:34px;font-size:16px;cursor:pointer}
+#vscroll{flex:1;overflow:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;display:flex}
+#vimg{display:block;margin:auto;max-width:none;background:#fff;user-select:none;-webkit-user-select:none}
+.vhint{position:absolute;left:50%;bottom:calc(14px + env(safe-area-inset-bottom));transform:translateX(-50%);background:rgba(0,0,0,.75);color:#fff;font-size:13px;padding:7px 12px;border-radius:999px;pointer-events:none;white-space:nowrap}
+@media (orientation:landscape){.vhint{display:none}}
 </style>
 </head>
 <body>
 <header>
   <h1>Boîte à outils COA <span>MRS · LFML</span><button id="gear" class="btn" style="margin-left:auto;padding:4px 8px;display:flex" title="Réglages" aria-label="Réglages"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></h1>
-  <input id="q" type="search" placeholder="Rechercher : MRS, LFML, Air France, AFR, A320, 93, WCHR…" autocomplete="off" autofocus>
+  <input id="q" type="search" placeholder="Rechercher : 5B, A321, MRS, LFML, AFR, 93, WCHR…" autocomplete="off" autofocus>
   <nav id="tabs"></nav>
 </header>
 <main id="out"></main>
+<div id="viewer" class="hide" role="dialog" aria-label="Fiche MUA">
+ <div class="vbar"><b id="vtitle"></b><button id="vprev" aria-label="Fiche précédente">‹</button><button id="vnext" aria-label="Fiche suivante">›</button><button id="vout" aria-label="Dézoomer">−</button><button id="vin" aria-label="Zoomer">+</button><button id="vclose" aria-label="Fermer">✕</button></div>
+ <div id="vscroll"><img id="vimg" alt=""></div>
+ <div class="vhint" id="vhint">Tourne le téléphone pour voir la fiche en grand</div>
+</div>
 <div id="set" class="hide" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20;display:flex;align-items:flex-start;justify-content:center;padding:40px 12px">
  <div class="card" style="max-width:420px;width:100%;margin:0">
   <div style="display:flex;align-items:center"><b style="font-size:16px">Réglages</b><button class="btn" id="setX" style="margin-left:auto">✕</button></div>
@@ -62,6 +84,9 @@ mark{background:#ffe58a;color:#000;border-radius:2px}
   <p style="text-align:center;font-weight:600;overflow-wrap:anywhere;margin:0 0 10px">planning-equipe-coa.github.io/Outil-COA</p>
   <p style="text-align:center"><button class="btn p" id="shareCopy">Envoyer le lien</button></p>
   <p class="sub"><strong>L'avoir comme une appli :</strong> sur iPhone, bouton Partager → « Sur l'écran d'accueil » ; sur Android, menu ⋮ → « Ajouter à l'écran d'accueil ». Elle fonctionne ensuite hors connexion.</p>
+  <h2>Fiches MUA</h2>
+  <p class="sub" id="muaSetInfo"></p>
+  <p><button class="btn hide" id="muaLock">Verrouiller le MUA sur ce téléphone</button></p>
   <h2>Sauvegarde des contacts</h2>
   <p class="sub">Les contacts restent dans ce navigateur. Utilise l'onglet Contacts MRS → « Copier (sauvegarde) » pour les transférer.</p>
  </div>
@@ -232,7 +257,7 @@ const HANDLERS=["Aviapartner","Alyzia","Air France Handling","Onet","WFS","Jetex
 /* ---------- État ---------- */
 let AP=[],AL=[],PL=[],loaded=false;
 const TABS=[["mua","MUA"],["all","Tout"],["ap","Aéroports"],["al","Compagnies"],["pl","Avions"],["dl","Codes retard"],["ab","Abréviations"],["nato","Alphabet"],["ct","Contacts MRS"]];
-let tab="all";let STRICT=false;
+let tab="mua";let STRICT=false;
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const norm=s=>String(s??"").normalize("NFD").replace(/[̀-ͯ]/g,"").toLowerCase();
@@ -326,9 +351,114 @@ function bindContacts(){
   $("#ctOk").onclick=()=>{try{const v=JSON.parse($("#ctTxt").value);if(!Array.isArray(v))throw 0;saveContacts(v);render()}catch(e){$("#ctMsg").textContent="Texte invalide."}};
 }
 
-function muaView(){
-  return `<div class="card"><b>Manuel (MUA) — en cours d'intégration</b><p class="sub">Le contenu du manuel sera ajouté ici, découpé par chapitres et consultable avec la barre de recherche du haut.</p></div>`;
+/* ---------- MUA (fiches chiffrées, code d'accès) ---------- */
+const MUA={key:null,sheets:null,state:"idle",err:"",urls:{},cur:-1,zoom:1};
+const b64=a=>btoa(String.fromCharCode(...new Uint8Array(a)));
+const unb64=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
+async function muaDecrypt(buf){const b=new Uint8Array(buf);return crypto.subtle.decrypt({name:"AES-GCM",iv:b.slice(0,12)},MUA.key,b.slice(12))}
+async function muaFetch(f){const r=await fetch("mua/"+f,{cache:"no-cache"});if(!r.ok)throw new Error(r.status);return r.arrayBuffer()}
+async function muaOpenIndex(){
+  const plain=await muaDecrypt(await muaFetch("index.enc"));
+  MUA.sheets=JSON.parse(new TextDecoder().decode(plain)).sheets;
+  MUA.sheets.forEach(s=>{s._n=norm(s.poste+" "+s.alias+" "+s.text)});
+  MUA.state="ok";
+  setTimeout(muaPrefetch,1500);
 }
+async function muaUnlock(code){
+  MUA.state="busy";MUA.err="";render();
+  try{
+    const meta=await (await fetch("mua/meta.json",{cache:"no-cache"})).json();
+    const base=await crypto.subtle.importKey("raw",new TextEncoder().encode(code.trim().toLowerCase()),"PBKDF2",false,["deriveKey"]);
+    MUA.key=await crypto.subtle.deriveKey({name:"PBKDF2",hash:"SHA-256",salt:unb64(meta.salt),iterations:meta.iter},base,{name:"AES-GCM",length:256},true,["decrypt"]);
+    await muaOpenIndex();
+    store("coa-mua-k",b64(await crypto.subtle.exportKey("raw",MUA.key)));
+  }catch(e){MUA.key=null;MUA.state="idle";MUA.err=(e&&e.name==="OperationError")?"Code incorrect.":"Impossible de charger les fiches (pas de réseau ?).";}
+  render();
+}
+async function muaRestore(){
+  const k=store("coa-mua-k");if(!k)return;
+  try{MUA.key=await crypto.subtle.importKey("raw",unb64(k),{name:"AES-GCM"},false,["decrypt"]);MUA.state="busy";render();await muaOpenIndex()}
+  catch(e){MUA.state="idle";if(e&&e.name==="OperationError"){try{localStorage.removeItem("coa-mua-k")}catch(_){}MUA.err="Le code du MUA a changé : saisis le nouveau."}}
+  render();
+}
+/* télécharge toutes les fiches une fois : le service worker les garde pour l'usage hors connexion */
+async function muaPrefetch(){for(const s of MUA.sheets||[]){try{await fetch("mua/"+s.id+".enc")}catch(e){return}}}
+function muaLock(){MUA.key=null;MUA.sheets=null;MUA.state="idle";Object.values(MUA.urls).forEach(u=>URL.revokeObjectURL(u));MUA.urls={};try{localStorage.removeItem("coa-mua-k")}catch(e){}render()}
+function muaMatch(q){
+  if(!MUA.sheets)return [];
+  if(!q)return MUA.sheets;
+  const Q=q.toUpperCase().replace(/\s+/g,"");
+  const exact=MUA.sheets.filter(s=>s.poste===Q);
+  if(exact.length)return exact;
+  const qq=norm(q).replace(/\s+/g,"");
+  return MUA.sheets.filter(s=>s._n.includes(norm(q))||s._n.replace(/\s+/g,"").includes(qq));
+}
+function muaCard(s,q){
+  const i=MUA.sheets.indexOf(s);
+  let av=s.avions;
+  if(q){const f=av.filter(a=>norm(a.t).replace(/\s+/g,"").includes(norm(q).replace(/\s+/g,"")));if(f.length)av=f}
+  const more=av.length>5?`<div class="sub">+ ${av.length-5} autre(s) type(s)</div>`:"";
+  return `<button class="mcard" data-sheet="${i}"><div class="mhead"><span class="mbadge">${esc(s.poste)}</span><div><b>Poste ${esc(s.poste)}${s.part?` · fiche ${esc(s.part)}`:""}</b><div class="sub">${s.date?"Mise à jour "+esc(s.date):""}${s.page?` · p. ${esc(s.page)}`:""}</div></div></div>
+  ${av.slice(0,5).map(a=>`<div class="mav">${hl(a.t,q)} <span class="sub">· RdN ${esc(a.rdn)}${a.info?" · "+esc(a.info):""}</span></div>`).join("")||'<div class="sub">Plan et consignes : toucher pour ouvrir</div>'}${more}
+  ${s.consignes.length?`<div class="sub" style="margin-top:4px">${s.consignes.length} consigne(s) d'exploitation</div>`:""}</button>`;
+}
+function muaView(q,limit){
+  if(MUA.state==="busy")return `<div class="info">Ouverture des fiches…</div>`;
+  if(!MUA.sheets){
+    return `<div class="card" style="max-width:460px"><b>Fiches MUA protégées</b>
+    <p class="sub">Les fiches de postes (annexe au manuel des aires de stationnement) sont chiffrées. Saisis le code d'accès une fois sur ce téléphone ; demande-le à un collègue.</p>
+    <form id="muaForm"><input id="muaCode" class="e" style="border:1px solid var(--line);background:var(--bg);padding:9px;font-size:16px" type="text" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="ex. mot-mot-mot-mot">
+    <p><button class="btn p" type="submit">Ouvrir le MUA</button> <span class="sub" style="color:#c0392b">${esc(MUA.err)}</span></p></form></div>`;
+  }
+  const list=muaMatch(q);
+  if(!list.length)return `<div class="info">Aucune fiche pour « ${esc(q)} ».</div>`;
+  const shown=limit?list.slice(0,limit):list;
+  return `${q?"":`<div class="info">${MUA.sheets.length} fiches · touche une fiche pour l'ouvrir en grand. Recherche par poste (5B) ou par avion (A321, B737, 777).</div>`}<div class="mgrid">${shown.map(s=>muaCard(s,q)).join("")}</div>${limit&&list.length>limit?`<div class="info">${list.length} fiches en tout.</div>`:""}`;
+}
+function bindMua(){
+  const f=$("#muaForm");if(f)f.onsubmit=e=>{e.preventDefault();const c=$("#muaCode").value;if(c.trim())muaUnlock(c)};
+  document.querySelectorAll("[data-sheet]").forEach(b=>b.onclick=()=>muaShow(+b.dataset.sheet));
+}
+/* visionneuse plein écran : zoom par boutons, double-toucher ou pincement */
+async function muaShow(i){
+  const s=MUA.sheets[i];if(!s)return;
+  MUA.cur=i;MUA.zoom=1;
+  $("#vtitle").textContent="Poste "+s.poste+(s.part?" · fiche "+s.part:"")+(s.date?" · "+s.date:"");
+  $("#viewer").classList.remove("hide");
+  const img=$("#vimg");img.removeAttribute("src");img.alt="Chargement…";
+  try{
+    if(!MUA.urls[s.id]){const p=await muaDecrypt(await muaFetch(s.id+".enc"));MUA.urls[s.id]=URL.createObjectURL(new Blob([p],{type:"image/jpeg"}))}
+    if(MUA.cur!==i)return;
+    img.src=MUA.urls[s.id];img.alt="Fiche poste "+s.poste;
+  }catch(e){img.alt="Fiche indisponible hors connexion (ouvre-la une fois avec du réseau)."}
+  vFit();
+}
+function vFit(){const img=$("#vimg"),box=$("#vscroll");const W=box.clientWidth,H=box.clientHeight;const s=MUA.sheets&&MUA.sheets[MUA.cur];const r=s&&s.w?s.h/s.w:1754/2480;
+  const base=Math.min(W,H/r);img.style.width=(base*MUA.zoom)+"px";}
+function vZoom(z,cx,cy){const box=$("#vscroll");const old=MUA.zoom;z=Math.max(1,Math.min(6,z));if(z===old)return;
+  const rect=box.getBoundingClientRect();cx=cx??rect.width/2;cy=cy??rect.height/2;
+  const fx=(box.scrollLeft+cx)/box.scrollWidth,fy=(box.scrollTop+cy)/box.scrollHeight;
+  MUA.zoom=z;vFit();box.scrollLeft=fx*box.scrollWidth-cx;box.scrollTop=fy*box.scrollHeight-cy;}
+$("#vin").onclick=()=>vZoom(MUA.zoom*1.6);
+$("#vout").onclick=()=>vZoom(MUA.zoom/1.6);
+$("#vclose").onclick=()=>{$("#viewer").classList.add("hide");MUA.cur=-1};
+$("#vprev").onclick=()=>{if(MUA.cur>0)muaShow(MUA.cur-1)};
+$("#vnext").onclick=()=>{if(MUA.sheets&&MUA.cur<MUA.sheets.length-1)muaShow(MUA.cur+1)};
+window.addEventListener("resize",()=>{if(MUA.cur>=0)vFit()});
+document.addEventListener("keydown",e=>{if(MUA.cur<0)return;if(e.key==="Escape")$("#vclose").click();if(e.key==="ArrowRight")$("#vnext").click();if(e.key==="ArrowLeft")$("#vprev").click()});
+{const box=$("#vscroll");let d0=0,z0=1,lastTap=0;
+  const dist=t=>Math.hypot(t[0].clientX-t[1].clientX,t[0].clientY-t[1].clientY);
+  box.addEventListener("touchstart",e=>{if(e.touches.length===2){d0=dist(e.touches);z0=MUA.zoom}
+    else if(e.touches.length===1){const now=Date.now();if(now-lastTap<300){const r=box.getBoundingClientRect();vZoom(MUA.zoom>1.5?1:2.5,e.touches[0].clientX-r.left,e.touches[0].clientY-r.top);e.preventDefault()}lastTap=now}},{passive:false});
+  box.addEventListener("touchmove",e=>{if(e.touches.length===2&&d0){e.preventDefault();const r=box.getBoundingClientRect();
+    const cx=(e.touches[0].clientX+e.touches[1].clientX)/2-r.left,cy=(e.touches[0].clientY+e.touches[1].clientY)/2-r.top;vZoom(z0*dist(e.touches)/d0,cx,cy)}},{passive:false});
+  box.addEventListener("touchend",e=>{if(e.touches.length<2)d0=0});
+  box.addEventListener("dblclick",e=>{const r=box.getBoundingClientRect();vZoom(MUA.zoom>1.5?1:2.5,e.clientX-r.left,e.clientY-r.top)});
+}
+$("#muaLock").onclick=()=>{muaLock();$("#set").classList.add("hide")};
+function muaSettings(){const on=!!MUA.sheets;$("#muaLock").classList.toggle("hide",!on);
+  $("#muaSetInfo").textContent=on?`Ouvert sur ce téléphone (${MUA.sheets.length} fiches, gardées pour l'usage hors connexion).`:"Pas encore ouvert sur ce téléphone : onglet MUA, puis code d'accès.";}
+muaRestore();
 
 function render(){
   document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.k===tab));
@@ -345,9 +475,9 @@ function render(){
     case "ab":h=grouped(ABBR,q,1,"150px");break;
     case "nato":h=natoTable(q);break;
     case "ct":h=ctView(q);break;
-    case "mua":h=muaView();break;
+    case "mua":h=muaView(q);break;
     default:{
-      if(!q){h=`<div class="card"><b>Recherche globale</b><p class="sub">Une seule barre pour tout : code aéroport, compagnie, type d'avion, code retard, abréviation ou contact. Les onglets filtrent par rubrique.</p></div>`;break}
+      if(!q){h=`<div class="card"><b>Recherche globale</b><p class="sub">Une seule barre pour tout : poste MUA, code aéroport, compagnie, type d'avion, code retard, abréviation ou contact. Les onglets filtrent par rubrique.</p></div>`;break}
       const parts=[];STRICT=true;
       const Q=q.toUpperCase();
       if(loaded===true){
@@ -358,6 +488,7 @@ function render(){
       const dm=DELAY.filter(r=>norm(r.join(" ")).includes(q));if(dm.length)parts.push(["Codes retard","dl",grouped(DELAY,q,1,"60px"),dm.some(r=>r[1]===Q)?3:1]);
       const am=ABBR.filter(r=>norm(r.join(" ")).includes(q));if(am.length)parts.push(["Abréviations","ab",grouped(ABBR,q,1,"150px"),am.some(r=>r[1].toUpperCase().split(/[ \/]+/).includes(Q))?3:1]);
       if(getContacts().some(r=>norm(Object.values(r).join(" ")).includes(q)))parts.push(["Contacts MRS","ct","",1]);
+      if(MUA.sheets){const m=muaMatch(q);if(m.length)parts.push(["MUA · fiches de postes","mua",muaView(q,4),m.some(x=>x.poste===q.toUpperCase().replace(/\s+/g,""))?4:2])}
       STRICT=false;
       parts.sort((x,y)=>y[3]-x[3]);
       h=parts.length?parts.map(([t,k,x])=>`<h2>${t} <button class="btn" style="font-size:11px;padding:2px 8px" onclick="tab='${k}';render()">voir tout</button></h2>${x}`).join(""):`<div class="info">Aucun résultat.</div>`;
@@ -365,11 +496,12 @@ function render(){
   }
   out.innerHTML=h;
   if(tab==="ct")bindContacts();
+  bindMua();
 }
 render();
 if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").catch(()=>{})}
 const SHARE_URL="https://planning-equipe-coa.github.io/Outil-COA/";
-$("#gear").onclick=()=>$("#set").classList.remove("hide");
+$("#gear").onclick=()=>{muaSettings();$("#set").classList.remove("hide")};
 $("#setX").onclick=()=>$("#set").classList.add("hide");
 $("#set").onclick=e=>{if(e.target.id==="set")$("#set").classList.add("hide")};
 $("#shareCopy").onclick=async()=>{const b=$("#shareCopy");
