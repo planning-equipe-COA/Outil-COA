@@ -15,7 +15,8 @@ L'utilisateur échange en français.
 - `airports.json` (OurAirports, domaine public : IATA, OACI, nom, ville, pays, type L/M/S, vols réguliers),
   `airlines.json`, `aircraft.json` (OpenFlights, ODbL, plus mis à jour). Un enregistrement par ligne.
 - `sw.js` — hors connexion, réseau d'abord puis copie ; caches `coa-outils-*` ; changer `CACHE` à chaque mise en ligne
-  qui ajoute un fichier. `manifest.json`, `icon-512.png`.
+  qui ajoute un fichier. `manifest.json`, icônes `icon-192.png`, `icon-512.png`, `apple-touch-icon.png` (avion qui décolle
+  au-dessus d'une piste + « COA », fond violet ; demandé le 20 nov. 2026 ; `?v=2` dans les liens, à changer si l'icône change).
 
 ## À faire
 - MUA : en attente du PDF de l'utilisateur → extraire le texte par chapitres, consultable par la recherche
