@@ -165,6 +165,7 @@ html[data-nav=menu] nav#tabs{display:none}
 .mcard:active{transform:scale(.99)}
 .mhead{display:flex;align-items:center;gap:10px;margin-bottom:6px}
 .mbadge{background:#111;color:#ffd200;font-weight:800;font-size:20px;letter-spacing:.04em;padding:4px 10px;border-radius:6px;min-width:58px;text-align:center}
+.mbadge.sm{font-size:14px;letter-spacing:0;max-width:120px;line-height:1.25}
 .mav{font-size:13px;line-height:1.35;margin:2px 0;color:var(--ink)}
 .mav .sub{font-size:12px}
 #viewer{position:fixed;inset:0;background:#0b0a10;z-index:30;display:flex;flex-direction:column}
@@ -627,7 +628,7 @@ function isFav(k){return getFavs().includes(k)}
 function toggleFav(k){const f=getFavs();const i=f.indexOf(k);if(i<0)f.push(k);else f.splice(i,1);store("coa-favs",JSON.stringify(f));render()}
 const favBtn=k=>`<button class="fav${isFav(k)?" on":""}" data-fav="${esc(k)}" aria-label="${isFav(k)?"Retirer des favoris":"Ajouter aux favoris"}">${isFav(k)?"★":"☆"}</button>`;
 document.addEventListener("click",e=>{const b=e.target.closest("[data-fav]");if(b){e.stopPropagation();e.preventDefault();toggleFav(b.dataset.fav)}},true);
-document.addEventListener("click",e=>{const b=e.target.closest("[data-openposte]");if(b&&MUA.sheets){e.preventDefault();const i=MUA.sheets.findIndex(s=>s.poste===b.dataset.openposte);if(i>=0)muaShow(i)}});
+document.addEventListener("click",e=>{const b=e.target.closest("[data-openposte]");if(b&&MUA.sheets){e.preventDefault();const i=MUA.sheets.findIndex(s=>s.poste===b.dataset.openposte||muaPostes(s).includes(b.dataset.openposte));if(i>=0)muaShow(i)}});
 
 /* Numéros utiles (Contacts MRS) — même présentation que le Planning : services, plusieurs numéros, Appeler / SMS.
    Gardés sur ce téléphone (localStorage coa-utiles) ; l'ancien format coa-contacts est repris une fois. */
@@ -659,9 +660,11 @@ function numLine(p,label,note,q){
   return `<div class="u-line"><div class="u-text"><span class="u-tel">${hl(p.t,q)}${p.kind==="freq"?" MHz":""}${tag}</span>${note?`<span class="u-note">${hl(note,q)}</span>`:""}</div>${call}${sms}</div>`;
 }
 function gateStand(label,extra){const a=String(label).match(/^(\d{1,2}[A-Z])\b/);const b=String(extra||"").match(/(\d{1,2}[A-Z])\s*$/);
-  const c=[a&&a[1],b&&b[1]].filter(Boolean);return c.find(p=>MUA.sheets&&MUA.sheets.some(s=>s.poste===p))||null}
-function standGates(poste){const out=[];if(!MUA.annu)return out;MUA.annu.groups.forEach(g=>{if(!g.gates)return;g.items.forEach(([l,n,x])=>{if(l.startsWith("—"))return;
-  if(gateStand(l,x)===poste){const porte=l.includes("/")?l.split("/")[1].trim():l;out.push({porte,pp:x,tel:n})}})});return out}
+  const c=[a&&a[1],b&&b[1]].filter(Boolean);return c.find(p=>MUA.sheets&&MUA.sheets.some(s=>muaPostes(s).includes(p)))||null}
+/* postes couverts par une fiche (« 30A / 30D » → 30A, 30D) ; anciennes fiches : un seul poste */
+function muaPostes(s){return s.postes||[s.poste]}
+function standGates(s){const poste=muaPostes(s);const out=[];if(!MUA.annu)return out;MUA.annu.groups.forEach(g=>{if(!g.gates)return;g.items.forEach(([l,n,x])=>{if(l.startsWith("—"))return;
+  if(poste.includes(gateStand(l,x))){const porte=l.includes("/")?l.split("/")[1].trim():l;out.push({porte,pp:x,tel:n})}})});return out}
 function annuView(q,limit){
   const A=MUA.annu;if(!A)return "";
   const qq=q||"";let total=0;
@@ -876,7 +879,7 @@ function muaMatch(q){
   if(!MUA.sheets)return [];
   if(!q)return MUA.sheets;
   const Q=q.toUpperCase().replace(/\s+/g,"");
-  const exact=MUA.sheets.filter(s=>s.poste===Q);
+  const exact=MUA.sheets.filter(s=>muaPostes(s).includes(Q));
   if(exact.length)return exact;
   const qq=norm(q).replace(/\s+/g,"");
   return MUA.sheets.filter(s=>s._n.includes(norm(q))||s._n.replace(/\s+/g,"").includes(qq));
@@ -892,7 +895,7 @@ function finderView(type){
   const types=muaTypes();
   let res="";
   if(type){const rows=[];MUA.sheets.forEach(s=>s.avions.forEach(a=>{if(typeAliases(a.t).includes(type))rows.push({s,a})}));
-    res=rows.length?`<table class="ftab"><tr><th>Poste</th><th>Avion</th><th>Arrivée · passerelle · postes neutralisés</th></tr>${rows.map(({s,a})=>`<tr><td><span class="mbadge" data-openposte="${esc(s.poste)}">${esc(s.poste)}</span>${s.part?`<div class="sub">fiche ${esc(s.part)}</div>`:""}</td><td>${esc(a.t)}<div class="sub">RdN ${esc(a.rdn)}</div></td><td>${esc(a.info)}</td></tr>`).join("")}</table>`
+    res=rows.length?`<table class="ftab"><tr><th>Poste</th><th>Avion</th><th>Arrivée · passerelle · postes neutralisés</th></tr>${rows.map(({s,a})=>`<tr><td><span class="mbadge${s.poste.length>4?" sm":""}" data-openposte="${esc(s.poste)}">${esc(s.poste)}</span>${s.part?`<div class="sub">fiche ${esc(s.part)}</div>`:""}</td><td>${esc(a.t)}<div class="sub">RdN ${esc(a.rdn)}</div></td><td>${esc(a.info)}</td></tr>`).join("")}</table>`
       :`<div class="info">Aucun poste ne mentionne ${esc(type)} dans les fiches chargées.</div>`;
     res=`<div class="info">${new Set(rows.map(r=>r.s.poste)).size} poste(s) pour ${esc(type)}, d'après les ${MUA.sheets.length} fiches chargées. Touche un poste pour ouvrir sa fiche.</div>`+res}
   return `<div class="finder"><b>Quel poste pour cet avion ?</b><select id="finderSel"><option value="">Choisir un type…</option>${types.map(t=>`<option${t===type?" selected":""}>${esc(t)}</option>`).join("")}</select>${type?'<button class="btn" id="finderX">Effacer</button>':""}</div>${res}`;
@@ -902,8 +905,8 @@ function muaCard(s,q){
   let av=s.avions;
   if(q){const f=av.filter(a=>norm(a.t).replace(/\s+/g,"").includes(norm(q).replace(/\s+/g,"")));if(f.length)av=f}
   const more=av.length>5?`<div class="sub">+ ${av.length-5} autre(s) type(s)</div>`:"";
-  const gates=standGates(s.poste);
-  return `<div class="mcard" role="button" tabindex="0" data-sheet="${i}"><div class="mhead"><span class="mbadge">${esc(s.poste)}</span><div><b>Poste ${esc(s.poste)}${s.part?` · fiche ${esc(s.part)}`:""}</b><div class="sub">${s.date?"Mise à jour "+esc(s.date):""}${s.page?` · p. ${esc(s.page)}`:""}</div></div>${favBtn("mua:"+s.poste+s.part)}</div>
+  const gates=standGates(s);
+  return `<div class="mcard" role="button" tabindex="0" data-sheet="${i}"><div class="mhead"><span class="mbadge${s.poste.length>4?" sm":""}">${esc(s.poste)}</span><div><b>${muaPostes(s).length>1?"Postes":"Poste"} ${esc(s.poste)}${s.part?` · fiche ${esc(s.part)}`:""}</b><div class="sub">${s.date?"Mise à jour "+esc(s.date):""}${s.page?` · p. ${esc(s.page)}`:""}</div></div>${favBtn("mua:"+s.poste+s.part)}</div>
   ${gates.length?`<div class="mgate">${gates.map(g=>`Porte ${esc(g.porte)}${g.pp?" · "+esc(g.pp):""}${g.tel?" · poste "+esc(g.tel):""}`).join("<br>")}</div>`:""}
   ${av.slice(0,5).map(a=>`<div class="mav">${hl(a.t,q)} <span class="sub">· RdN ${esc(a.rdn)}${a.info?" · "+esc(a.info):""}</span></div>`).join("")||'<div class="sub">Plan et consignes : toucher pour ouvrir</div>'}${more}
   ${s.consignes.length?`<div class="sub" style="margin-top:4px">${s.consignes.length} consigne(s) d'exploitation</div>`:""}</div>`;
@@ -932,13 +935,13 @@ function bindMua(){
 async function muaShow(i){
   const s=MUA.sheets[i];if(!s)return;
   MUA.cur=i;MUA.zoom=1;
-  $("#vtitle").textContent="Poste "+s.poste+(s.part?" · fiche "+s.part:"")+(s.date?" · "+s.date:"");
+  $("#vtitle").textContent=(muaPostes(s).length>1?"Postes ":"Poste ")+s.poste+(s.part?" · fiche "+s.part:"")+(s.date?" · "+s.date:"");
   $("#viewer").classList.remove("hide");vLayout();vHint();
   const img=$("#vimg");img.removeAttribute("src");img.alt="Chargement…";
   try{
     if(!MUA.urls[s.id]){const p=await muaDecrypt(await muaFetch(s.id+".enc"));MUA.urls[s.id]=URL.createObjectURL(new Blob([p],{type:"image/jpeg"}))}
     if(MUA.cur!==i)return;
-    img.src=MUA.urls[s.id];img.alt="Fiche poste "+s.poste;
+    img.src=MUA.urls[s.id];img.alt="Fiche "+s.poste;
   }catch(e){img.alt="Fiche indisponible hors connexion (ouvre-la une fois avec du réseau)."}
   vFit();
 }
@@ -1015,7 +1018,7 @@ function render(){
       const am=ABBR.filter(r=>norm(r.join(" ")).includes(q));if(am.length)parts.push(["Abréviations","ab",grouped(ABBR,q,1,"150px"),am.some(r=>r[1].toUpperCase().split(/[ \/]+/).includes(Q))?3:1]);
       if(MUA.annu){const r=annuView(q);if(r.total)parts.push(["Annuaire COA","ct",r.html,1])}
       if(getContacts().some(u=>ctMatch(u,q)))parts.push(["Mes numéros","ct",ctMine(q).split("<p><button class=\"btn p\" id=\"ctEdit\"")[0],1]);
-      if(MUA.sheets){const m=muaMatch(q);if(m.length)parts.push(["MUA · fiches de postes","mua",muaView(q,4),m.some(x=>x.poste===q.toUpperCase().replace(/\s+/g,""))?4:2])}
+      if(MUA.sheets){const m=muaMatch(q);if(m.length)parts.push(["MUA · fiches de postes","mua",muaView(q,4),m.some(x=>muaPostes(x).includes(q.toUpperCase().replace(/\s+/g,"")))?4:2])}
       STRICT=false;
       parts.sort((x,y)=>y[3]-x[3]);
       h=parts.length?parts.map(([t,k,x])=>`<h2>${t} <button class="btn" style="font-size:11px;padding:2px 8px" onclick="tab='${k}';render()">voir tout</button></h2>${x}`).join(""):`<div class="info">Aucun résultat.</div>`;
