@@ -99,6 +99,31 @@ body.noscroll{overflow:hidden}
 .abody .u-none{padding-top:9px}
 .ahead{display:flex;align-items:center;gap:8px;margin:4px 2px 10px}
 .ahead h2{margin:0}
+/* favoris, liens porte↔fiche, recherche par avion, temps de vol, météo */
+.fav{border:0;background:none;color:var(--mute);font-size:20px;line-height:1;cursor:pointer;padding:2px 4px;margin-left:auto}
+.fav.on{color:#f0b400}
+.mcard{position:relative}
+.glink{display:inline-block;margin-top:3px;font-size:12px;font-weight:600;color:var(--acc);background:var(--acc2);border:0;border-radius:6px;padding:2px 7px;cursor:pointer}
+.mgate{font-size:12px;color:var(--acc);margin-top:4px}
+.finder{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 12px}
+.finder select{font:inherit;font-size:16px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);max-width:100%}
+.ftab{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:12px}
+.ftab td,.ftab th{padding:8px;border-bottom:1px solid var(--line);font-size:14px;text-align:left;vertical-align:top}
+.ftab .mbadge{font-size:15px;min-width:44px;padding:2px 6px;cursor:pointer;display:inline-block}
+.ft{margin-top:4px;font-size:13px;color:var(--ink)}
+.ft b{color:var(--acc)}
+.wx{background:var(--card);border:1.5px solid var(--line);border-radius:14px;padding:12px;margin-bottom:6px}
+.wxh{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.wxh b{font-size:15px}
+.wxgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:6px 12px;font-size:14px}
+.wxgrid span{color:var(--mute);font-size:12px;display:block}
+.raw{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;background:var(--bg);border-radius:8px;padding:6px 8px;margin-top:8px;overflow-wrap:anywhere;color:var(--ink)}
+.cat{font-size:11px;font-weight:700;border-radius:6px;padding:1px 6px;color:#fff}
+.favlist .u-row{display:flex;gap:10px;align-items:flex-start;padding:5px 0}
+.favlist .u-label{flex:0 0 40%;margin:0;padding-top:9px;font-size:14px}
+.favlist .u-label small{display:block;font-weight:400;color:var(--mute);font-size:12px}
+.favlist .u-nums{flex:1;min-width:0}
+.favlist .u-act{width:40px;height:36px}
 /* page d'accueil : tuiles par thème */
 .home h2{margin:16px 2px 8px}
 .home h2:first-child{margin-top:4px}
@@ -349,7 +374,7 @@ const HANDLERS=["Aviapartner","Alyzia","Air France Handling","Onet","WFS","Jetex
 
 /* ---------- État ---------- */
 let AP=[],AL=[],PL=[],loaded=false;
-const TABS=[["home","Accueil"],["mua","MUA"],["ap","Aéroports"],["al","Compagnies"],["pl","Avions"],["ct","Contacts MRS"],["dl","Codes retard"],["ab","Abréviations"],["nato","Alphabet"],["all","Tout"]];
+const TABS=[["home","Accueil"],["mua","MUA"],["ap","Aéroports"],["al","Compagnies"],["pl","Avions"],["wx","Météo"],["ct","Contacts MRS"],["dl","Codes retard"],["ab","Abréviations"],["nato","Alphabet"],["all","Tout"]];
 let tab="home";let STRICT=false;
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -359,7 +384,7 @@ function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localSto
 
 $("#tabs").innerHTML=TABS.map(([k,l])=>`<button data-k="${k}">${l}</button>`).join("");
 const THEMES=[["Référentiels",[["mua","MUA · fiches de postes","Postes, avions autorisés, plans"],["ap","Aéroports","Codes IATA et OACI"],["al","Compagnies","Codes IATA, OACI et indicatifs"],["pl","Avions","Types, envergure, sillage"]]],
-  ["Escale MRS",[["ct","Contacts MRS","Assistants et services, appeler ou SMS"]]],
+  ["Escale MRS",[["wx","Météo LFML","METAR et TAF décodés"],["ct","Contacts MRS","Assistants et services, appeler ou SMS"]]],
   ["Codes et langage",[["dl","Codes retard","Codes IATA 00 à 99"],["ab","Abréviations","A-CDM, messages, PMR, météo"],["nato","Alphabet","Alphabet OTAN, épellation"]]],
   ["Recherche",[["home","Accueil","Toutes les rubriques en tuiles"],["all","Tout","Une seule recherche dans toutes les rubriques"]]]];
 const tabName=k=>{for(const [,it] of THEMES)for(const [kk,l] of it)if(kk===k)return l;return ""};
@@ -375,10 +400,20 @@ const TI={
  pl:'<path d="M21 12.5 13.5 9V4.5a1.5 1.5 0 0 0-3 0V9L3 12.5V15l7.5-2.2V18L8 19.8V21l4-1 4 1v-1.2L13.5 18v-5.2L21 15z"/>',
  dl:'<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/>',
  ab:'<path d="M4 6h16M4 12h10M4 18h13"/>',
- nato:'<path d="M5 19 9.5 5h1L15 19M6.5 14.5h7M17 9h4M19 7v4"/>'};
+ nato:'<path d="M5 19 9.5 5h1L15 19M6.5 14.5h7M17 9h4M19 7v4"/>',
+ wx:'<path d="M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.2 9.6 4.2 4.2 0 0 0 7 18z"/>'};
+function favsView(){
+  const f=getFavs();if(!f.length)return "";
+  const muaF=f.filter(k=>k.startsWith("mua:")).map(k=>MUA.sheets&&MUA.sheets.find(s=>"mua:"+s.poste+s.part===k)).filter(Boolean);
+  const annF=[];if(MUA.annu)f.filter(k=>k.startsWith("annu:")).forEach(k=>{const [g,l]=k.slice(5).split("|");const G=MUA.annu.groups.find(x=>x.name===g);const it=G&&G.items.find(x=>x[0]===l);if(it)annF.push([G,it,k])});
+  if(!muaF.length&&!annF.length)return "";
+  return `<h2>Favoris</h2>${muaF.length?`<div class="tiles" style="margin-bottom:10px">${muaF.map(s=>`<div class="tile" role="button" data-sheet="${MUA.sheets.indexOf(s)}" style="min-height:0"><div style="display:flex;width:100%;align-items:center"><span class="mbadge" style="font-size:16px;min-width:44px">${esc(s.poste)}</span>${favBtn("mua:"+s.poste+s.part)}</div><small>Fiche MUA${s.part?" "+esc(s.part):""}${s.date?" · "+esc(s.date):""}</small></div>`).join("")}</div>`:""}
+  ${annF.length?`<div class="card favlist" style="padding:4px 12px">${annF.map(([G,[label,nums,extra],k])=>{const title=G.gates?"Porte "+label:label;const parts=numParts(nums,G.gates?"":G.ext);
+    return `<div class="u-row"><span class="u-label">${esc(title)} ${favBtn(k).replace('class="fav','style="font-size:16px;margin:0;padding:0 2px" class="fav')}<small>${esc(G.name)}${G.gates&&extra?" · "+esc(extra):""}</small></span><div class="u-nums">${parts.map(p=>numLine(p,title,"","")).join("")||'<div class="u-none">pas de numéro</div>'}</div></div>`}).join("")}</div>`:""}`;
+}
 function homeView(){
   const extra={mua:MUA.sheets?`${MUA.sheets.length} fiches de postes`:"Fiches de postes (code)",ct:MUA.annu?"Annuaire COA et mes numéros":"Assistants, services, portes"};
-  return '<div class="home">'+THEMES.map(([t,it])=>{const items=it.filter(([k])=>k!=="home"&&k!=="all");if(!items.length)return "";
+  return '<div class="home">'+`<div data-go="wx" style="cursor:pointer">${wxCard(false)}</div>`+favsView()+THEMES.map(([t,it])=>{const items=it.filter(([k])=>k!=="home"&&k!=="all");if(!items.length)return "";
     return `<h2>${t}</h2><div class="tiles">`+items.map(([k,l,d])=>`<button class="tile" data-go="${k}"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TI[k]||""}</svg></span><b>${l}</b><small>${extra[k]||d}</small></button>`).join("")+"</div>"}).join("")+"</div>";
 }
 $("#menu").onclick=e=>{const b=e.target.closest(".mitem");if(b){tab=b.dataset.k;location.hash=tab;render()}if(b||e.target.id==="menu")$("#menu").classList.add("hide")};
@@ -415,12 +450,26 @@ function search(list,codesF,textsF,q,limit){
 
 /* ---------- Rendus ---------- */
 function more(n,shown){return n>shown?`<div class="info">${shown} affichés sur ${n} — précise ta recherche.</div>`:""}
+/* temps de vol estimés depuis / vers MRS : distance orthodromique, ~800 km/h en croisière + 30 min (roulage, montée,
+   descente), vent moyen d'ouest : environ −6 % vers l'est, +7 % vers l'ouest. Estimation à vérifier avec l'horaire. */
+const MRS=[43.438,5.213];
+function flightInfo(lat,lon){
+  if(lat==null||lon==null)return null;
+  const R=6371,toR=x=>x*Math.PI/180,[la1,lo1]=MRS.map(toR),la2=toR(lat),lo2=toR(lon);
+  const d=2*R*Math.asin(Math.sqrt(Math.sin((la2-la1)/2)**2+Math.cos(la1)*Math.cos(la2)*Math.sin((lo2-lo1)/2)**2));
+  if(d<60)return null;
+  const brg=Math.atan2(Math.sin(lo2-lo1)*Math.cos(la2),Math.cos(la1)*Math.sin(la2)-Math.sin(la1)*Math.cos(la2)*Math.cos(lo2-lo1));
+  const east=Math.sin(brg),air=d/800*60;
+  const go=Math.round(30+air*(1-0.065*east)),back=Math.round(30+air*(1+0.065*east));
+  return {d:Math.round(d),go,back};
+}
+const hm=m=>`${Math.floor(m/60)} h ${String(m%60).padStart(2,"0")}`;
 function apTable(q,limit){
   if(!q)return `<div class="info">Tape un code IATA (MRS), OACI (LFML), une ville ou un pays. ${AP.length.toLocaleString("fr")} aéroports.</div>`;
   const {total,rows}=search(AP,r=>[r[0],r[1]],r=>[r[2],r[3],r[4]],q,limit);
   if(!total)return `<div class="info">Aucun aéroport.</div>`;
   const T={L:"Grand",M:"Moyen",S:"Petit"};
-  return `<table><tr><th>IATA</th><th>OACI</th><th>Aéroport</th><th class="hm">Pays</th></tr>${rows.map(r=>`<tr><td class="code">${hl(r[0]||"—",q)}</td><td class="code">${hl(r[1]||"—",q)}</td><td>${hl(r[2],q)}<div class="sub">${hl(r[3],q)}<span class="tag ${r[6]?"":"off"}">${T[r[5]]}${r[6]?"":" · pas de vols réguliers"}</span></div></td><td class="hm">${hl(r[4],q)}</td></tr>`).join("")}</table>${more(total,rows.length)}`;
+  return `<table><tr><th>IATA</th><th>OACI</th><th>Aéroport</th><th class="hm">Pays</th></tr>${rows.map(r=>`<tr><td class="code">${hl(r[0]||"—",q)}</td><td class="code">${hl(r[1]||"—",q)}</td><td>${hl(r[2],q)}<div class="sub">${hl(r[3],q)}<span class="tag ${r[6]?"":"off"}">${T[r[5]]}${r[6]?"":" · pas de vols réguliers"}</span></div>${(()=>{const f=flightInfo(r[7],r[8]);return f?`<div class="ft">MRS → ${esc(r[0]||r[1])} <b>≈ ${hm(f.go)}</b> · retour <b>≈ ${hm(f.back)}</b> · ${f.d.toLocaleString("fr")} km</div>`:""})()}</td><td class="hm">${hl(r[4],q)}</td></tr>`).join("")}</table>${more(total,rows.length)}`;
 }
 function alTable(q,limit){
   if(!q)return `<div class="info">Tape un code IATA (AF), OACI (AFR), un nom ou un indicatif radio. ${AL.length.toLocaleString("fr")} compagnies.</div>`;
@@ -451,6 +500,62 @@ function natoTable(q){
   return spell+`<table>${rows.map(r=>`<tr><td class="code" style="width:60px">${r[0]}</td><td>${r[1]}</td></tr>`).join("")}</table>`;
 }
 
+/* Météo LFML : METAR et TAF de api.met.no (accès autorisé depuis le navigateur), décodés en français.
+   Dernier relevé gardé (coa-wx) pour l'usage hors connexion ; relu toutes les 10 min appli ouverte. */
+const WX={metar:"",taf:"",at:0,err:"",loading:false};
+try{Object.assign(WX,JSON.parse(store("coa-wx")||"{}"))}catch(e){}
+async function wxLoad(force){
+  if(WX.loading||(!force&&Date.now()-WX.at<10*60e3&&WX.metar))return;
+  WX.loading=true;
+  try{const get=async u=>{const r=await fetch(u,{cache:"no-cache"});if(!r.ok)throw 0;return (await r.text()).trim().split("\n").filter(Boolean).pop()||""};
+    const [m,t]=await Promise.all([get("https://api.met.no/weatherapi/tafmetar/1.0/metar.txt?icao=LFML"),get("https://api.met.no/weatherapi/tafmetar/1.0/taf.txt?icao=LFML")]);
+    Object.assign(WX,{metar:m.replace(/=$/,""),taf:t.replace(/=$/,""),at:Date.now(),err:""});store("coa-wx",JSON.stringify({metar:WX.metar,taf:WX.taf,at:WX.at}));
+  }catch(e){WX.err="Météo indisponible (pas de réseau ?)"}
+  WX.loading=false;if(tab==="home"||tab==="wx")render();
+}
+setInterval(()=>{if(!document.hidden)wxLoad()},60e3);
+const WXW={RA:"pluie",SH:"averses",TS:"orage",FG:"brouillard",BR:"brume",DZ:"bruine",SN:"neige",HZ:"brume sèche",GR:"grêle",GS:"grésil",FU:"fumée",SA:"sable",DU:"poussière",SQ:"grains",PL:"granules de glace",FZ:"se congelant",BC:"bancs",MI:"mince",VC:"au voisinage",UP:"précipitations",BL:"chasse",DR:"chasse basse",PR:"partiel"};
+const WXC={FEW:"peu",SCT:"épars",BKN:"fragmenté",OVC:"couvert"};
+function wxDecode(raw){
+  const o={wind:"",vis:"",wx:[],clouds:[],temp:"",dew:"",qnh:"",time:"",trend:"",cavok:false};
+  const tk=String(raw).split(/\s+/);
+  for(let i=0;i<tk.length;i++){const t=tk[i];let m;
+    if(/^(NOSIG|BECMG|TEMPO)$/.test(t)){if(t==="NOSIG")o.trend="pas d'évolution significative prévue";else{const r=wxDecode(tk.slice(i+1).join(" "));const bits=[r.wind&&"vent "+r.wind,r.vis&&"visibilité "+r.vis,r.wx.join(", "),r.clouds.join(", ")].filter(Boolean);
+      o.trend=(t==="BECMG"?"devient ":"temporairement ")+(bits.join(" · ")||tk.slice(i+1).join(" "))}break}
+    if((m=t.match(/^(\d\d)(\d\d)(\d\d)Z$/))){const d=new Date(Date.UTC(new Date().getUTCFullYear(),new Date().getUTCMonth(),+m[1],+m[2],+m[3]));o.time=`${m[2]}:${m[3]} UTC (${d.toLocaleTimeString("fr",{hour:"2-digit",minute:"2-digit",timeZone:"Europe/Paris"})} locale)`;continue}
+    if((m=t.match(/^(\d{3}|VRB)(\d{2,3})(?:G(\d{2,3}))?KT$/))){o.wind=(m[1]==="VRB"?"variable":m[1]+"°")+` ${+m[2]} kt`+(m[3]?` (rafales ${+m[3]} kt)`:"");continue}
+    if(/^\d{3}V\d{3}$/.test(t)){o.wind+=` (de ${t.slice(0,3)}° à ${t.slice(4)}°)`;continue}
+    if(t==="CAVOK"){o.cavok=true;o.vis="≥ 10 km";o.clouds.push("aucun nuage significatif");continue}
+    if(/^\d{4}$/.test(t)&&!o.vis){o.vis=t==="9999"?"≥ 10 km":(+t>=5000?(+t/1000)+" km":(+t)+" m");continue}
+    if((m=t.match(/^(FEW|SCT|BKN|OVC)(\d{3})(CB|TCU)?$/))){o.clouds.push(`${WXC[m[1]]} à ${(+m[2]*100).toLocaleString("fr")} ft${m[3]?(m[3]==="CB"?" (cumulonimbus)":" (cumulus bourgeonnant)"):""}`);continue}
+    if(/^(NSC|NCD|SKC|CLR)$/.test(t)){o.clouds.push("aucun nuage significatif");continue}
+    if((m=t.match(/^(M?\d\d)\/(M?\d\d)$/))){const tc=x=>(x[0]==="M"?"−":"")+parseInt(x.replace("M",""),10)+" °C";o.temp=tc(m[1]);o.dew=tc(m[2]);continue}
+    if((m=t.match(/^Q(\d{4})$/))){o.qnh=+m[1]+" hPa";continue}
+    if((m=t.match(/^([-+]|VC)?([A-Z]{2,8})$/))&&/^(MI|BC|PR|DR|BL|SH|TS|FZ|VC)?(RA|DZ|SN|SG|PL|GR|GS|UP|BR|FG|FU|VA|DU|SA|HZ|SQ|FC|TS|SH)+$/.test(m[2])){
+      const parts=m[2].match(/.{2}/g).map(x=>WXW[x]||x);o.wx.push((m[1]==="-"?"faible ":m[1]==="+"?"fort ":m[1]==="VC"?"au voisinage : ":"")+parts.join(" "));continue}
+  }
+  return o;
+}
+function wxCard(full){
+  if(!WX.metar&&!WX.loading)wxLoad();
+  if(!WX.metar)return `<div class="wx"><div class="wxh"><b>Météo LFML</b></div><div class="sub">${WX.err?esc(WX.err):"Chargement…"}</div></div>`;
+  const o=wxDecode(WX.metar.replace(/^(METAR|SPECI)\s+/,"").replace(/^LFML\s+/,""));
+  const age=Math.round((Date.now()-WX.at)/60e3);
+  const cell=(l,v)=>v?`<div><span>${l}</span>${esc(v)}</div>`:"";
+  return `<div class="wx"><div class="wxh"><b>Météo LFML</b><span class="sub">${esc(o.time)}</span>${full?'<button class="btn" id="wxRefresh" style="margin-left:auto;font-size:12px;padding:4px 8px">Actualiser</button>':""}</div>
+  <div class="wxgrid">${cell("Vent",o.wind)}${cell("Visibilité",o.vis)}${cell("Temps",o.wx.join(", "))}${cell("Nuages",o.clouds.join(", "))}${cell("Température",o.temp)}${cell("Point de rosée",o.dew)}${cell("QNH",o.qnh)}</div>
+  ${o.trend?`<div class="sub" style="margin-top:6px">Tendance : ${esc(o.trend)}</div>`:""}
+  ${full?`<div class="raw">METAR ${esc(WX.metar)}</div><div class="raw">TAF ${esc(WX.taf)}</div><p class="sub">Source : MET Norway (api.met.no), relevés officiels de LFML. ${WX.err?esc(WX.err)+" · ":""}Relevé chargé il y a ${age} min. Le décodage est une aide : le METAR et le TAF bruts font foi.</p>`:`<div class="sub" style="margin-top:6px">Toucher pour le METAR et le TAF complets${age>60?` · relevé d'il y a ${age} min`:""}</div>`}</div>`;
+}
+
+/* Favoris : « mua:<poste+fiche> » ou « annu:<groupe>|<libellé> » (localStorage coa-favs) */
+function getFavs(){try{return JSON.parse(store("coa-favs")||"[]")}catch(e){return []}}
+function isFav(k){return getFavs().includes(k)}
+function toggleFav(k){const f=getFavs();const i=f.indexOf(k);if(i<0)f.push(k);else f.splice(i,1);store("coa-favs",JSON.stringify(f));render()}
+const favBtn=k=>`<button class="fav${isFav(k)?" on":""}" data-fav="${esc(k)}" aria-label="${isFav(k)?"Retirer des favoris":"Ajouter aux favoris"}">${isFav(k)?"★":"☆"}</button>`;
+document.addEventListener("click",e=>{const b=e.target.closest("[data-fav]");if(b){e.stopPropagation();e.preventDefault();toggleFav(b.dataset.fav)}},true);
+document.addEventListener("click",e=>{const b=e.target.closest("[data-openposte]");if(b&&MUA.sheets){e.preventDefault();const i=MUA.sheets.findIndex(s=>s.poste===b.dataset.openposte);if(i>=0)muaShow(i)}});
+
 /* Numéros utiles (Contacts MRS) — même présentation que le Planning : services, plusieurs numéros, Appeler / SMS.
    Gardés sur ce téléphone (localStorage coa-utiles) ; l'ancien format coa-contacts est repris une fois. */
 const IC_PHONE='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" aria-hidden="true"><path d="M5 3.5h3.5l1.8 4.6-2.3 1.4a11.5 11.5 0 0 0 5.5 5.5l1.4-2.3 4.6 1.8V18a2.5 2.5 0 0 1-2.5 2.5A15.5 15.5 0 0 1 2.5 6 2.5 2.5 0 0 1 5 3.5z"/></svg>';
@@ -480,6 +585,10 @@ function numLine(p,label,note,q){
   const sms=p.kind==="tel"&&p.sms?`<a class="u-act" href="sms:${esc(p.dial)}" aria-label="SMS à ${esc(label)}">${IC_MSG}</a>`:'<span class="u-act ph"></span>';
   return `<div class="u-line"><div class="u-text"><span class="u-tel">${hl(p.t,q)}${p.kind==="freq"?" MHz":""}${tag}</span>${note?`<span class="u-note">${hl(note,q)}</span>`:""}</div>${call}${sms}</div>`;
 }
+function gateStand(label,extra){const a=String(label).match(/^(\d{1,2}[A-Z])\b/);const b=String(extra||"").match(/(\d{1,2}[A-Z])\s*$/);
+  const c=[a&&a[1],b&&b[1]].filter(Boolean);return c.find(p=>MUA.sheets&&MUA.sheets.some(s=>s.poste===p))||null}
+function standGates(poste){const out=[];if(!MUA.annu)return out;MUA.annu.groups.forEach(g=>{if(!g.gates)return;g.items.forEach(([l,n,x])=>{if(l.startsWith("—"))return;
+  if(gateStand(l,x)===poste){const porte=l.includes("/")?l.split("/")[1].trim():l;out.push({porte,pp:x,tel:n})}})});return out}
 function annuView(q,limit){
   const A=MUA.annu;if(!A)return "";
   const qq=q||"";let total=0;
@@ -492,8 +601,10 @@ function annuView(q,limit){
       if(qq&&!norm(g.name+" "+title+" "+nums+" "+(extra||"")).includes(qq))return "";
       total++;
       const parts=numParts(nums,g.gates?"":g.ext);
-      const sub=note?`<small>${hl(note,qq)}</small>`:"";
-      return `<div class="u-row"><span class="u-label${extra==="!"?" imp":""}">${hl(title,qq)}${sub}</span><div class="u-nums">${parts.length?parts.map(p=>numLine(p,title,"",qq)).join(""):'<div class="u-none">pas de numéro</div>'}</div></div>`;
+      const st=g.gates?gateStand(label,extra):null;
+      const sub=(note?`<small>${hl(note,qq)}</small>`:"")+(st?`<button class="glink" data-openposte="${st}">Fiche MUA ${st}</button>`:"");
+      const fk="annu:"+g.name+"|"+label;
+      return `<div class="u-row"><span class="u-label${extra==="!"?" imp":""}">${hl(title,qq)} ${favBtn(fk).replace('class="fav','style="font-size:16px;margin:0;padding:0 2px" class="fav')}${sub}</span><div class="u-nums">${parts.length?parts.map(p=>numLine(p,title,"",qq)).join(""):'<div class="u-none">pas de numéro</div>'}</div></div>`;
     }).join("");
     if(qq&&!rows)return "";
     const n=g.items.filter(it=>!it[0].startsWith("—")).length;
@@ -596,14 +707,32 @@ function muaMatch(q){
   const qq=norm(q).replace(/\s+/g,"");
   return MUA.sheets.filter(s=>s._n.includes(norm(q))||s._n.replace(/\s+/g,"").includes(qq));
 }
+/* « A318 / 319 / 320 » → A318 A319 A320 ; « B737-200 / 300 » → B737-200 B737-300 (même règle que tools/mua_build.py) */
+function typeAliases(name){const res=[];let prefix="",fam="",dash=false;
+  String(name).replace(/tous\s*types/ig,"").split(/\s*[\/,]\s*|\s+-\s+/).forEach(part=>{const p=part.replace(/\s+/g,"").toUpperCase().replace(/NE0$/,"NEO");const m=p.match(/^([A-Z]+)(\d+)(-?)(\w*)$/);
+    if(m){prefix=m[1];fam=m[2];dash=!!m[3];res.push(p)}else if(/^\d/.test(p)&&prefix)res.push(dash?prefix+fam+"-"+p:prefix+p)});
+  return [...new Set(res)]}
+function muaTypes(){const set=new Set();(MUA.sheets||[]).forEach(s=>s.avions.forEach(a=>typeAliases(a.t).forEach(t=>set.add(t))));
+  return [...set].sort((a,b)=>a.localeCompare(b,"fr",{numeric:true}))}
+function finderView(type){
+  const types=muaTypes();
+  let res="";
+  if(type){const rows=[];MUA.sheets.forEach(s=>s.avions.forEach(a=>{if(typeAliases(a.t).includes(type))rows.push({s,a})}));
+    res=rows.length?`<table class="ftab"><tr><th>Poste</th><th>Avion</th><th>Arrivée · passerelle · postes neutralisés</th></tr>${rows.map(({s,a})=>`<tr><td><span class="mbadge" data-openposte="${esc(s.poste)}">${esc(s.poste)}</span>${s.part?`<div class="sub">fiche ${esc(s.part)}</div>`:""}</td><td>${esc(a.t)}<div class="sub">RdN ${esc(a.rdn)}</div></td><td>${esc(a.info)}</td></tr>`).join("")}</table>`
+      :`<div class="info">Aucun poste ne mentionne ${esc(type)} dans les fiches chargées.</div>`;
+    res=`<div class="info">${new Set(rows.map(r=>r.s.poste)).size} poste(s) pour ${esc(type)}, d'après les ${MUA.sheets.length} fiches chargées. Touche un poste pour ouvrir sa fiche.</div>`+res}
+  return `<div class="finder"><b>Quel poste pour cet avion ?</b><select id="finderSel"><option value="">Choisir un type…</option>${types.map(t=>`<option${t===type?" selected":""}>${esc(t)}</option>`).join("")}</select>${type?'<button class="btn" id="finderX">Effacer</button>':""}</div>${res}`;
+}
 function muaCard(s,q){
   const i=MUA.sheets.indexOf(s);
   let av=s.avions;
   if(q){const f=av.filter(a=>norm(a.t).replace(/\s+/g,"").includes(norm(q).replace(/\s+/g,"")));if(f.length)av=f}
   const more=av.length>5?`<div class="sub">+ ${av.length-5} autre(s) type(s)</div>`:"";
-  return `<button class="mcard" data-sheet="${i}"><div class="mhead"><span class="mbadge">${esc(s.poste)}</span><div><b>Poste ${esc(s.poste)}${s.part?` · fiche ${esc(s.part)}`:""}</b><div class="sub">${s.date?"Mise à jour "+esc(s.date):""}${s.page?` · p. ${esc(s.page)}`:""}</div></div></div>
+  const gates=standGates(s.poste);
+  return `<div class="mcard" role="button" tabindex="0" data-sheet="${i}"><div class="mhead"><span class="mbadge">${esc(s.poste)}</span><div><b>Poste ${esc(s.poste)}${s.part?` · fiche ${esc(s.part)}`:""}</b><div class="sub">${s.date?"Mise à jour "+esc(s.date):""}${s.page?` · p. ${esc(s.page)}`:""}</div></div>${favBtn("mua:"+s.poste+s.part)}</div>
+  ${gates.length?`<div class="mgate">${gates.map(g=>`Porte ${esc(g.porte)}${g.pp?" · "+esc(g.pp):""}${g.tel?" · poste "+esc(g.tel):""}`).join("<br>")}</div>`:""}
   ${av.slice(0,5).map(a=>`<div class="mav">${hl(a.t,q)} <span class="sub">· RdN ${esc(a.rdn)}${a.info?" · "+esc(a.info):""}</span></div>`).join("")||'<div class="sub">Plan et consignes : toucher pour ouvrir</div>'}${more}
-  ${s.consignes.length?`<div class="sub" style="margin-top:4px">${s.consignes.length} consigne(s) d'exploitation</div>`:""}</button>`;
+  ${s.consignes.length?`<div class="sub" style="margin-top:4px">${s.consignes.length} consigne(s) d'exploitation</div>`:""}</div>`;
 }
 function muaView(q,limit){
   if(MUA.state==="busy")return `<div class="info">Ouverture des fiches…</div>`;
@@ -616,11 +745,14 @@ function muaView(q,limit){
   const list=muaMatch(q);
   if(!list.length)return `<div class="info">Aucune fiche pour « ${esc(q)} ».</div>`;
   const shown=limit?list.slice(0,limit):list;
-  return `${q?"":`<div class="info">${MUA.sheets.length} fiches · touche une fiche pour l'ouvrir en grand. Recherche par poste (5B) ou par avion (A321, B737, 777).</div>`}<div class="mgrid">${shown.map(s=>muaCard(s,q)).join("")}</div>${limit&&list.length>limit?`<div class="info">${list.length} fiches en tout.</div>`:""}`;
+  if(!limit&&!q&&MUA.finder)return finderView(MUA.finder);
+  return `${limit?"":finderView("")}${q?"":`<div class="info">${MUA.sheets.length} fiches · touche une fiche pour l'ouvrir en grand. Recherche par poste (5B) ou par avion (A321, B737, 777).</div>`}<div class="mgrid">${shown.map(s=>muaCard(s,q)).join("")}</div>${limit&&list.length>limit?`<div class="info">${list.length} fiches en tout.</div>`:""}`;
 }
 function bindMua(){
   const f=$("#muaForm");if(f)f.onsubmit=e=>{e.preventDefault();const c=$("#muaCode").value;if(c.trim())muaUnlock(c)};
-  document.querySelectorAll("[data-sheet]").forEach(b=>b.onclick=()=>muaShow(+b.dataset.sheet));
+  document.querySelectorAll("[data-sheet]").forEach(b=>{b.onclick=()=>muaShow(+b.dataset.sheet);b.onkeydown=e=>{if(e.key==="Enter")muaShow(+b.dataset.sheet)}});
+  const fs=$("#finderSel");if(fs)fs.onchange=()=>{MUA.finder=fs.value;render()};
+  const fx=$("#finderX");if(fx)fx.onclick=()=>{MUA.finder="";render()};
 }
 /* visionneuse plein écran : zoom par boutons, double-toucher ou pincement */
 async function muaShow(i){
@@ -684,7 +816,7 @@ function render(){
   if(needData&&loaded!==true){out.innerHTML=`<div class="info">${loaded==="err"?"Impossible de charger les bases de codes.":"Chargement des bases…"}</div>`;if(tab!=="all")return}
   let h="";
   switch(tab){
-    case "ap":h=apTable(q,200);break;
+    case "ap":h=apTable(q,200)+(q?'<div class="info">Temps de vol estimés (porte à porte, vent moyen d\'ouest) : vérifie toujours l\'horaire de la compagnie.</div>':"");break;
     case "al":h=alTable(q,200);break;
     case "pl":h=plTable(q,300);break;
     case "dl":h=`<div class="info">Codes retard IATA standard (AHM 730), traduction résumée. Ta compagnie peut utiliser des sous-codes propres.</div>`+grouped(DELAY,q,1,"60px");break;
@@ -692,6 +824,7 @@ function render(){
     case "nato":h=natoTable(q);break;
     case "ct":h=ctView(q);break;
     case "home":if(q){tab="all";return render()}h=homeView();break;
+    case "wx":h=wxCard(true);wxLoad();break;
     case "mua":h=muaView(q);break;
     default:{
       if(!q){h=`<div class="card"><b>Recherche globale</b><p class="sub">Une seule barre pour tout : poste MUA, code aéroport, compagnie, type d'avion, code retard, abréviation ou contact. Les onglets filtrent par rubrique.</p></div>`;break}
@@ -715,7 +848,8 @@ function render(){
   out.innerHTML=h;
   if(tab==="ct")bindContacts();
   bindMua();
-  document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{tab=b.dataset.go;location.hash=tab;render();scrollTo(0,0)});
+  document.querySelectorAll("[data-go]").forEach(b=>b.onclick=e=>{if(e.target.closest("a,button:not(.tile)"))return;tab=b.dataset.go;location.hash=tab;render();scrollTo(0,0)});
+  const wr=$("#wxRefresh");if(wr)wr.onclick=()=>{wr.textContent="…";wxLoad(true)};
 }
 render();
 if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").catch(()=>{})}
