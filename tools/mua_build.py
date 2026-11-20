@@ -147,7 +147,13 @@ def main(src):
             os.remove(os.path.join(out, f))
     for sid, img in images.items():
         open(os.path.join(out, sid + '.enc'), 'wb').write(enc(img))
-    idx = json.dumps({'v': 1, 'sheets': sheets}, ensure_ascii=False).encode()
+    # synthèse « types étudiés par poste » (document interne, chiffré avec le reste) : DOSSIER/synthese.json
+    spath = os.path.join(src, 'synthese.json')
+    synth = json.load(open(spath, encoding='utf-8')) if os.path.exists(spath) else None
+    if synth:
+        covered = {p for x in sheets for p in x['postes']}
+        print('synthèse :', len(synth['postes']), 'postes ; sans fiche :', sorted(set(synth['postes']) - covered) or 'aucun')
+    idx = json.dumps({'v': 1, 'sheets': sheets, 'synth': synth}, ensure_ascii=False).encode()
     open(os.path.join(out, 'index.enc'), 'wb').write(enc(idx))
     json.dump({'v': 1, 'iter': ITER, 'salt': base64.b64encode(salt).decode(), 'count': len(sheets)}, open(meta_path, 'w'))
     print(len(sheets), 'fiches chiffrées dans', os.path.normpath(out))

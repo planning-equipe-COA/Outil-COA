@@ -17,15 +17,16 @@ testé (Chrome sans affichage, 390 px de large) et publié (push sur `main` = en
    refait, voir « MUA » plus bas) et le code d'accès, que Raph donne de vive voix : **ne jamais l'écrire dans le dépôt, un commit
    ou un fichier suivi**. Les PDF ne sont pas dans le dépôt (document interne) : les demander à Raph, travailler hors du dépôt.
 
-**Questions ouvertes :**
-- Postes internes à 4 chiffres hors groupe AMP (assistants, services, portes) : passent-ils aussi par le standard AMP ?
-  Si oui, ajouter le préfixe `ext` aux groupes concernés de l'annuaire (`tools/annuaire.py decrypt` → éditer → `encrypt`).
-- Une ligne Alyzia (passage T2) a été lue sur un ajout manuscrit : marquée « à vérifier » dans l'annuaire.
-- SASCA : un poste barré sur la feuille n'a pas été repris.
+**Décisions de Raph (20 nov. 2026) :**
+- Fiche MUA : **toujours la plus récente** (date imprimée). 8B : la version du 15/10/2025 reste (celle du GANTT porte 13/03/2025).
+- Lignes MRS confirmées : ORY, CDG, LGW, LHR, STN, Milan, IST (pas SAW), CRL, BRU.
+- Postes internes à 4 chiffres de l'annuaire : **non joignables de l'extérieur** (pas de préfixe `ext` à ajouter).
+- Ligne Alyzia passage T2 : à supprimer (`tools/annuaire.py remove alyzia verifier`, lancé par Raph avec le code) ; poste SASCA
+  barré : reste hors de l'annuaire.
 (Aucun numéro dans ce fichier : le dépôt est public, les numéros sont seulement dans l'annuaire chiffré.)
 
-**Idées proposées, pas encore demandées (ne pas faire sans accord) :** compagnies opérant à MRS avec leur assistant ; outils de
-calcul (UTC/local, kg/lb, carburant L/kg, écart d'heures).
+**Faits le 20 nov. 2026 (demandés) :** « Quel poste pour cet avion ? » avec la synthèse MUA, Compagnies présentes à MRS,
+onglet Calculs (voir plus bas).
 
 **Travailler avec Raph :** il parle français, utilise surtout l'iPhone (appli installée sur l'écran d'accueil), parfois le Mac.
 Explications courtes, étape par étape, avec une vérification « ✅ » après chaque action et une courte explication de chaque terme
@@ -101,6 +102,24 @@ L'utilisateur échange en français.
   LFML par l'API FAA à confirmer au premier vrai appel.** Le briefing officiel SIA fait foi (écrit dans l'appli).
 - **Favoris** (`coa-favs`, ☆/★) sur les cartes MUA et les lignes de l'annuaire ; section « Favoris » sur l'accueil (fiches en
   tuiles, numéros avec Appeler/SMS). Gestionnaire global en phase de capture (`data-fav`).
+
+## Ajouts du 20 nov. 2026 (soir, demandés)
+- **« Quel poste pour cet avion ? » complété** : synthèse « MUA LFML – types étudiés par poste » (PDF du GANTT
+  `~/Dev/flight-planning/assets/`), convertie en `~/Dev/MUA_source/synthese.json` (hors dépôt : document interne) puis chiffrée
+  dans `mua/index.enc` (`idx.synth` = {ref: 40 types de référence, postes: {poste: zone, gabarit, date, depart, etudies, non,
+  ok, neutr, rem}}). `ok` = types de référence étudiés (liste de référence moins « Non étudiés » ; « Tous… sauf » ; « Aucun »
+  = tous ; « Non déterminable » = null). 8B réécrit d'après la fiche du 15/10/2025. Menu : « Types courants » (40) d'abord →
+  `finderSynth` (postes par zone, départ, neutralisés, remarque, mention « gabarit » = déduit des dimensions, à confirmer) ;
+  « Autres types cités sur les fiches » → ancienne recherche sur les lignes des fiches. Cartes MUA : départ + postes neutralisés
+  par poste. Texte de la synthèse ajouté à la recherche MUA (fiches scannées). Sans synthèse dans l'index, tout marche comme avant.
+  Script de conversion : à refaire si la synthèse change (demander, il est simple : en-têtes « Poste X — zone — fiche du … »).
+- **Compagnies présentes à MRS** (onglet Compagnies sans recherche) : `MRS_AL` (44 : filtre du site de l'aéroport + compagnies
+  régulières des programmes du GANTT, dont fret), codes et indicatifs écrits ici (base OpenFlights périmée : ITA, easyJet Europe…),
+  aussi en tête des recherches (étiquette MRS). Colonne Assistant prévue (`MRS_HANDLER` IATA → nom), **vide : Raph doit donner
+  la correspondance** (le GANTT la garde dans son localStorage, illisible depuis le Mac).
+- **Onglet Calculs** (thème « Calculs », `calcView`/`bindCalc`, état `CALC`) : calculatrice sans eval (`calcEval` : + − × ÷ %,
+  parenthèses, virgule), UTC ↔ Marseille (décalage du jour via Intl Europe/Paris), kg ↔ lb, carburant L ↔ kg ↔ USG ↔ lb
+  (densité modifiable, 0,8 par défaut), écart entre deux heures (passage minuit), heure + durée.
 
 ## Annuaire COA — chiffré (même code que le MUA)
 - Numéros internes (assistants, AMP, aviation générale, autres, passerelle avec portables nominatifs, postes des portes),

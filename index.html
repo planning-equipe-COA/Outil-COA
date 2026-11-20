@@ -167,6 +167,13 @@ html[data-nav=menu] nav#tabs{display:none}
 .mcard:active{transform:scale(.99)}
 .mhead{display:flex;align-items:center;gap:10px;margin-bottom:6px}
 .mbadge{background:#111;color:#ffd200;font-weight:800;font-size:20px;letter-spacing:.04em;padding:4px 10px;border-radius:6px;min-width:58px;text-align:center}
+.calc label{display:grid;gap:4px;font-size:13px;color:var(--mute)}
+.cgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cdisp{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:8px 12px;text-align:right;margin-bottom:10px;overflow-wrap:anywhere}
+#cRes{font-size:30px;font-weight:700}
+.ckeys{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.ckeys .btn{font-size:20px;padding:12px 0}
+.cout{margin-top:10px;font-size:18px}
 .mbadge.sm{font-size:14px;letter-spacing:0;max-width:120px;line-height:1.25}
 .mav{font-size:13px;line-height:1.35;margin:2px 0;color:var(--ink)}
 .mav .sub{font-size:12px}
@@ -387,7 +394,7 @@ const HANDLERS=["Aviapartner","Alyzia","Air France Handling","Onet","WFS","Jetex
 
 /* ---------- État ---------- */
 let AP=[],AL=[],PL=[],loaded=false;
-const TABS=[["home","Accueil"],["mua","MUA"],["ap","Aéroports"],["al","Compagnies"],["pl","Avions"],["fl","Temps de vol"],["wx","Météo"],["notam","NOTAM"],["ct","Contacts MRS"],["dl","Codes retard"],["ab","Abréviations"],["nato","Alphabet"],["all","Tout"]];
+const TABS=[["home","Accueil"],["mua","MUA"],["ap","Aéroports"],["al","Compagnies"],["pl","Avions"],["fl","Temps de vol"],["wx","Météo"],["notam","NOTAM"],["ct","Contacts MRS"],["calc","Calculs"],["dl","Codes retard"],["ab","Abréviations"],["nato","Alphabet"],["all","Tout"]];
 let tab="home";let STRICT=false;
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -399,6 +406,7 @@ $("#tabs").innerHTML=TABS.map(([k,l])=>`<button data-k="${k}">${l}</button>`).jo
 const THEMES=[["Référentiels",[["mua","MUA · fiches de postes","Postes, avions autorisés, plans"],["ap","Aéroports","Codes IATA et OACI"],["al","Compagnies","Codes IATA, OACI et indicatifs"],["pl","Avions","Types, envergure, sillage"]]],
   ["Temps de vol",[["fl","Temps de vol","Depuis et vers Marseille"]]],
   ["Escale MRS",[["wx","Météo et fréquences","METAR, TAF, ATIS, tour, sol"],["notam","NOTAM LFML","Pistes, voies, postes, balisage"],["ct","Contacts MRS","Assistants et services, appeler ou SMS"]]],
+  ["Calculs",[["calc","Calculs","Calculatrice, UTC / local, kg / lb, carburant, écart d'heures"]]],
   ["Codes et langage",[["dl","Codes retard","Codes IATA 00 à 99"],["ab","Abréviations","A-CDM, messages, PMR, météo"],["nato","Alphabet","Alphabet OTAN, épellation"]]],
   ["Recherche",[["home","Accueil","Toutes les rubriques en tuiles"],["all","Tout","Une seule recherche dans toutes les rubriques"]]]];
 const tabName=k=>{for(const [,it] of THEMES)for(const [kk,l] of it)if(kk===k)return l;return ""};
@@ -417,6 +425,7 @@ const TI={
  nato:'<path d="M5 19 9.5 5h1L15 19M6.5 14.5h7M17 9h4M19 7v4"/>',
  wx:'<path d="M7 18h10a4 4 0 0 0 .6-7.95A6 6 0 0 0 6.2 9.6 4.2 4.2 0 0 0 7 18z"/>',
  fl:'<circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9.5 2.5h5"/><path d="M18.5 4.5l1.5 1.5"/>',
+ calc:'<rect x="5" y="2.5" width="14" height="19" rx="2"/><path d="M8 6.5h8M8.5 11h1M11.5 11h1M14.5 11h1M8.5 14h1M11.5 14h1M14.5 14h1M8.5 17h1M11.5 17h4"/>',
  notam:'<path d="M12 3.5 2.5 20h19zM12 10v4.5"/><circle cx="12" cy="17.3" r=".9" fill="currentColor"/>'};
 function favsView(){
   const f=getFavs();if(!f.length)return "";
@@ -488,7 +497,7 @@ const hm=m=>`${Math.floor(m/60)} h ${String(m%60).padStart(2,"0")}`;
    destinations, 20 nov. 2026, 114 villes, saisonnières comprises). Le site ne donne pas les codes : codes choisis ici ; plusieurs
    codes = aéroports possibles de la ville, le 1er sert au calcul. À relever de nouveau à chaque saison IATA. */
 const MRS_DEST_DATE="20/11/2026";
-const MRS_DEST=[["France et Corse","Ajaccio:AJA|Bastia:BIA|Biarritz:BIQ|Bordeaux:BOD|Brest:BES|Caen:CFR|Calvi:CLY|Figari:FSC|La Rochelle:LRH|Lille:LIL|Lyon:LYS|Nantes:NTE|Paris:ORY CDG|Rennes:RNS|Strasbourg:SXB|Toulouse:TLS|Tours:TUF"],["Outre-mer","Dzaoudzi (Mayotte):DZA|Pointe-à-Pitre:PTP|Saint-Denis (La Réunion):RUN"],["Europe","Alicante:ALC|Amsterdam:AMS|Antalya:AYT|Athènes:ATH|Barcelone:BCN|Bari:BRI|Berlin:BER|Bologne:BLQ|Bristol:BRS|Bruxelles:BRU CRL|Bucarest:OTP|Budapest:BUD|Cagliari:CAG|Catane:CTA|Chania:CHQ|Copenhague:CPH|Corfou:CFU|Cracovie:KRK|Dublin:DUB|Dubrovnik:DBV|Düsseldorf:DUS|Édimbourg:EDI|Erevan:EVN|Faro:FAO|Funchal (Madère):FNC|Héraklion:HER|Ibiza:IBZ|Istanbul:IST SAW|Lanzarote:ACE|Lisbonne:LIS|Londres:LGW LHR STN|Luxembourg:LUX|Madrid:MAD|Malaga:AGP|Malte:MLA|Manchester:MAN|Milan:MXP BGY LIN|Minorque:MAH|Munich:MUC|Naples:NAP|Olbia:OLB|Palerme:PMO|Palma de Majorque:PMI|Porto:OPO|Prague:PRG|Rome:FCO|Santorin:JTR|Séville:SVQ|Split:SPU|Tenerife:TFS|Tirana:TIA|Valence:VLC|Venise:VCE|Vienne:VIE|Wroclaw:WRO|Zadar:ZAD|Zurich:ZRH"],["Maghreb","Agadir:AGA|Alger:ALG|Annaba:AAE|Batna:BLJ|Béjaïa:BJA|Casablanca:CMN|Chlef:CFK|Constantine:CZL|Dakhla:VIL|Djerba:DJE|Essaouira:ESU|Fès:FEZ|Marrakech:RAK|Monastir:MIR|Nador:NDR|Oran:ORN|Ouarzazate:OZZ|Oujda:OUD|Rabat:RBA|Tanger:TNG|Tlemcen:TLM|Tunis:TUN"],["Afrique, Moyen-Orient et Asie","Addis-Abeba:ADD|Beyrouth:BEY|Dakar:DSS|Djeddah:JED|Hurghada:HRG|Île Maurice:MRU|Le Caire:CAI|Médine:MED|Praia (Cap-Vert):RAI|Sal (Cap-Vert):SID|Shanghai:PVG|Tel Aviv:TLV"],["Amérique du Nord","Montréal:YUL|New York:EWR JFK|Québec:YQB"]].map(([g,s])=>[g,s.split("|").map(x=>{const [c,k]=x.split(":");return {c,codes:k.split(" ")}})]);
+const MRS_DEST=[["France et Corse","Ajaccio:AJA|Bastia:BIA|Biarritz:BIQ|Bordeaux:BOD|Brest:BES|Caen:CFR|Calvi:CLY|Figari:FSC|La Rochelle:LRH|Lille:LIL|Lyon:LYS|Nantes:NTE|Paris:ORY CDG|Rennes:RNS|Strasbourg:SXB|Toulouse:TLS|Tours:TUF"],["Outre-mer","Dzaoudzi (Mayotte):DZA|Pointe-à-Pitre:PTP|Saint-Denis (La Réunion):RUN"],["Europe","Alicante:ALC|Amsterdam:AMS|Antalya:AYT|Athènes:ATH|Barcelone:BCN|Bari:BRI|Berlin:BER|Bologne:BLQ|Bristol:BRS|Bruxelles:BRU CRL|Bucarest:OTP|Budapest:BUD|Cagliari:CAG|Catane:CTA|Chania:CHQ|Copenhague:CPH|Corfou:CFU|Cracovie:KRK|Dublin:DUB|Dubrovnik:DBV|Düsseldorf:DUS|Édimbourg:EDI|Erevan:EVN|Faro:FAO|Funchal (Madère):FNC|Héraklion:HER|Ibiza:IBZ|Istanbul:IST|Lanzarote:ACE|Lisbonne:LIS|Londres:LGW LHR STN|Luxembourg:LUX|Madrid:MAD|Malaga:AGP|Malte:MLA|Manchester:MAN|Milan:MXP BGY LIN|Minorque:MAH|Munich:MUC|Naples:NAP|Olbia:OLB|Palerme:PMO|Palma de Majorque:PMI|Porto:OPO|Prague:PRG|Rome:FCO|Santorin:JTR|Séville:SVQ|Split:SPU|Tenerife:TFS|Tirana:TIA|Valence:VLC|Venise:VCE|Vienne:VIE|Wroclaw:WRO|Zadar:ZAD|Zurich:ZRH"],["Maghreb","Agadir:AGA|Alger:ALG|Annaba:AAE|Batna:BLJ|Béjaïa:BJA|Casablanca:CMN|Chlef:CFK|Constantine:CZL|Dakhla:VIL|Djerba:DJE|Essaouira:ESU|Fès:FEZ|Marrakech:RAK|Monastir:MIR|Nador:NDR|Oran:ORN|Ouarzazate:OZZ|Oujda:OUD|Rabat:RBA|Tanger:TNG|Tlemcen:TLM|Tunis:TUN"],["Afrique, Moyen-Orient et Asie","Addis-Abeba:ADD|Beyrouth:BEY|Dakar:DSS|Djeddah:JED|Hurghada:HRG|Île Maurice:MRU|Le Caire:CAI|Médine:MED|Praia (Cap-Vert):RAI|Sal (Cap-Vert):SID|Shanghai:PVG|Tel Aviv:TLV"],["Amérique du Nord","Montréal:YUL|New York:EWR JFK|Québec:YQB"]].map(([g,s])=>[g,s.split("|").map(x=>{const [c,k]=x.split(":");return {c,codes:k.split(" ")}})]);
 const MRS_CODES=new Set(MRS_DEST.flatMap(([,l])=>l.flatMap(x=>x.codes)));
 function flCard(r,q){const f=flightInfo(r[7],r[8]);if(!f)return "";const code=r[0]||r[1];
   return `<div class="flc"><div class="fh"><b>${hl(code,q)}</b><span>${hl(r[2],q)}${MRS_CODES.has(r[0])?' <span class="tag">ligne MRS</span>':""}</span><span class="sub">${hl(r[3],q)} · ${hl(pfr(r[4]),q)}</span></div>
@@ -524,12 +533,90 @@ function apTable(q,limit){
   const T={L:"Grand",M:"Moyen",S:"Petit"};
   return `<table><tr><th>IATA</th><th>OACI</th><th>Aéroport</th><th class="hm">Pays</th></tr>${rows.map(r=>`<tr><td class="code">${hl(r[0]||"—",q)}</td><td class="code">${hl(r[1]||"—",q)}</td><td>${hl(r[2],q)}<div class="sub">${hl(r[3],q)}<span class="tag ${r[6]?"":"off"}">${T[r[5]]}${r[6]?"":" · pas de vols réguliers"}</span></div>${(()=>{const f=flightInfo(r[7],r[8]);return f?`<div class="ft">MRS → ${esc(r[0]||r[1])} <b>≈ ${hm(f.go)}</b> · retour <b>≈ ${hm(f.back)}</b> · ${f.d.toLocaleString("fr")} km</div>`:""})()}</td><td class="hm">${hl(pfr(r[4]),q)}</td></tr>`).join("")}</table>${more(total,rows.length)}`;
 }
+/* Compagnies présentes à MRS (20 nov. 2026) : filtre « compagnies » du site de l'aéroport + compagnies régulières des
+   programmes de vols du GANTT (Air Nostrum, Corsair, flynas, fret). Codes et indicatifs écrits ici (la base OpenFlights
+   n'est plus à jour). Assistant : MRS_HANDLER (IATA → assistant), à remplir avec Raph. */
+const MRS_AL="Aegean Airlines|A3|AEE|AEGEAN;Aer Lingus|EI|EIN|SHAMROCK;Air Algérie|AH|DAH|AIR ALGERIE;Air Arabia Maroc|3O|MAC|;Air Corsica|XK|CCM|CORSICA;Air France|AF|AFR|AIRFRANS;Air Nostrum|YW|ANE|AIR NOSTRUM;Air Transat|TS|TSC|TRANSAT;Austrian Airlines|OS|AUA|AUSTRIAN;British Airways|BA|BAW|SPEEDBIRD;Brussels Airlines|SN|BEL|BEELINE;China Eastern|MU|CES|CHINA EASTERN;Corsair|SS|CRL|CORSAIR;easyJet|U2|EZY|EASY;easyJet Europe|EC|EJU|ALPINE;easyJet Switzerland|DS|EZS|TOPSWISS;El Al|LY|ELY|ELAL;Ethiopian Airlines|ET|ETH|ETHIOPIAN;Eurowings|EW|EWG|EUROWINGS;flynas|XY|KNE|NAS EXPRESS;Iberia|IB|IBE|IBERIA;ITA Airways|AZ|ITY|ITARROW;KLM|KL|KLM|KLM;Lufthansa|LH|DLH|LUFTHANSA;Nouvelair|BJ|LBT|NOUVELAIR;Pegasus|PC|PGT|SUNTURK;Royal Air Maroc|AT|RAM|ROYALAIR MAROC;Ryanair|FR|RYR|RYANAIR;Ryanair UK|RK|RUK|;SAS|SK|SAS|SCANDINAVIAN;Sky Express|GQ|SEH|AIR CRETE;Swiss|LX|SWR|SWISS;TAP Air Portugal|TP|TAP|AIR PORTUGAL;Transavia France|TO|TVF|FRENCH SUN;Transavia|HV|TRA|TRANSAVIA;Tunisair|TU|TAR|TUNAIR;Turkish Airlines|TK|THY|TURKISH;Twin Jet|T7|TJT|TWINJET;United Airlines|UA|UAL|UNITED;Volotea|V7|VOE|VOLOTEA;Vueling|VY|VLG|VUELING;ASL Airlines France (fret)|5O|FPO|FRENCH POST;DHL – European Air Transport (fret)|QY|BCS|EUROTRANS;Swiftair (fret)|WT|SWT|SWIFT".split(";").map(x=>x.split("|"));
+const MRS_HANDLER={};
+/* ---------- Calculs : calculatrice, UTC ↔ heure de Marseille, kg ↔ lb, carburant, écart d'heures ---------- */
+const CALC={expr:"",res:"",utc:"",loc:"",dur1:"",dur2:"",add1:"",add2:"",dens:"0.8"};
+/* calculatrice sans eval : + − × ÷ %, parenthèses, virgule ou point */
+function calcEval(src){
+  const t=String(src).replace(/,/g,".").replace(/×/g,"*").replace(/÷/g,"/").replace(/−/g,"-").match(/\d+(?:\.\d*)?|\.\d+|[-+*/%()]/g)||[];
+  let i=0;const peek=()=>t[i],next=()=>t[i++];
+  function prim(){const x=next();if(x==="(") {const v=sum();if(next()!==")")throw 0;return v}if(x==="-")return -prim();if(x==="+")return prim();
+    const n=parseFloat(x);if(isNaN(n))throw 0;if(peek()==="%"){next();return n/100}return n}
+  function prod(){let v=prim();while(peek()==="*"||peek()==="/"){const o=next(),w=prim();v=o==="*"?v*w:v/w}return v}
+  function sum(){let v=prod();while(peek()==="+"||peek()==="-"){const o=next(),w=prod();v=o==="+"?v+w:v-w}return v}
+  if(!t.length)return "";const v=sum();if(i<t.length||!isFinite(v))throw 0;
+  return (Math.round(v*1e10)/1e10).toLocaleString("fr",{maximumFractionDigits:10});
+}
+/* heures : « 14:30 », « 1430 », « 14h30 », « 9 » */
+function parseHM(s){const m=String(s).trim().replace(/h/i,":").match(/^(\d{1,2})(?::?(\d{2}))?$/);if(!m)return null;const h=+m[1],mi=+(m[2]||0);return h<24&&mi<60?h*60+mi:null}
+const fmtHM=m=>String(Math.floor(m/60)%24).padStart(2,"0")+":"+String(m%60).padStart(2,"0");
+/* décalage de Marseille (Europe/Paris) pour une date : +60 l'hiver, +120 l'été */
+function parisOffset(d){const p=new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Paris",hourCycle:"h23",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"}).formatToParts(d).reduce((o,x)=>(o[x.type]=x.value,o),{});
+  return Math.round((Date.UTC(+p.year,+p.month-1,+p.day,+p.hour,+p.minute)-Math.floor(d.getTime()/60000)*60000)/60000)}
+const n2=v=>{const x=parseFloat(String(v).replace(",","."));return isNaN(x)?null:x};
+const f2=(x,d=1)=>x==null?"":(Math.round(x*10**d)/10**d).toLocaleString("fr",{maximumFractionDigits:d});
+function calcView(){
+  const off=parisOffset(new Date()),kb=["C","(",")","÷","7","8","9","×","4","5","6","−","1","2","3","+","0",",","%","="];
+  const box=(t,b)=>`<div class="card calc"><h2>${t}</h2>${b}</div>`;
+  const inp=(id,ph,mode="decimal",v="")=>`<input id="${id}" class="u-input" inputmode="${mode}" autocomplete="off" placeholder="${ph}" value="${esc(v)}">`;
+  return box("Calculatrice",`<div class="cdisp"><div id="cExpr" class="sub">${esc(CALC.expr)||"&nbsp;"}</div><div id="cRes">${esc(CALC.res||"0")}</div></div>
+    <div class="ckeys">${kb.map(k=>`<button class="btn${k==="="?" p":""}" data-ck="${k}">${k}</button>`).join("")}<button class="btn" data-ck="⌫" style="grid-column:span 4">⌫ effacer le dernier</button></div>`)+
+  box("UTC ↔ heure de Marseille",`<p class="sub">Aujourd'hui : UTC${off>=0?"+":"−"}${Math.abs(off/60)} (${off===120?"heure d'été":"heure d'hiver"}). Tape une heure dans l'une des deux cases.</p>
+    <div class="cgrid"><label>UTC (Z)${inp("cUtc","14:30","numeric",CALC.utc)}</label><label>Marseille${inp("cLoc","15:30","numeric",CALC.loc)}</label></div>`)+
+  box("Masse : kg ↔ lb",`<div class="cgrid"><label>kg${inp("cKg","1000")}</label><label>lb${inp("cLb","2205")}</label></div><p class="sub">1 kg = 2,2046 lb · 1 lb = 0,4536 kg</p>`)+
+  box("Carburant : litres ↔ kg",`<label>Densité (kg/L)${inp("cDens","0,8","decimal",CALC.dens)}</label><p class="sub">Jet A-1 : 0,775 à 0,840 selon la température. Prendre la densité donnée par le pétrolier.</p>
+    <div class="cgrid"><label>Litres${inp("cL","5000")}</label><label>kg${inp("cFkg","4000")}</label><label>Gallons US${inp("cG","1321")}</label><label>lb${inp("cFlb","8818")}</label></div>`)+
+  box("Écart entre deux heures",`<div class="cgrid"><label>Début${inp("cD1","06:45","numeric",CALC.dur1)}</label><label>Fin${inp("cD2","09:10","numeric",CALC.dur2)}</label></div><div id="cDur" class="cout"></div>`)+
+  box("Heure + durée",`<div class="cgrid"><label>Heure${inp("cA1","22:30","numeric",CALC.add1)}</label><label>+ minutes (ou h:mm)${inp("cA2","95","numeric",CALC.add2)}</label></div><div id="cAdd" class="cout"></div>`);
+}
+function bindCalc(){
+  const show=()=>{$("#cExpr").textContent=CALC.expr||" ";$("#cRes").textContent=CALC.res||"0"};
+  document.querySelectorAll("[data-ck]").forEach(b=>b.onclick=()=>{const k=b.dataset.ck;
+    const done=CALC.done;CALC.done=false;
+    if(k==="C"){CALC.expr="";CALC.res=""}else if(k==="⌫")CALC.expr=CALC.expr.slice(0,-1);
+    else if(k==="="){try{CALC.res=calcEval(CALC.expr);CALC.expr=CALC.res.replace(/\s/g,"");CALC.done=true}catch(e){CALC.res="Erreur"}show();return}
+    else{if(done&&/[\d,(]/.test(k))CALC.expr="";CALC.expr+=k}
+    try{CALC.res=calcEval(CALC.expr)}catch(e){}show()});
+  const date=new Date(),off=parisOffset(date);
+  const tz=(src,dst,sign)=>{const v=$(src).value;CALC[src==="#cUtc"?"utc":"loc"]=v;const m=parseHM(v);$(dst).value=m==null?"":fmtHM((m+sign*off+1440)%1440)};
+  $("#cUtc").oninput=()=>tz("#cUtc","#cLoc",1);$("#cLoc").oninput=()=>tz("#cLoc","#cUtc",-1);
+  const LB=0.45359237,USG=3.785411784;
+  $("#cKg").oninput=()=>{const x=n2($("#cKg").value);$("#cLb").value=x==null?"":f2(x/LB)};
+  $("#cLb").oninput=()=>{const x=n2($("#cLb").value);$("#cKg").value=x==null?"":f2(x*LB)};
+  const fuel=from=>{const d=n2($("#cDens").value)||0.8;CALC.dens=$("#cDens").value;let L=null;const v=n2($(from).value);
+    if(v!=null)L=from==="#cL"?v:from==="#cFkg"?v/d:from==="#cG"?v*USG:v*LB/d;
+    ["#cL","#cFkg","#cG","#cFlb"].forEach(id=>{if(id===from)return;$(id).value=L==null?"":f2(id==="#cL"?L:id==="#cFkg"?L*d:id==="#cG"?L/USG:L*d/LB,0)})};
+  ["#cL","#cFkg","#cG","#cFlb"].forEach(id=>$(id).oninput=()=>fuel(id));$("#cDens").oninput=()=>fuel("#cL");
+  const dur=()=>{CALC.dur1=$("#cD1").value;CALC.dur2=$("#cD2").value;const a=parseHM(CALC.dur1),b=parseHM(CALC.dur2);
+    if(a==null||b==null){$("#cDur").textContent="";return}const d=(b-a+1440)%1440;
+    $("#cDur").innerHTML=`<b>${Math.floor(d/60)} h ${String(d%60).padStart(2,"0")}</b> · ${d} min${b<a?' <span class="tag">fin le lendemain</span>':""}`};
+  $("#cD1").oninput=dur;$("#cD2").oninput=dur;dur();
+  const add=()=>{CALC.add1=$("#cA1").value;CALC.add2=$("#cA2").value;const a=parseHM(CALC.add1);const v=String(CALC.add2).trim();
+    const m=/:|h/i.test(v)?parseHM(v):(/^-?\d+$/.test(v)?+v:null);
+    if(a==null||m==null){$("#cAdd").textContent="";return}const t=a+m;
+    $("#cAdd").innerHTML=`<b>${fmtHM(((t%1440)+1440)%1440)}</b>${t>=1440?' <span class="tag">lendemain</span>':t<0?' <span class="tag">veille</span>':""}`};
+  $("#cA1").oninput=add;$("#cA2").oninput=add;add();
+}
+function alMrsView(){
+  const h=MRS_AL.some(([,i])=>MRS_HANDLER[i]);
+  return `<div class="info">Tape un code IATA (AF), OACI (AFR), un nom ou un indicatif radio. ${AL.length.toLocaleString("fr")} compagnies dans la base.</div>
+  <h2 style="margin-bottom:2px">Compagnies présentes à MRS</h2><p class="sub" style="margin-top:0">${MRS_AL.length} compagnies (site de l'aéroport et programmes de vols, relevé du 20/11/2026). Touche une ligne pour la fiche complète.</p>
+  <table class="ftab fld"><tr><th>Compagnie</th><th>IATA · OACI</th>${h?"<th>Assistant</th>":""}</tr>${MRS_AL.map(([n,i,o,c])=>`<tr data-flq="${esc(o)}"><td><b>${esc(n)}</b>${c?`<div class="sub">Indicatif ${esc(c)}</div>`:""}</td><td class="code">${esc(i)} · ${esc(o)}</td>${h?`<td>${esc(MRS_HANDLER[i]||"")}</td>`:""}</tr>`).join("")}</table>`;
+}
 function alTable(q,limit){
-  if(!q)return `<div class="info">Tape un code IATA (AF), OACI (AFR), un nom ou un indicatif radio. ${AL.length.toLocaleString("fr")} compagnies.</div>`;
-  const {total,rows}=search(AL,r=>[r[0],r[1]],r=>[r[2],r[3],r[4],pfr(r[4])],q,limit);
+  if(!q)return alMrsView();
+  const {total:t0,rows}=search(AL,r=>[r[0],r[1]],r=>[r[2],r[3],r[4],pfr(r[4])],q,limit);
   rows.sort((a,b)=>(b[5]-a[5]));
+  /* compagnies MRS en tête, avec les codes écrits ici (ITA, easyJet Europe… absentes ou périmées dans la base) */
+  const Q=q.toUpperCase(),mrs=MRS_AL.filter(([n,i,o,c])=>i===Q||o===Q||[n,c].some(x=>norm(x).includes(q))).map(([n,i,o,c])=>[i,o,n,c,"",true,1]);
+  const oc=new Set(mrs.map(r=>r[1]));const rest=rows.filter(r=>!oc.has(r[1]));rows.length=0;rows.push(...mrs,...rest);
+  const total=t0+mrs.length;
   if(!total)return `<div class="info">Aucune compagnie.</div>`;
-  return `<table><tr><th>IATA</th><th>OACI</th><th>Compagnie</th><th class="hm">Indicatif</th></tr>${rows.map(r=>`<tr><td class="code">${hl(r[0]||"—",q)}</td><td class="code">${hl(r[1]||"—",q)}</td><td>${hl(r[2],q)}${r[5]?"":'<span class="tag off">inactive ?</span>'}<div class="sub">${hl(r[4],q)}</div></td><td class="hm code">${hl(r[3],q)}</td></tr>`).join("")}</table>${more(total,rows.length)}`;
+  return `<table><tr><th>IATA</th><th>OACI</th><th>Compagnie</th><th class="hm">Indicatif</th></tr>${rows.map(r=>`<tr><td class="code">${hl(r[0]||"—",q)}</td><td class="code">${hl(r[1]||"—",q)}</td><td>${hl(r[2],q)}${r[6]?'<span class="tag">MRS</span>':""}${r[5]?"":'<span class="tag off">inactive ?</span>'}<div class="sub">${hl(r[4],q)}</div></td><td class="hm code">${hl(r[3],q)}</td></tr>`).join("")}</table>${more(total,rows.length)}`;
 }
 function plTable(q,limit){
   const {total,rows}=q?search(PL,r=>[r[0],r[1]],r=>[r[2]],q,limit):{total:PL.length,rows:PL.slice(0,limit)};
@@ -774,8 +861,11 @@ async function muaDecrypt(buf){const b=new Uint8Array(buf);return crypto.subtle.
 async function muaFetch(f){const r=await fetch("mua/"+f,{cache:"no-cache"});if(!r.ok)throw new Error(r.status);return r.arrayBuffer()}
 async function muaOpenIndex(){
   const plain=await muaDecrypt(await muaFetch("index.enc"));
-  MUA.sheets=JSON.parse(new TextDecoder().decode(plain)).sheets;
-  MUA.sheets.forEach(s=>{s._n=norm(s.poste+" "+s.alias+" "+s.text)});
+  const idx=JSON.parse(new TextDecoder().decode(plain));
+  MUA.sheets=idx.sheets;MUA.synth=idx.synth||null;
+  /* la synthèse (types étudiés) est ajoutée au texte cherché : utile pour les fiches scannées sans texte */
+  MUA.sheets.forEach(s=>{const sy=muaPostes(s).map(p=>synthOf(p)).filter(Boolean).map(e=>e.etudies.map(x=>x.t).join(" ")+" "+(e.ok||[]).join(" ")).join(" ");
+    s._n=norm(s.poste+" "+s.alias+" "+s.text+" "+sy)});
   MUA.annu=await annuLoad();
   MUA.state="ok";
   setTimeout(muaPrefetch,1500);
@@ -895,7 +985,7 @@ function confirmDel(b){if(b.dataset.armed)return false;b.dataset.armed="1";b.tex
 
 /* télécharge toutes les fiches une fois : le service worker les garde pour l'usage hors connexion */
 async function muaPrefetch(){try{await fetch("mua/annuaire.enc")}catch(e){}for(const s of MUA.sheets||[]){try{await fetch("mua/"+s.id+".enc")}catch(e){return}}}
-function muaLock(){MUA.key=null;MUA.sheets=null;MUA.annu=null;MUA.state="idle";Object.values(MUA.urls).forEach(u=>URL.revokeObjectURL(u));MUA.urls={};try{localStorage.removeItem("coa-mua-k")}catch(e){}render()}
+function muaLock(){MUA.key=null;MUA.sheets=null;MUA.synth=null;MUA.annu=null;MUA.state="idle";Object.values(MUA.urls).forEach(u=>URL.revokeObjectURL(u));MUA.urls={};try{localStorage.removeItem("coa-mua-k")}catch(e){}render()}
 function muaMatch(q){
   if(!MUA.sheets)return [];
   if(!q)return MUA.sheets;
@@ -912,14 +1002,27 @@ function typeAliases(name){const res=[];let prefix="",fam="",dash=false;
   return [...new Set(res)]}
 function muaTypes(){const set=new Set();(MUA.sheets||[]).forEach(s=>s.avions.forEach(a=>typeAliases(a.t).forEach(t=>set.add(t))));
   return [...set].sort((a,b)=>a.localeCompare(b,"fr",{numeric:true}))}
+/* synthèse par poste (types de la liste de référence étudiés, départ, postes neutralisés) — dans l'index chiffré */
+function synthOf(p){return MUA.synth&&MUA.synth.postes[p]||null}
+const shortDep=d=>String(d||"").replace(/\s*\(voir le détail ci-dessous\)/,"").replace(/\.$/,"");
+const standOrder=(a,b)=>parseInt(a)-parseInt(b)||a.localeCompare(b,"fr",{numeric:true});
+function finderSynth(type){
+  const rows=Object.entries(MUA.synth.postes).filter(([,e])=>e.ok&&e.ok.includes(type)).sort(([a],[b])=>standOrder(a,b));
+  if(!rows.length)return `<div class="info">Aucun poste n'est étudié pour ${esc(type)} d'après la synthèse du MUA.</div>`;
+  const zones=[...new Set(rows.map(([,e])=>e.zone))];
+  return `<div class="info">${rows.length} poste(s) étudié(s) pour <b>${esc(type)}</b>, d'après la synthèse des fiches MUA. « gabarit » = fiche qui ne cite que des dimensions : déduit, à confirmer sur la fiche. Touche un poste pour ouvrir sa fiche.</div>`+
+  zones.map(z=>`<h3 class="flg">${esc(z)}</h3><table class="ftab"><tr><th>Poste</th><th>Départ · postes neutralisés</th></tr>${rows.filter(([,e])=>e.zone===z).map(([p,e])=>`<tr><td><span class="mbadge${p.length>4?" sm":""}" data-openposte="${esc(p)}">${esc(p)}</span>${e.gabarit?'<div class="sub">gabarit</div>':""}</td><td>${esc(shortDep(e.depart))}<div class="sub">Neutralise : ${esc(e.neutr.replace(/\.$/,""))}</div>${e.rem?`<div class="sub">${esc(e.rem)}</div>`:""}</td></tr>`).join("")}</table>`).join("");
+}
 function finderView(type){
-  const types=muaTypes();
+  const ref=MUA.synth?MUA.synth.ref:[];const nk=t=>norm(t).replace(/[^a-z0-9]/g,"");const refK=new Set(ref.map(nk));
+  const types=muaTypes().filter(t=>!refK.has(nk(t)));
   let res="";
-  if(type){const rows=[];MUA.sheets.forEach(s=>s.avions.forEach(a=>{if(typeAliases(a.t).includes(type))rows.push({s,a})}));
+  if(type&&ref.includes(type))res=finderSynth(type);
+  else if(type){const rows=[];MUA.sheets.forEach(s=>s.avions.forEach(a=>{if(typeAliases(a.t).includes(type))rows.push({s,a})}));
     res=rows.length?`<table class="ftab"><tr><th>Poste</th><th>Avion</th><th>Arrivée · passerelle · postes neutralisés</th></tr>${rows.map(({s,a})=>`<tr><td><span class="mbadge${s.poste.length>4?" sm":""}" data-openposte="${esc(s.poste)}">${esc(s.poste)}</span>${s.part?`<div class="sub">fiche ${esc(s.part)}</div>`:""}</td><td>${esc(a.t)}<div class="sub">RdN ${esc(a.rdn)}</div></td><td>${esc(a.info)}</td></tr>`).join("")}</table>`
       :`<div class="info">Aucun poste ne mentionne ${esc(type)} dans les fiches chargées.</div>`;
     res=`<div class="info">${new Set(rows.map(r=>r.s.poste)).size} poste(s) pour ${esc(type)}, d'après les ${MUA.sheets.length} fiches chargées. Touche un poste pour ouvrir sa fiche.</div>`+res}
-  return `<div class="finder"><b>Quel poste pour cet avion ?</b><select id="finderSel"><option value="">Choisir un type…</option>${types.map(t=>`<option${t===type?" selected":""}>${esc(t)}</option>`).join("")}</select>${type?'<button class="btn" id="finderX">Effacer</button>':""}</div>${res}`;
+  return `<div class="finder"><b>Quel poste pour cet avion ?</b><select id="finderSel"><option value="">Choisir un type…</option>${ref.length?`<optgroup label="Types courants">${ref.map(t=>`<option${t===type?" selected":""}>${esc(t)}</option>`).join("")}</optgroup><optgroup label="Autres types cités sur les fiches">`:""}${types.map(t=>`<option${t===type?" selected":""}>${esc(t)}</option>`).join("")}${ref.length?"</optgroup>":""}</select>${type?'<button class="btn" id="finderX">Effacer</button>':""}</div>${res}`;
 }
 function muaCard(s,q){
   const i=MUA.sheets.indexOf(s);
@@ -930,6 +1033,7 @@ function muaCard(s,q){
   return `<div class="mcard" role="button" tabindex="0" data-sheet="${i}"><div class="mhead"><span class="mbadge${s.poste.length>4?" sm":""}">${esc(s.poste)}</span><div><b>${muaPostes(s).length>1?"Postes":"Poste"} ${esc(s.poste)}${s.part?` · fiche ${esc(s.part)}`:""}</b><div class="sub">${s.date?"Mise à jour "+esc(s.date):""}${s.page?` · p. ${esc(s.page)}`:""}</div></div>${favBtn("mua:"+s.poste+s.part)}</div>
   ${gates.length?`<div class="mgate">${gates.map(g=>`Porte ${esc(g.porte)}${g.pp?" · "+esc(g.pp):""}${g.tel?" · poste "+esc(g.tel):""}`).join("<br>")}</div>`:""}
   ${av.slice(0,5).map(a=>`<div class="mav">${hl(a.t,q)} <span class="sub">· RdN ${esc(a.rdn)}${a.info?" · "+esc(a.info):""}</span></div>`).join("")||'<div class="sub">Plan et consignes : toucher pour ouvrir</div>'}${more}
+  ${muaPostes(s).map(p=>[p,synthOf(p)]).filter(([,e])=>e).map(([p,e])=>`<div class="sub" style="margin-top:3px">${muaPostes(s).length>1?`<b>${esc(p)}</b> · `:""}${esc(shortDep(e.depart))} · neutralise ${esc(e.neutr.replace(/\.$/,""))}</div>`).join("")}
   ${s.consignes.length?`<div class="sub" style="margin-top:4px">${s.consignes.length} consigne(s) d'exploitation</div>`:""}</div>`;
 }
 function muaView(q,limit){
@@ -1025,6 +1129,7 @@ function render(){
     case "wx":h=wxCard(true)+freqView();wxLoad();break;
     case "notam":h=notamView(q);notamLoad();break;
     case "fl":h=flView(q);break;
+    case "calc":h=calcView();break;
     case "mua":h=muaView(q);break;
     default:{
       if(!q){h=`<div class="card"><b>Recherche globale</b><p class="sub">Une seule barre pour tout : poste MUA, code aéroport, compagnie, type d'avion, code retard, abréviation ou contact. Les onglets filtrent par rubrique.</p></div>`;break}
@@ -1047,6 +1152,7 @@ function render(){
   }
   out.innerHTML=h;
   if(tab==="ct")bindContacts();
+  if(tab==="calc")bindCalc();
   bindMua();
   document.querySelectorAll("[data-go]").forEach(b=>b.onclick=e=>{if(e.target.closest("a,button:not(.tile)"))return;tab=b.dataset.go;location.hash=tab;render();scrollTo(0,0)});
   const wr=$("#wxRefresh");if(wr)wr.onclick=()=>{wr.textContent="…";wxLoad(true)};
