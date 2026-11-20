@@ -45,6 +45,10 @@ textarea{width:100%;min-height:90px;font-family:ui-monospace,monospace;font-size
 .hide{display:none}
 mark{background:#ffe58a;color:#000;border-radius:2px}
 @media (max-width:640px){.hm{display:none}th,td{padding:7px 8px}}
+#set{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
+  padding:calc(24px + env(safe-area-inset-top)) 12px calc(24px + env(safe-area-inset-bottom))}
+#set .setcard{max-width:420px;width:100%;margin:0 auto}
+body.noscroll{overflow:hidden}
 #set.hide{display:none!important}
 /* MUA */
 .mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
@@ -82,8 +86,8 @@ mark{background:#ffe58a;color:#000;border-radius:2px}
  <div id="vscroll"><img id="vimg" alt=""></div>
  <div class="vhint off" id="vhint">Tourne le téléphone ↻ pour lire la fiche</div>
 </div>
-<div id="set" class="hide" style="position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20;display:flex;align-items:flex-start;justify-content:center;padding:40px 12px">
- <div class="card" style="max-width:420px;width:100%;margin:0">
+<div id="set" class="hide">
+ <div class="card setcard">
   <div style="display:flex;align-items:center"><b style="font-size:16px">Réglages</b><button class="btn" id="setX" style="margin-left:auto">✕</button></div>
   <h2>Partager l'application</h2>
   <p class="sub">Fais scanner ce QR code avec l'appareil photo du téléphone.</p>
@@ -473,7 +477,7 @@ document.addEventListener("keydown",e=>{if(MUA.cur<0)return;if(e.key==="Escape")
   box.addEventListener("touchend",e=>{if(e.touches.length<2)d0=0});
   box.addEventListener("dblclick",e=>{const [lx,ly]=vLocal(e.clientX,e.clientY);vZoom(MUA.zoom>1.5?1:2.5,lx,ly)});
 }
-$("#muaLock").onclick=()=>{muaLock();$("#set").classList.add("hide")};
+$("#muaLock").onclick=()=>{muaLock();closeSet()};
 function muaSettings(){const on=!!MUA.sheets;$("#muaLock").classList.toggle("hide",!on);
   $("#muaSetInfo").textContent=on?`Ouvert sur ce téléphone (${MUA.sheets.length} fiches, gardées pour l'usage hors connexion).`:"Pas encore ouvert sur ce téléphone : onglet MUA, puis code d'accès.";}
 muaRestore();
@@ -519,9 +523,10 @@ function render(){
 render();
 if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").catch(()=>{})}
 const SHARE_URL="https://planning-equipe-coa.github.io/Outil-COA/";
-$("#gear").onclick=()=>{muaSettings();$("#set").classList.remove("hide")};
-$("#setX").onclick=()=>$("#set").classList.add("hide");
-$("#set").onclick=e=>{if(e.target.id==="set")$("#set").classList.add("hide")};
+$("#gear").onclick=()=>{muaSettings();$("#set").classList.remove("hide");$("#set").scrollTop=0;document.body.classList.add("noscroll")};
+const closeSet=()=>{$("#set").classList.add("hide");document.body.classList.remove("noscroll")};
+$("#setX").onclick=closeSet;
+$("#set").onclick=e=>{if(e.target.id==="set")closeSet()};
 $("#shareCopy").onclick=async()=>{const b=$("#shareCopy");
   if(navigator.share){try{await navigator.share({title:"Boîte à outils COA",url:SHARE_URL})}catch(e){}return}
   try{await navigator.clipboard.writeText(SHARE_URL);b.textContent="Lien copié ✓"}catch(e){b.textContent=SHARE_URL}
