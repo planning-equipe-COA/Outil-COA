@@ -1,5 +1,38 @@
 # Boîte à outils COA
 
+## OÙ ON EN EST (point du 20 nov. 2026, à lire en premier)
+Appli en ligne et utilisée : https://planning-equipe-coa.github.io/Outil-COA/ — tout ce qui est décrit plus bas est en place,
+testé (Chrome sans affichage, 390 px de large) et publié (push sur `main` = en ligne en ~1 min).
+
+**En attente de l'utilisateur (Raph) — rien à coder tant qu'il ne l'a pas fait :**
+1. **NOTAM** : il crée un compte api.faa.gov (client_id / client_secret), puis un worker Cloudflare `coa-notam` avec le code de
+   `tools/notam-worker.js` et les secrets FAA_CLIENT_ID / FAA_CLIENT_SECRET. Ensuite : mettre l'adresse `.workers.dev` dans
+   `NOTAM_URL` (index.html), vérifier avec un vrai appel que l'API FAA renvoie bien les NOTAM de LFML (**pas encore confirmé**),
+   ajuster les champs lus dans `fetchFaa` si besoin, changer `CACHE` dans sw.js, publier.
+2. **Annuaire partagé** : il crée le dépôt public `planning-equipe-COA/Outil-COA-donnees` (avec README) et une clé fine-grained
+   (Contents R/W sur ce seul dépôt), puis fait la configuration DANS l'appli (Contacts MRS → « Modifier l'annuaire (responsable) »).
+   Rien à coder ; l'aider en cas d'erreur (messages de `adErr`).
+3. **Fiches MUA** : il en envoie au fil de l'eau (noms `01-A.PDF`, `09-B-b.PDF`). 21 fiches en ligne : 1A, 1Z, 3A, 3B, 4B, 4Z, 5A,
+   5B, 5C, 6B, 6C, 7A, 7B, 7C, 8C, 9B, 9B fiche b, 10A, 10B, 10C, 10D fiche b. Pour en ajouter il faut TOUTES les PDF (l'index est
+   refait, voir « MUA » plus bas) et le code d'accès, que Raph donne de vive voix : **ne jamais l'écrire dans le dépôt, un commit
+   ou un fichier suivi**. Les PDF ne sont pas dans le dépôt (document interne) : les demander à Raph, travailler hors du dépôt.
+
+**Questions ouvertes :**
+- Postes internes à 4 chiffres hors groupe AMP (assistants, services, portes) : passent-ils aussi par le standard AMP ?
+  Si oui, ajouter le préfixe `ext` aux groupes concernés de l'annuaire (`tools/annuaire.py decrypt` → éditer → `encrypt`).
+- Une ligne Alyzia (passage T2) a été lue sur un ajout manuscrit : marquée « à vérifier » dans l'annuaire.
+- SASCA : un poste barré sur la feuille n'a pas été repris.
+(Aucun numéro dans ce fichier : le dépôt est public, les numéros sont seulement dans l'annuaire chiffré.)
+
+**Idées proposées, pas encore demandées (ne pas faire sans accord) :** compagnies opérant à MRS avec leur assistant ; outils de
+calcul (UTC/local, kg/lb, carburant L/kg, écart d'heures).
+
+**Travailler avec Raph :** il parle français, utilise surtout l'iPhone (appli installée sur l'écran d'accueil), parfois le Mac.
+Explications courtes, étape par étape, avec une vérification « ✅ » après chaque action et une courte explication de chaque terme
+technique. Toujours tester avant de publier, changer `CACHE` dans sw.js à chaque mise en ligne, mettre à jour CE fichier quand
+une fonction change. Dépôt public : aucune donnée interne en clair (fiches MUA, annuaire, numéros, codes, clés).
+
+## Présentation
 Appli web statique, **distincte du Planning COA** (choix de l'utilisateur) : référence pour le travail au COA
 (aéroport Marseille-Provence). En ligne : https://planning-equipe-coa.github.io/Outil-COA/ (GitHub Pages, branche `main`, racine).
 Le Planning COA est dans le dépôt `planning-equipe-COA/horaires` et a seulement un lien vers ici (Réglages).
@@ -11,8 +44,8 @@ L'utilisateur échange en français.
   haut à droite ; demandée le 20 nov. 2026) : thèmes de haut en bas (`THEMES` sauf Recherche), tuiles encadrées 2 par ligne en
   portrait (`.tiles`, minmax 150 px), icône au trait (`TI`), toucher = rubrique ; taper une recherche depuis l'accueil bascule
   sur « Tout ». Thèmes (`THEMES`, même ordre pour l'accueil, le menu et les onglets ; demandé le 20 nov.) : **Référentiels** (MUA, Aéroports,
-  Compagnies, Avions) en premier, Temps de vol, Escale MRS (Météo et fréquences, NOTAM, (Contacts MRS), Codes et langage (Codes retard, Abréviations, Alphabet), Recherche
-  (Accueil, Tout ; absente de l'accueil). Onglets : Accueil, MUA, Aéroports, Compagnies, Avions, Contacts MRS, Codes retard,
+  Compagnies, Avions) en premier, Temps de vol, Escale MRS (Météo et fréquences, NOTAM, Contacts MRS), Codes et langage (Codes retard, Abréviations, Alphabet), Recherche
+  (Accueil, Tout ; absente de l'accueil). Onglets : Accueil, MUA, Aéroports, Compagnies, Avions, Temps de vol, Météo, NOTAM, Contacts MRS, Codes retard,
   Abréviations, Alphabet, Tout. Une barre de recherche ; codes exacts (IATA/OACI) en premier. Onglet dans le `#hash`.
   Codes retard IATA (AHM 730), abréviations, alphabet OTAN, `ACX` (code OACI d'envergure, sillage, envergure indicative)
   écrits dans le fichier. **Contacts MRS = numéros utiles comme dans le Planning** (demandé) : services triés par ordre
@@ -33,7 +66,7 @@ L'utilisateur échange en français.
 ## Ajouts du 20 nov. 2026 (demandés)
 - **Portes ↔ fiches MUA** : `gateStand(libellé, passerelle)` → poste (« 5B / 28 » → 5B, « PP9 – 9A » → 9A) s'il existe une fiche ;
   bouton « Fiche MUA 5B » dans l'annuaire (`data-openposte`, gestionnaire global) ; la carte MUA affiche « Porte 28 · PP6 – 6A ·
-  poste 7499 » (`standGates`).
+  poste …… » (`standGates`).
 - **Quel poste pour cet avion ?** (haut de l'onglet MUA) : menu des types (`muaTypes` = `typeAliases` de chaque ligne avion,
   « tous types » retiré, « NE0 » → NEO) → tableau poste / avion / infos ; toucher le badge ouvre la fiche. `MUA.finder`.
 - **Temps de vol MRS ↔ aéroport** : `airports.json` a maintenant lat/lon (colonnes 8 et 9). `flightInfo` : orthodromie,
