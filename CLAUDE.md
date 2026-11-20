@@ -3,6 +3,7 @@
 Appli web statique, **distincte du Planning COA** (choix de l'utilisateur) : référence pour le travail au COA
 (aéroport Marseille-Provence). En ligne : https://planning-equipe-coa.github.io/Outil-COA/ (GitHub Pages, branche `main`, racine).
 Le Planning COA est dans le dépôt `planning-equipe-COA/horaires` et a seulement un lien vers ici (Réglages).
+**Aucun lien ni mention du Planning dans cette appli** (demandé par l'utilisateur).
 L'utilisateur échange en français.
 
 ## Fichiers
