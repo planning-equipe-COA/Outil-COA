@@ -349,7 +349,7 @@ const HANDLERS=["Aviapartner","Alyzia","Air France Handling","Onet","WFS","Jetex
 
 /* ---------- État ---------- */
 let AP=[],AL=[],PL=[],loaded=false;
-const TABS=[["home","Accueil"],["mua","MUA"],["all","Tout"],["ap","Aéroports"],["al","Compagnies"],["pl","Avions"],["dl","Codes retard"],["ab","Abréviations"],["nato","Alphabet"],["ct","Contacts MRS"]];
+const TABS=[["home","Accueil"],["mua","MUA"],["ap","Aéroports"],["al","Compagnies"],["pl","Avions"],["ct","Contacts MRS"],["dl","Codes retard"],["ab","Abréviations"],["nato","Alphabet"],["all","Tout"]];
 let tab="home";let STRICT=false;
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -358,10 +358,10 @@ function hl(text,q){const t=esc(text);if(!q)return t;const n=norm(text);const i=
 function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
 
 $("#tabs").innerHTML=TABS.map(([k,l])=>`<button data-k="${k}">${l}</button>`).join("");
-const THEMES=[["Recherche",[["home","Accueil","Toutes les rubriques en tuiles"],["all","Tout","Une seule recherche dans toutes les rubriques"]]],
-  ["Escale MRS",[["mua","MUA · fiches de postes","Postes, avions autorisés, plans"],["ct","Contacts MRS","Assistants et services, appeler ou SMS"]]],
-  ["Référentiels",[["ap","Aéroports","Codes IATA et OACI"],["al","Compagnies","Codes IATA, OACI et indicatifs"],["pl","Avions","Types, envergure, sillage"]]],
-  ["Codes et langage",[["dl","Codes retard","Codes IATA 00 à 99"],["ab","Abréviations","A-CDM, messages, PMR, météo"],["nato","Alphabet","Alphabet OTAN, épellation"]]]];
+const THEMES=[["Référentiels",[["mua","MUA · fiches de postes","Postes, avions autorisés, plans"],["ap","Aéroports","Codes IATA et OACI"],["al","Compagnies","Codes IATA, OACI et indicatifs"],["pl","Avions","Types, envergure, sillage"]]],
+  ["Escale MRS",[["ct","Contacts MRS","Assistants et services, appeler ou SMS"]]],
+  ["Codes et langage",[["dl","Codes retard","Codes IATA 00 à 99"],["ab","Abréviations","A-CDM, messages, PMR, météo"],["nato","Alphabet","Alphabet OTAN, épellation"]]],
+  ["Recherche",[["home","Accueil","Toutes les rubriques en tuiles"],["all","Tout","Une seule recherche dans toutes les rubriques"]]]];
 const tabName=k=>{for(const [,it] of THEMES)for(const [kk,l] of it)if(kk===k)return l;return ""};
 function openMenu(){$("#menuList").innerHTML=THEMES.map(([t,it])=>`<div class="mtheme">${t}</div>`+it.map(([k,l,d])=>`<button class="mitem${k===tab?" on":""}" data-k="${k}">${l}<small>${d}</small></button>`).join("")).join("");$("#menu").classList.remove("hide")}
 $("#menuBtn").onclick=openMenu;
