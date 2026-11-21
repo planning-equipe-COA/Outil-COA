@@ -836,7 +836,7 @@ function numLine(p,label,note,q){
   return `<div class="u-line"><div class="u-text"><span class="u-tel">${hl(p.t,q)}${p.kind==="freq"?" MHz":""}${tag}</span>${note?`<span class="u-note">${hl(note,q)}</span>`:""}</div>${call}${sms}</div>`;
 }
 /* corrections porte → poste données par Raph (prioritaires sur ce que l'annuaire laisse deviner) */
-const GATE_FIX={"41B":"1A","40B":"4B"};
+const GATE_FIX={"41B":["1A"],"40B":["4B"],"20":["8B","8C"]}; /* 01/20 (PP8) → 8B et 8C */
 /* portes qui n'existent plus (Raph, 21/11/2026) : masquées même si l'annuaire les contient encore */
 const GATE_GONE=["6AB","8AB"];
 /* portes sans passerelle (Raph, 21/11/2026) : remplace la passerelle indiquée par l'annuaire */
@@ -847,14 +847,14 @@ const gateOf=l=>{const t=gateToks(l);return t[t.length-1]||""};
 /* portes mixtes « 5B / 28 » : 1re porte = configuration internationale (selon les cloisons), 2e = national / Europe */
 function gateLabel(l){const t=String(l).split("/").map(x=>x.trim());return t.length===2?`${t[0]} (Intl) / ${t[1]} (Nat./Europe)`:String(l)}
 /* le poste vient de la passerelle (« PP6 – 6A » → 6A) ; « DAL » = pas de poste au contact */
-function gateStand(label,extra){const fx=GATE_FIX[gateOf(label)];if(fx)return fx;if(GATE_NOTE[gateOf(label)])return null;const b=String(extra||"").match(/(\d{1,2}[A-Z])\s*$/);
-  const p=b&&b[1];return p&&MUA.sheets&&MUA.sheets.some(s=>muaPostes(s).includes(p))?p:null}
+function gateStand(label,extra){const fx=GATE_FIX[gateOf(label)];if(fx)return fx;if(GATE_NOTE[gateOf(label)])return [];const b=String(extra||"").match(/(\d{1,2}[A-Z])\s*$/);
+  const p=b&&b[1];return p&&MUA.sheets&&MUA.sheets.some(s=>muaPostes(s).includes(p))?[p]:[]}
 /* postes couverts par une fiche (« 30A / 30D » → 30A, 30D) ; anciennes fiches : un seul poste */
 function muaPostes(s){return s.postes||[s.poste]}
 function standGates(s){const poste=muaPostes(s);const out=[];if(!MUA.annu)return out;MUA.annu.groups.forEach(g=>{if(!g.gates)return;g.items.forEach(([l,n,x])=>{if(l.startsWith("—")||gateGone(l))return;
-  if(poste.includes(gateStand(l,x)))out.push({porte:gateLabel(l),key:gateOf(l),pp:x,tel:n})})});
+  if(gateStand(l,x).some(p=>poste.includes(p)))out.push({porte:gateLabel(l),key:gateOf(l),pp:x,tel:n})})});
   /* porte corrigée absente de l'annuaire : on l'affiche quand même */
-  Object.entries(GATE_FIX).forEach(([g,p])=>{if(poste.includes(p)&&!out.some(o=>o.key===g))out.push({porte:g,key:g,pp:"",tel:""})});return out}
+  Object.entries(GATE_FIX).forEach(([g,ps])=>{if(ps.some(p=>poste.includes(p))&&!out.some(o=>o.key===g))out.push({porte:g,key:g,pp:"",tel:""})});return out}
 function annuView(q,limit){
   const A=MUA.annu;if(!A)return "";
   const qq=q||"";let total=0;
@@ -868,8 +868,8 @@ function annuView(q,limit){
       if(qq&&!norm(g.name+" "+title+" "+nums+" "+(extra||"")).includes(qq))return "";
       total++;
       const parts=numParts(nums,g.gates?"":g.ext);
-      const st=g.gates?gateStand(label,extra):null;
-      const sub=(note?`<small>${hl(note,qq)}</small>`:"")+(st?`<button class="glink" data-openposte="${st}">Fiche MUA ${st}</button>`:"");
+      const st=g.gates?gateStand(label,extra):[];
+      const sub=(note?`<small>${hl(note,qq)}</small>`:"")+st.map(p=>`<button class="glink" data-openposte="${p}">Fiche MUA ${p}</button>`).join("");
       const fk="annu:"+g.name+"|"+label;
       return `<div class="u-row"><span class="u-label${extra==="!"?" imp":""}">${hl(title,qq)} ${favBtn(fk).replace('class="fav','style="font-size:16px;margin:0;padding:0 2px" class="fav')}${sub}</span><div class="u-nums">${parts.length?parts.map(p=>numLine(p,title,"",qq)).join(""):'<div class="u-none">pas de numéro</div>'}</div></div>`;
     }).join("");
