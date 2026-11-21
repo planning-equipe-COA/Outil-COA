@@ -258,3 +258,5 @@ L'utilisateur échange en français.
 - Recherche « Tout » : numéro de vol (AF7343, AF 7343, 7343) → « Vols du jour » en tête (`volsSearch`).
 - Carte MUA : « Départs prévus à ses portes » (3 prochains, `volsByStand`, mémorisé par liste de vols + annuaire), marqué
   indicatif. Accueil / recherche / MUA n'utilisent la liste que si elle a moins de 30 min (`volsFresh`).
+- Calculs : « Heure d'arrivée à Marseille » (demande de Raph) : escale (IATA/OACI) + ED en Z (+ temps de vol connu facultatif)
+  → ETA Z et heure de Marseille ; sinon temps estimé porte à porte `flightInfo(...).back`.

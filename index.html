@@ -417,7 +417,7 @@ function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localSto
 $("#tabs").innerHTML=TABS.map(([k,l])=>`<button data-k="${k}">${l}</button>`).join("");
 const THEMES=[["Référentiels",[["mua","MUA · fiches de postes","Postes, avions autorisés, plans"],["ap","Aéroports","Codes IATA et OACI"],["al","Compagnies","Codes IATA, OACI et indicatifs"],["pl","Avions","Types, envergure, sillage"],["immat","Immatriculations","Type, compagnie, sièges (code)"]]],
   ["Escale MRS",[["vols","Vols du jour","Départs et arrivées MRS, statuts, portes"],["wx","Météo et fréquences","METAR, TAF, ATIS, tour, sol"],["notam","NOTAM LFML","Pistes, voies, postes, balisage"],["ct","Contacts MRS","Assistants et services, appeler ou SMS"],["lfml","Aérodrome LFML","AIP, pistes, consignes, AIRAC, SUP AIP"]]],
-  ["Outils",[["fl","Temps de vol","Depuis et vers Marseille"],["calc","Calculs","Calculatrice, heure Z ↔ locale, durées"]]],
+  ["Outils",[["fl","Temps de vol","Depuis et vers Marseille"],["calc","Calculs","Calculatrice, heure Z ↔ locale, ETA Marseille, durées"]]],
   ["Codes et langage",[["dl","Codes retard","Codes IATA 00 à 99"],["ab","Abréviations","A-CDM, messages, PMR, météo"],["nato","Alphabet","Alphabet OTAN, épellation"]]],
   ["Recherche",[["home","Accueil","Toutes les rubriques en tuiles"],["all","Tout","Une seule recherche dans toutes les rubriques"]]]];
 /* explicatif affiché en haut de chaque rubrique (masqué pendant une recherche) */
@@ -433,7 +433,7 @@ const HELP={
  ct:"<b>Contacts de l'escale.</b> Assistants, services et portes : touche un numéro pour appeler ou envoyer un SMS. Les postes internes à 4 chiffres ne sont pas joignables de l'extérieur. Tu peux ajouter tes propres numéros.",
  lfml:"<b>Aérodrome de Marseille.</b> Pistes et distances, consignes d'exploitation, services, cycle AIRAC en cours et SUP AIP, avec les liens vers le SIA.",
  fl:"<b>Temps de vol depuis et vers Marseille.</b> Touche une destination de la liste ou tape une ville ou un pays. Estimation porte à porte : l'horaire de la compagnie fait foi.",
- calc:"<b>Calculs rapides.</b> Calculatrice, conversion heure Z ↔ heure de Marseille (été / hiver automatique), durée entre deux heures et heure + durée. Passe minuit tout seul.",
+ calc:"<b>Calculs rapides.</b> Calculatrice, conversion heure Z ↔ heure de Marseille (été / hiver automatique), heure d'arrivée à Marseille depuis l'ED d'une escale, durée entre deux heures et heure + durée. Passe minuit tout seul.",
  dl:"<b>Codes retard IATA</b> (00 à 99) avec leur signification. Tape un numéro (93) ou un mot (météo).",
  ab:"<b>Abréviations</b> de l'exploitation : A-CDM, messages, PMR, météo, masses, urgences… Tape le sigle ou un mot.",
  nato:"<b>Alphabet OTAN.</b> Tape un mot ou une immatriculation pour l'avoir épelée (FHBXA → Foxtrot Hotel Bravo X-ray Alfa).",
@@ -572,7 +572,7 @@ function apTable(q,limit){
 const MRS_AL="Aegean Airlines|A3|AEE|AEGEAN;Aer Lingus|EI|EIN|SHAMROCK;Air Algérie|AH|DAH|AIR ALGERIE;Air Arabia Maroc|3O|MAC|;Air Corsica|XK|CCM|CORSICA;Air France|AF|AFR|AIRFRANS;Air Nostrum|YW|ANE|AIR NOSTRUM;Air Transat|TS|TSC|TRANSAT;Austrian Airlines|OS|AUA|AUSTRIAN;British Airways|BA|BAW|SPEEDBIRD;Brussels Airlines|SN|BEL|BEELINE;Shanghai Airlines|FM|CSH|SHANGHAI AIR;Corsair|SS|CRL|CORSAIR;easyJet (codes U2 et EZ)|U2|EZY|EASY;easyJet Europe|EC|EJU|ALPINE;El Al|LY|ELY|ELAL;Ethiopian Airlines|ET|ETH|ETHIOPIAN;Eurowings|EW|EWG|EUROWINGS;flynas|XY|KNE|NAS EXPRESS;Iberia|IB|IBE|IBERIA;ITA Airways|AZ|ITY|ITARROW;KLM|KL|KLM|KLM;Lufthansa|LH|DLH|LUFTHANSA;Nouvelair|BJ|LBT|NOUVELAIR;Pegasus|PC|PGT|SUNTURK;Royal Air Maroc|AT|RAM|ROYALAIR MAROC;Ryanair|FR|RYR|RYANAIR;Ryanair UK|RK|RUK|;SAS|SK|SAS|SCANDINAVIAN;Sky Express|GQ|SEH|AIR CRETE;Swiss|LX|SWR|SWISS;TAP Air Portugal|TP|TAP|AIR PORTUGAL;Transavia France|TO|TVF|FRENCH SUN;Transavia|HV|TRA|TRANSAVIA;Tunisair|TU|TAR|TUNAIR;Turkish Airlines|TK|THY|TURKISH;Twin Jet|T7|TJT|TWINJET;Twin Jet fret|ITI||;United Airlines|UA|UAL|UNITED;Volotea|V7|VOE|VOLOTEA;Vueling|VY|VLG|VUELING;ASL Airlines France (fret)|5O|FPO|FRENCH POST;DHL – European Air Transport (fret)|QY|BCS|EUROTRANS;Swiftair (fret)|WT|SWT|SWIFT".split(";").map(x=>x.split("|"));
 const MRS_HANDLER={BA:"Aviapartner",V7:"Aviapartner",TU:"Aviapartner",LH:"Aviapartner",FR:"Aviapartner",IB:"Aviapartner",YW:"Aviapartner",TP:"Aviapartner",BJ:"Aviapartner",A3:"Aviapartner",T7:"Aviapartner",PC:"Aviapartner",AH:"Alyzia",TO:"Alyzia",AT:"Alyzia",SS:"Alyzia",EZ:"Alyzia",U2:"Alyzia",ET:"Alyzia",XK:"Alyzia",EC:"Alyzia",LX:"Aviapartner",SN:"Aviapartner",AZ:"Aviapartner",OS:"Aviapartner",SK:"Aviapartner",EI:"Aviapartner",LY:"Aviapartner",TS:"Aviapartner",UA:"Aviapartner",XY:"Aviapartner","3O":"Aviapartner",GQ:"Aviapartner",RK:"Aviapartner","5O":"Aviapartner",QY:"Aviapartner",WT:"Aviapartner",AF:"Air France",EW:"Onet",TK:"Alyzia",VY:"Aviapartner",ITI:"Aviapartner",KL:"Passage Air France · coordo Aviapartner",FM:"Passage Air France · coordo Alyzia"}; /* donné par Raph le 21/11/2026. Particularité MRS : passage (passagers) et coordination (piste) peuvent être chez deux assistants différents (ex. KLM : passage AF, coordo Aviapartner). */
 /* ---------- Calculs : calculatrice, heure Z ↔ heure de Marseille, durée entre deux heures, heure + durée ---------- */
-const CALC={expr:"",res:"",utc:"",loc:"",dur1:"",dur2:"",add1:"",add2:""};
+const CALC={expr:"",res:"",utc:"",loc:"",dur1:"",dur2:"",add1:"",add2:"",eap:"",eed:"",eft:""};
 /* calculatrice sans eval : + − × ÷ %, parenthèses, virgule ou point */
 function calcEval(src){
   const t=String(src).replace(/,/g,".").replace(/×/g,"*").replace(/÷/g,"/").replace(/−/g,"-").match(/\d+(?:\.\d*)?|\.\d+|[-+*/%()]/g)||[];
@@ -600,6 +600,9 @@ function calcView(){
     <div class="ckeys">${kb.map(k=>`<button class="btn${k==="="?" p":""}" data-ck="${k}">${k}</button>`).join("")}<button class="btn" data-ck="⌫" style="grid-column:span 4">⌫ effacer le dernier</button></div>`)+
   box("Heure Z ↔ heure de Marseille",`<p class="sub">Aujourd'hui Marseille = Z ${off>=0?"+":"−"} ${Math.abs(off/60)} h (${off===120?"heure d'été":"heure d'hiver"}). Tape l'heure dans une case, l'autre se remplit.</p>
     <div class="cgrid"><label>Heure Z (UTC)${inp("cUtc","ex. 14:30","numeric",CALC.utc)}</label><label>Heure de Marseille${inp("cLoc","ex. 15:30","numeric",CALC.loc)}</label></div><div id="cTz" class="cout"></div>`)+
+  box("Heure d'arrivée à Marseille",`<p class="sub">À partir de l'ED (heure de départ estimée, en Z) d'une escale : ETA à Marseille avec le temps de vol estimé porte à porte, ou celui de la compagnie si tu le connais.</p>
+    <div class="cgrid"><label>Escale de départ${inp("cEap","ex. ORY ou LFPO","text",CALC.eap)}</label><label>ED (Z)${inp("cEed","ex. 14:20","numeric",CALC.eed)}</label></div>
+    <label>Temps de vol connu (facultatif)${inp("cEft","ex. 1:20 ou 80","numeric",CALC.eft)}</label><div id="cEta" class="cout"></div>`)+
   box("Durée entre deux heures",`<p class="sub">Exemple : temps d'escale entre l'arrivée et le départ. Passe minuit tout seul.</p><div class="cgrid"><label>Première heure${inp("cD1","ex. 06:45","numeric",CALC.dur1)}</label><label>Deuxième heure${inp("cD2","ex. 09:10","numeric",CALC.dur2)}</label></div><div id="cDur" class="cout"></div>`)+
   box("Heure + durée",`<p class="sub">Exemple : heure de départ + temps de vol = heure d'arrivée. Durée en minutes (95) ou en h:mm (1:35).</p><div class="cgrid"><label>Heure${inp("cA1","ex. 22:30","numeric",CALC.add1)}</label><label>+ durée${inp("cA2","ex. 1:35","numeric",CALC.add2)}</label></div><div id="cAdd" class="cout"></div>`);
 }
@@ -616,6 +619,18 @@ function bindCalc(){
   const tz=(src,dst,sign)=>{const v=$(src).value;CALC.utc="";CALC.loc="";CALC[src==="#cUtc"?"utc":"loc"]=v;const m=parseHM(v);$(dst).value=m==null?"":fmtHM((m+sign*off+1440)%1440);tzOut()};
   $("#cUtc").oninput=()=>tz("#cUtc","#cLoc",1);$("#cLoc").oninput=()=>tz("#cLoc","#cUtc",-1);
   if(CALC.utc)tz("#cUtc","#cLoc",1);else if(CALC.loc)tz("#cLoc","#cUtc",-1);
+  const eta=()=>{CALC.eap=$("#cEap").value;CALC.eed=$("#cEed").value;CALC.eft=$("#cEft").value;const out=$("#cEta");
+    const c=CALC.eap.trim().toUpperCase(),ed=parseHM(CALC.eed),ftv=String(CALC.eft).trim();
+    if(!c||ed==null){out.textContent="";return}
+    const ap=loaded===true?AP.find(r=>r[0]===c||r[1]===c):null;const fi=ap&&flightInfo(ap[7],ap[8]);
+    const own=ftv?(/:|h/i.test(ftv)?parseHM(ftv):(/^\d+$/.test(ftv)?+ftv:null)):null;
+    if(!ap&&own==null){out.innerHTML=loaded===true?'<span class="sub">Escale inconnue : vérifie le code IATA ou OACI, ou indique le temps de vol.</span>':'<span class="sub">Chargement de la base des aéroports…</span>';return}
+    const ft=own!=null?own:fi?fi.back:null;if(ft==null){out.innerHTML='<span class="sub">Escale trop proche pour estimer : indique le temps de vol.</span>';return}
+    const z=ed+ft,d=new Date();d.setUTCHours(0,0,0,0);const tz=parisOffset(new Date(d.getTime()+z*60e3)),l=z+tz;
+    const tag=m=>m>=1440?' <span class="tag">lendemain</span>':"";
+    out.innerHTML=`ETA Marseille <b>${fmtHM(((z%1440)+1440)%1440)} Z</b>${tag(z)} · <b>${fmtHM(((l%1440)+1440)%1440)}</b> heure de Marseille${tag(l)}
+      <div class="sub">${ap?esc(ap[3]||ap[2])+" ("+esc(ap[0]||ap[1])+") → MRS · ":""}temps de vol ${own!=null?"indiqué":"estimé porte à porte"} ${hm(ft)}${own==null&&fi?" · "+fi.d.toLocaleString("fr")+" km":""}</div>`};
+  ["#cEap","#cEed","#cEft"].forEach(id=>$(id).oninput=eta);eta();
   const dur=()=>{CALC.dur1=$("#cD1").value;CALC.dur2=$("#cD2").value;const a=parseHM(CALC.dur1),b=parseHM(CALC.dur2);
     if(a==null||b==null){$("#cDur").textContent="";return}const d=(b-a+1440)%1440;
     $("#cDur").innerHTML=`<b>${Math.floor(d/60)} h ${String(d%60).padStart(2,"0")}</b> · ${d} min${b<a?' <span class="tag">fin le lendemain</span>':""}`};
