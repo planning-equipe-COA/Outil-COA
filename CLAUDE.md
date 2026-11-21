@@ -122,8 +122,8 @@ L'utilisateur échange en français.
   Script de conversion : à refaire si la synthèse change (demander, il est simple : en-têtes « Poste X — zone — fiche du … »).
 - **Compagnies présentes à MRS** (onglet Compagnies sans recherche) : `MRS_AL` (44 : filtre du site de l'aéroport + compagnies
   régulières des programmes du GANTT, dont fret), codes et indicatifs écrits ici (base OpenFlights périmée : ITA, easyJet Europe…),
-  aussi en tête des recherches (étiquette MRS). Colonne Assistant prévue (`MRS_HANDLER` IATA → nom), **vide : Raph doit donner
-  la correspondance** (le GANTT la garde dans son localStorage, illisible depuis le Mac).
+  aussi en tête des recherches (étiquette MRS). Colonne Assistant prévue (`MRS_HANDLER` IATA → nom), **Aviapartner rempli (21/11 : BA, V7, TU, LH, FR, IB, YW, TP, BJ, A3, T7, PC ; « ITI » cité, compagnie à identifier) ; autres
+  assistants à demander à Raph** (le GANTT la garde dans son localStorage, illisible depuis le Mac).
 - **Onglet Calculs** (thème « Calculs », `calcView`/`bindCalc`, état `CALC`) : calculatrice sans eval (`calcEval` : + − × ÷ %,
   parenthèses, virgule), UTC ↔ Marseille (décalage du jour via Intl Europe/Paris), kg ↔ lb, carburant L ↔ kg ↔ USG ↔ lb
   (densité modifiable, 0,8 par défaut), écart entre deux heures (passage minuit), heure + durée.
