@@ -140,6 +140,10 @@ L'utilisateur échange en français.
   groupes (PROB30 TEMPO gardé ensemble) avec période en clair. Mention : aide, **ne remplace pas les MAA**.
 - **MAA** (messages d'avertissement d'aérodrome) : pas de source publique trouvée ; Météo-France les diffuse par le serveur
   AEROWEB, code d'accès sous convention. À voir avec Raph (son employeur a peut-être un accès).
+- **QRP / QRF** (définitions de Raph, ajoutées aux Abréviations, groupe Urgences) : QRP = retour parking, le vol n'a pas
+  décollé ; QRF = retour sur la plateforme de départ après le décollage. Idée en cours : être prévenu des déroutements vers MRS,
+  des QRF et QRP (source temps réel nécessaire : FlightAware AeroAPI payant à l'usage à étudier ; OpenSky ne connaît pas la
+  destination prévue).
 - Météo : plus de boucle d'essais si le réseau manque (`WX.failAt`, 2 min).
 
 ## Annuaire COA — chiffré (même code que le MUA)
