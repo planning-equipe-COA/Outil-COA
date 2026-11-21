@@ -835,6 +835,8 @@ function numLine(p,label,note,q){
   const sms=p.kind==="tel"&&p.sms?`<a class="u-act" href="sms:${esc(p.dial)}" aria-label="SMS à ${esc(label)}">${IC_MSG}</a>`:'<span class="u-act ph"></span>';
   return `<div class="u-line"><div class="u-text"><span class="u-tel">${hl(p.t,q)}${p.kind==="freq"?" MHz":""}${tag}</span>${note?`<span class="u-note">${hl(note,q)}</span>`:""}</div>${call}${sms}</div>`;
 }
+/* nouvelles appellations des halls (Raph, 21/11/2026) : « Hall B1 » → « Nat/Europe » */
+function annuRename(A){if(A&&A.groups)A.groups.forEach(g=>{g.name=String(g.name).replace(/hall\s*B1\b/i,"Nat/Europe")});return A}
 /* corrections porte → poste données par Raph (prioritaires sur ce que l'annuaire laisse deviner) */
 const GATE_FIX={"41B":["1A"],"40B":["4B"],"20":["8B","8C"]}; /* 01/20 (PP8) → 8B et 8C */
 /* portes qui n'existent plus (Raph, 21/11/2026) : masquées même si l'annuaire les contient encore */
@@ -949,7 +951,7 @@ async function muaOpenIndex(){
   /* la synthèse (types étudiés) est ajoutée au texte cherché : utile pour les fiches scannées sans texte */
   MUA.sheets.forEach(s=>{const sy=muaPostes(s).map(p=>synthOf(p)).filter(Boolean).map(e=>e.etudies.map(x=>x.t).join(" ")+" "+(e.ok||[]).join(" ")).join(" ");
     s._n=norm(s.poste+" "+s.alias+" "+s.text+" "+sy)});
-  MUA.annu=await annuLoad();
+  MUA.annu=annuRename(await annuLoad());
   MUA.state="ok";
   setTimeout(muaPrefetch,1500);
 }
@@ -1005,7 +1007,7 @@ async function annuPublish(annu,tok){
   annu.maj=new Date().toLocaleDateString("fr-FR");annu.at=new Date().toISOString();const clean={...annu};delete clean._remote;
   const bytes=await muaEncrypt(new TextEncoder().encode(JSON.stringify(clean)));
   await ghPut(tok,"annuaire.enc",bytes,"Annuaire mis à jour");
-  store("coa-annu-enc",u8b64(bytes));MUA.annu=Object.assign(clean,{_remote:true});
+  store("coa-annu-enc",u8b64(bytes));MUA.annu=annuRename(Object.assign(clean,{_remote:true}));
 }
 const AD={step:"",draft:null,msg:"",tok:null};
 function adErr(e){const m=String(e&&e.message||e);return m==="cle"?"La clé de publication est refusée par GitHub (expirée ou sans droit d'écriture sur le dépôt de données).":m==="conflit"?"Quelqu'un a modifié l'annuaire en même temps : réessaie.":m.startsWith("gh 404")?"Dépôt de données introuvable.":"Pas envoyé (réseau ?)."}
