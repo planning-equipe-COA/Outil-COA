@@ -230,3 +230,14 @@ L'utilisateur échange en français.
   pas de forcer l'orientation d'une page. Bouton ⟳ pour l'activer / le couper (localStorage `coa-rot`, activé par défaut) ;
   touchers convertis dans le repère pivoté (`vLocal`). Bulle « Tourne le téléphone » 2,5 s. Zoom −/+, double-toucher, pincement,
   fiche précédente/suivante, Échap. Après ouverture, toutes les fiches sont téléchargées une fois (hors connexion via sw.js).
+
+## Vols du jour (21 nov. 2026)
+- Onglet `vols` (thème Escale MRS) : départs / arrivées, aujourd'hui / demain, statuts, porte, zone, tapis, assistant
+  (`MRS_HANDLER`), boutons « Fiche MUA » du poste au contact de la porte (`standsForGate`, annuaire déverrouillé).
+  Vols décollés / arrivés masqués par défaut (case à cocher). Recherche par la barre #q. Heures locales + Z (`volZ`).
+- Source : tableau public de l'aéroport `https://www.marseille.aeroport.fr/api-vols/vol/{departures|arrivals}/data`
+  (pas de CORS, ~9 Mo = 3 mois TRIÉS par heure, aucun filtre de date côté serveur). Passe par le MÊME worker Cloudflare
+  que les NOTAM : `?vols=1` (`fetchBoard` lit le flux jusqu'au surlendemain ≈ 300-500 Ko puis coupe ; cache 3 min).
+  Appli : rafraîchit toutes les 3 min quand l'onglet est ouvert, réessai après 2 min en cas d'erreur, dernière liste
+  gardée (`coa-vols`). Non officiel : si le site change de format, la route casse (message « Vols indisponibles »).
+- Consultation seulement (principe de l'appli) : pas de saisie, pas de parking attribué, le GANTT fait foi.

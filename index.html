@@ -401,7 +401,7 @@ const HANDLERS=["Aviapartner","Alyzia","Air France Handling","Onet","WFS","Jetex
 
 /* ---------- État ---------- */
 let AP=[],AL=[],PL=[],loaded=false;
-const TABS=[["home","Accueil"],["mua","MUA"],["ap","Aéroports"],["al","Compagnies"],["pl","Avions"],["immat","Immatriculations"],["fl","Temps de vol"],["wx","Météo"],["notam","NOTAM"],["lfml","Aérodrome"],["ct","Contacts MRS"],["calc","Calculs"],["dl","Codes retard"],["ab","Abréviations"],["nato","Alphabet"],["all","Tout"]];
+const TABS=[["home","Accueil"],["vols","Vols du jour"],["mua","MUA"],["ap","Aéroports"],["al","Compagnies"],["pl","Avions"],["immat","Immatriculations"],["fl","Temps de vol"],["wx","Météo"],["notam","NOTAM"],["lfml","Aérodrome"],["ct","Contacts MRS"],["calc","Calculs"],["dl","Codes retard"],["ab","Abréviations"],["nato","Alphabet"],["all","Tout"]];
 let tab="home";let STRICT=false;
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -412,7 +412,7 @@ function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localSto
 $("#tabs").innerHTML=TABS.map(([k,l])=>`<button data-k="${k}">${l}</button>`).join("");
 const THEMES=[["Référentiels",[["mua","MUA · fiches de postes","Postes, avions autorisés, plans"],["ap","Aéroports","Codes IATA et OACI"],["al","Compagnies","Codes IATA, OACI et indicatifs"],["pl","Avions","Types, envergure, sillage"],["immat","Immatriculations","Type, compagnie, sièges (code)"]]],
   ["Temps de vol",[["fl","Temps de vol","Depuis et vers Marseille"]]],
-  ["Escale MRS",[["wx","Météo et fréquences","METAR, TAF, ATIS, tour, sol"],["notam","NOTAM LFML","Pistes, voies, postes, balisage"],["ct","Contacts MRS","Assistants et services, appeler ou SMS"],["lfml","Aérodrome LFML","AIP, pistes, consignes, AIRAC, SUP AIP"]]],
+  ["Escale MRS",[["vols","Vols du jour","Départs et arrivées MRS, statuts, portes"],["wx","Météo et fréquences","METAR, TAF, ATIS, tour, sol"],["notam","NOTAM LFML","Pistes, voies, postes, balisage"],["ct","Contacts MRS","Assistants et services, appeler ou SMS"],["lfml","Aérodrome LFML","AIP, pistes, consignes, AIRAC, SUP AIP"]]],
   ["Calculs",[["calc","Calculs","Calculatrice, UTC / local, kg / lb, carburant, écart d'heures"]]],
   ["Codes et langage",[["dl","Codes retard","Codes IATA 00 à 99"],["ab","Abréviations","A-CDM, messages, PMR, météo"],["nato","Alphabet","Alphabet OTAN, épellation"]]],
   ["Recherche",[["home","Accueil","Toutes les rubriques en tuiles"],["all","Tout","Une seule recherche dans toutes les rubriques"]]]];
@@ -434,6 +434,7 @@ const TI={
  fl:'<circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9.5 2.5h5"/><path d="M18.5 4.5l1.5 1.5"/>',
  calc:'<rect x="5" y="2.5" width="14" height="19" rx="2"/><path d="M8 6.5h8M8.5 11h1M11.5 11h1M14.5 11h1M8.5 14h1M11.5 14h1M14.5 14h1M8.5 17h1M11.5 17h4"/>',
  immat:'<rect x="2.5" y="7" width="19" height="10" rx="2"/><path d="M6 12h4M12 10.5v3M15 10.5h3v3h-3z"/>',
+ vols:'<path d="M2.5 19h19"/><path d="M4 15.5 20 9.5l-1.2-2.4-4.8 1.6L9.5 4.5 8 5l2.4 4.6-4 1.4L4.6 9.8 3.5 10.4z"/>',
  lfml:'<path d="M4 20 20 4M7 21h10M12 3v4"/><circle cx="12" cy="12" r="2"/>',
  notam:'<path d="M12 3.5 2.5 20h19zM12 10v4.5"/><circle cx="12" cy="17.3" r=".9" fill="currentColor"/>'};
 function favsView(){
@@ -777,6 +778,50 @@ async function notamLoad(force){
     NT.list=j.notams||[];NT.at=Date.now();NT.src=j.source||"";store("coa-notam",JSON.stringify({list:NT.list,at:NT.at,src:NT.src}))}
   catch(e){NT.failAt=Date.now();const m=String(e.message||"réseau");NT.err="NOTAM indisponibles ("+(/not been activated/i.test(m)?"compte autorouter pas encore activé":/too many failed/i.test(m)?"autorouter : trop d'essais, nouvel essai plus tard":/invalid_client|credentials/i.test(m)?"identifiants autorouter refusés":/Failed to fetch|NetworkError|Load failed/i.test(m)?"pas de réseau":m)+")."}
   NT.loading=false;if(tab==="notam")render();
+}
+/* Vols du jour : tableau public de l'aéroport Marseille Provence, via le même relais Cloudflare que les NOTAM (?vols=1).
+   Consultation seulement (pas un GANTT). Heures du site = heures locales Paris. Dernière liste gardée (coa-vols) hors connexion. */
+const VL={data:null,at:0,err:"",loading:false,failAt:0,dir:"dep",day:0,done:false};
+try{const c=JSON.parse(store("coa-vols")||"null");if(c&&c.data){VL.data=c.data;VL.at=c.at}}catch(e){}
+async function volsLoad(force){
+  if(!NOTAM_URL||VL.loading||(!force&&VL.data&&Date.now()-VL.at<3*60e3))return;
+  if(!force&&VL.failAt&&Date.now()-VL.failAt<2*60e3)return;
+  VL.loading=true;VL.err="";
+  try{const r=await fetch(NOTAM_URL+"?vols=1",{cache:"no-store"});const j=await r.json();if(!r.ok||j.error)throw new Error(j.error||r.status);
+    VL.data=j;VL.at=Date.now();VL.failAt=0;store("coa-vols",JSON.stringify({data:j,at:VL.at}))}
+  catch(e){VL.failAt=Date.now();const m=String(e.message||"réseau");VL.err="Vols indisponibles ("+(/Failed to fetch|NetworkError|Load failed/i.test(m)?"pas de réseau":/vols|404|400|code non autoris/i.test(m)?"relais pas encore mis à jour":m)+")."}
+  VL.loading=false;if(tab==="vols")render();
+}
+setInterval(()=>{if(!document.hidden&&tab==="vols")volsLoad()},60e3);
+/* porte → poste(s) au contact, d'après l'annuaire (passerelle) et GATE_FIX */
+function standsForGate(g){const G=String(g||"").toUpperCase().replace(/^0+(?=\d)/,"");if(!G||!MUA.annu)return [];const out=new Set();
+  MUA.annu.groups.forEach(gr=>{if(!gr.gates)return;gr.items.forEach(([l,n,x])=>{if(l.startsWith("—")||gateGone(l))return;
+    if(gateToks(l).map(t=>t.replace(/^0+(?=\d)/,"")).includes(G))gateStand(l,x).forEach(p=>out.add(p))})});
+  (GATE_FIX[G]||[]).forEach(p=>out.add(p));return [...out]}
+function volZ(t){const d=new Date(t+"Z");if(isNaN(d))return "";return new Date(d.getTime()-parisOffset(d)*60e3).toISOString().slice(11,16)}
+function volsView(q){
+  if(!VL.data)return `<div class="info">${VL.err?esc(VL.err):"Chargement des vols…"}</div>`;
+  const D=VL.data,base=new Date(D.today+"T12:00:00Z");const day=new Date(base.getTime()+VL.day*864e5).toISOString().slice(0,10);
+  const arr=VL.dir==="arr";let list=(arr?D.arr:D.dep).filter(v=>v.t.slice(0,10)===day);
+  const all=list.length,canc=list.filter(v=>v.cls==="annulee").length,fini=list.filter(v=>v.cls==="vol-take-off").length;
+  if(!VL.done&&!q)list=list.filter(v=>v.cls!=="vol-take-off");
+  if(q)list=list.filter(v=>norm([v.n,v.n.replace(/\s/g,""),v.cie,v.ville,v.code,v.porte&&"porte "+v.porte,v.tapis&&"tapis "+v.tapis,MRS_HANDLER[v.al]||""].join(" ")).includes(q));
+  const age=Math.round((Date.now()-VL.at)/60e3);
+  const stCls=v=>v.cls==="annulee"?"#c62828":v.cls==="vol-take-off"?"var(--mute)":/retard/i.test(v.st)?"#b26a00":v.cls==="expected"||v.cls==="confirmed"?"var(--acc)":"#2e7d32";
+  const dl=["Aujourd'hui","Demain"];
+  const rows=list.map(v=>{const h=v.t.slice(11,16),z=volZ(v.t),hd=MRS_HANDLER[v.al];const st=v.porte?standsForGate(v.porte):[];
+    const where=arr?(v.tapis?"Tapis "+v.tapis:""):[v.porte?"Porte "+v.porte:"",v.zone&&v.zone!==v.term?"zone "+v.zone:"",v.term].filter(Boolean).join(" · ");
+    return `<div class="u-row" style="display:block;padding:8px 0${v.cls==="annulee"?";opacity:.75":""}"><div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">
+      <b style="font-size:17px;min-width:48px">${esc(h)}</b><span class="sub" style="min-width:52px">${esc(z)}Z</span>
+      <b>${hl(v.n,q)}</b><span>${hl(v.ville,q)} <span class="u-ext" style="margin:0">${esc(v.code)}</span></span>
+      ${v.st?`<span style="color:${stCls(v)};font-weight:600;font-size:13px">${esc(v.st)}</span>`:""}</div>
+      <div class="sub" style="margin-top:2px">${hl(v.cie,q)}${hd?" · "+hl(hd,q):""}${where?" · "+hl(where,q):""}${v.emb&&!arr?" · "+esc(v.emb):""}${st.map(p=>` <button class="glink" data-openposte="${esc(p)}">Fiche MUA ${esc(p)}</button>`).join("")}</div></div>`}).join("");
+  return `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><div class="seg" id="vlDir"><button data-v="dep" class="${arr?"":"on"}">Départs</button><button data-v="arr" class="${arr?"on":""}">Arrivées</button></div>
+    <div class="seg" id="vlDay">${dl.map((l,i)=>`<button data-v="${i}" class="${VL.day===i?"on":""}">${l}</button>`).join("")}</div>
+    <label class="sub" style="display:flex;gap:4px;align-items:center"><input type="checkbox" id="vlDone"${VL.done?" checked":""}> ${arr?"vols arrivés":"vols décollés"} (${fini})</label></div>
+  <div class="info">${all} ${arr?"arrivées":"départs"} le ${day.split("-").reverse().join("/")}${canc?` · <b style="color:#c62828">${canc} annulé${canc>1?"s":""}</b>`:""} · heures locales (Z à côté) · site de l'aéroport mis à jour à ${esc(D.maj||"?")}, relu il y a ${age} min${VL.err?" · "+esc(VL.err):""} <button class="btn" id="vlRefresh" style="font-size:12px;padding:3px 8px">Actualiser</button></div>
+  <div class="card" style="padding:2px 12px">${rows||'<div class="info">Aucun vol.</div>'}</div>
+  <p class="sub">Source : tableau public des vols de l'aéroport Marseille Provence. Consultation seulement : horaires indicatifs, le GANTT et les messages compagnie font foi.${MUA.annu?"":" Déverrouille le MUA pour voir le poste au contact des portes."}</p>`;
 }
 const NQG=[["Postes et aires de trafic",/^M[NKP]/],["Voies de circulation",/^MX/],["Pistes",/^M[RSTDUA]/],["Balisage",/^L/],["Radionavigation et ILS",/^[ING]/],
   ["Aérodrome et services",/^[FSC]/],["Procédures",/^P/],["Obstacles",/^O/],["Espace aérien",/^[ARW]/],["Autres",/./]];
@@ -1266,6 +1311,7 @@ function render(){
     case "home":if(q){tab="all";return render()}h=homeView();break;
     case "wx":h=wxCard(true)+freqView();wxLoad();break;
     case "notam":h=notamView(q);notamLoad();break;
+    case "vols":h=volsView(q);volsLoad();break;
     case "fl":h=flView(q);break;
     case "calc":h=calcView();break;
     case "mua":h=muaView(q);break;
@@ -1298,6 +1344,10 @@ function render(){
   document.querySelectorAll("[data-go]").forEach(b=>b.onclick=e=>{if(e.target.closest("a,button:not(.tile)"))return;tab=b.dataset.go;location.hash=tab;render();scrollTo(0,0)});
   const wr=$("#wxRefresh");if(wr)wr.onclick=()=>{wr.textContent="…";wxLoad(true)};
   const nr=$("#ntRefresh");if(nr)nr.onclick=()=>{nr.textContent="…";notamLoad(true)};
+  const vr=$("#vlRefresh");if(vr)vr.onclick=()=>{vr.textContent="…";volsLoad(true)};
+  document.querySelectorAll("#vlDir button").forEach(b=>b.onclick=()=>{VL.dir=b.dataset.v;render()});
+  document.querySelectorAll("#vlDay button").forEach(b=>b.onclick=()=>{VL.day=+b.dataset.v;render()});
+  const vd=$("#vlDone");if(vd)vd.onchange=()=>{VL.done=vd.checked;render()};
 }
 render();
 if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").catch(()=>{})}

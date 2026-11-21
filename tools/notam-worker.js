@@ -11,6 +11,7 @@
 // À coller dans Cloudflare → Workers → (nouveau worker) → Modifier le code → Déployer.
 // Puis Paramètres → Variables et secrets : ajouter les SECRETS de la source choisie.
 // Appel : https://<nom>.workers.dev/?icao=LFML   (seuls les codes de ALLOWED sont acceptés)
+// Vols du jour : https://<nom>.workers.dev/?vols=1 (sans identifiant, tableau public de l'aéroport)
 
 const ALLOWED = ['LFML', 'LFMM'];                        // aéroport + FIR de Marseille
 const ORIGINS = ['https://planning-equipe-coa.github.io']; // seule l'appli peut lire la réponse
@@ -109,10 +110,68 @@ async function fetchFaa(icao, env) {
   return all;
 }
 
+/* ---------- Vols du jour (tableau public de l'aéroport Marseille Provence) ---------- */
+// Le site renvoie ~9 Mo (3 mois de programme) TRIÉS par heure : on ne lit que le début du flux
+// (aujourd'hui + demain ≈ 300 Ko) puis on coupe -> peu de CPU, compatible avec le plan gratuit.
+// Appel : https://<nom>.workers.dev/?vols=1   (réponse gardée VOLS_CACHE_SECONDS en cache)
+const VOLS_CACHE_SECONDS = 180;
+const parisDay = (d) => new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Paris' }).format(d); // AAAA-MM-JJ
+async function fetchBoard(kind, stopDay) {
+  const r = await fetch(`https://www.marseille.aeroport.fr/api-vols/vol/${kind}/data`, {
+    headers: { 'User-Agent': 'Mozilla/5.0 (compatible; COA-outils)', Accept: 'application/json' },
+  });
+  if (!r.ok) throw new Error('aéroport ' + r.status);
+  const reader = r.body.getReader(), dec = new TextDecoder(), stop = `"time":"${stopDay}T`;
+  let s = '', end = false;
+  while (s.length < 1500000) {
+    const { value, done } = await reader.read();
+    if (done) { end = true; break; }
+    const from = Math.max(0, s.length - 64);
+    s += dec.decode(value, { stream: true });
+    if (s.indexOf(stop, from) >= 0) break;
+  }
+  if (!end) await reader.cancel().catch(() => {});
+  let data;
+  if (end) data = JSON.parse(s);
+  else {
+    const i = s.indexOf(stop), cut = s.lastIndexOf(',{"url_fr"', i < 0 ? s.length : i);
+    if (cut < 0) throw new Error('format inattendu');
+    data = JSON.parse(s.slice(0, cut) + ']}}');
+  }
+  const key = kind === 'arrivals' ? 'Arrivals' : 'Departures';
+  const rows = (data[key] && data[key].Vol) || [];
+  const out = rows.map(v => ({
+    n: v.flightNb || '', al: v.companyIATA || '', cie: v.companyName || '', t: v.time || '',
+    ville: String(v.location || '').replace(/\s+/g, ' ').trim(), code: v.code_location || '',
+    st: v.status_fr || '', cls: v.className || '', porte: v.Porte || '', zone: v.Zone_Embarquement || '',
+    term: v.terminal || '', tapis: v.tapis_Livraison_Bagage || '', emb: v.StatutEmbarquement_fr || '',
+    banques: v.NumBanqueEnregistrement || '',
+  }));
+  return { maj: data.lastUpdate || '', rows: out };
+}
+async function vols(origin, ctx) {
+  const cache = caches.default, key = new Request('https://notam-cache.local/vols');
+  const hit = await cache.match(key);
+  if (hit) return json(await hit.json(), 200, origin, { 'X-Cache': 'HIT' });
+  try {
+    const now = new Date(), today = parisDay(now);
+    const stopDay = parisDay(new Date(now.getTime() + 2 * 86400000)); // on garde aujourd'hui et demain
+    const [dep, arr] = await Promise.all([fetchBoard('departures', stopDay), fetchBoard('arrivals', stopDay)]);
+    const keep = r => r.t.slice(0, 10) >= today;
+    const body = { at: now.toISOString(), today, source: 'marseille.aeroport.fr (tableau public des vols)',
+      maj: dep.maj || arr.maj, dep: dep.rows.filter(keep), arr: arr.rows.filter(keep) };
+    ctx.waitUntil(cache.put(key, new Response(JSON.stringify(body), { headers: { 'Cache-Control': `max-age=${VOLS_CACHE_SECONDS}` } })));
+    return json(body, 200, origin, { 'X-Cache': 'MISS' });
+  } catch (e) {
+    return json({ error: String(e.message || e) }, 502, origin);
+  }
+}
+
 export default {
   async fetch(request, env, ctx) {
     const origin = request.headers.get('Origin') || '';
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(origin) });
+    if (new URL(request.url).searchParams.has('vols')) return vols(origin, ctx);
     const icao = (new URL(request.url).searchParams.get('icao') || 'LFML').toUpperCase();
     if (!ALLOWED.includes(icao)) return json({ error: 'code non autorisé' }, 400, origin);
     const useAr = env.AR_EMAIL && env.AR_PASSWORD, useFaa = env.FAA_CLIENT_ID && env.FAA_CLIENT_SECRET;
