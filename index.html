@@ -835,8 +835,9 @@ function numLine(p,label,note,q){
   const sms=p.kind==="tel"&&p.sms?`<a class="u-act" href="sms:${esc(p.dial)}" aria-label="SMS à ${esc(label)}">${IC_MSG}</a>`:'<span class="u-act ph"></span>';
   return `<div class="u-line"><div class="u-text"><span class="u-tel">${hl(p.t,q)}${p.kind==="freq"?" MHz":""}${tag}</span>${note?`<span class="u-note">${hl(note,q)}</span>`:""}</div>${call}${sms}</div>`;
 }
-/* nouvelles appellations des halls (Raph, 21/11/2026) : « Hall B1 » → « Nat/Europe » */
-function annuRename(A){if(A&&A.groups)A.groups.forEach(g=>{g.name=String(g.name).replace(/hall\s*B1\b/i,"Nat/Europe")});return A}
+/* appellations actuelles (Raph + dénomination AMP : Terminal 1 = Hall A + Hall B, Terminal 2 = ex-MP2), 21/11/2026 */
+const HALL_NAMES=[[/hall\s*B1\b(\s*nat\S*\s*\/?\s*europe)?/i,"Hall B · Nat/Europe"],[/hall\s*A\s*inter\w*/i,"Hall A · Inter"],[/\bT2\b|\bMP2\b/,"Terminal 2"]];
+function annuRename(A){if(A&&A.groups)A.groups.forEach(g=>{let n=String(g.name);if(/Nat\/Europe/.test(n)&&/Hall B ·/.test(n))return;HALL_NAMES.forEach(([r,t])=>{n=n.replace(r,t)});g.name=n});return A}
 /* corrections porte → poste données par Raph (prioritaires sur ce que l'annuaire laisse deviner) */
 const GATE_FIX={"41B":["1A"],"40B":["4B"],"20":["8B","8C"]}; /* 01/20 (PP8) → 8B et 8C */
 /* portes qui n'existent plus (Raph, 21/11/2026) : masquées même si l'annuaire les contient encore */
