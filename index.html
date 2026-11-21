@@ -839,13 +839,15 @@ function numLine(p,label,note,q){
 const GATE_FIX={"41B":"1A","40B":"4B"};
 /* portes qui n'existent plus (Raph, 21/11/2026) : masquées même si l'annuaire les contient encore */
 const GATE_GONE=["6AB","8AB"];
+/* portes sans passerelle (Raph, 21/11/2026) : remplace la passerelle indiquée par l'annuaire */
+const GATE_NOTE={"41A":"sans passerelle · semi-contact ou embarquement au large"};
 const gateToks=l=>String(l).split("/").map(t=>t.trim().toUpperCase()).filter(Boolean);
 const gateGone=l=>gateToks(l).some(t=>GATE_GONE.includes(t.replace(/\s+/g,"")));
 const gateOf=l=>{const t=gateToks(l);return t[t.length-1]||""};
 /* portes mixtes « 5B / 28 » : 1re porte = configuration internationale (selon les cloisons), 2e = national / Europe */
 function gateLabel(l){const t=String(l).split("/").map(x=>x.trim());return t.length===2?`${t[0]} (Intl) / ${t[1]} (Nat./Europe)`:String(l)}
 /* le poste vient de la passerelle (« PP6 – 6A » → 6A) ; « DAL » = pas de poste au contact */
-function gateStand(label,extra){const fx=GATE_FIX[gateOf(label)];if(fx)return fx;const b=String(extra||"").match(/(\d{1,2}[A-Z])\s*$/);
+function gateStand(label,extra){const fx=GATE_FIX[gateOf(label)];if(fx)return fx;if(GATE_NOTE[gateOf(label)])return null;const b=String(extra||"").match(/(\d{1,2}[A-Z])\s*$/);
   const p=b&&b[1];return p&&MUA.sheets&&MUA.sheets.some(s=>muaPostes(s).includes(p))?p:null}
 /* postes couverts par une fiche (« 30A / 30D » → 30A, 30D) ; anciennes fiches : un seul poste */
 function muaPostes(s){return s.postes||[s.poste]}
@@ -862,7 +864,7 @@ function annuView(q,limit){
       if(label.startsWith("—"))return qq?"":`<div class="asep">${esc(label.replace(/^—\s*/,""))}</div>`;
       if(g.gates&&gateGone(label))return "";
       const title=g.gates?"Porte "+gateLabel(label):label;
-      const note=g.gates?extra:(extra&&extra!=="!"?extra:"");
+      const note=g.gates?(GATE_NOTE[gateOf(label)]||extra):(extra&&extra!=="!"?extra:"");
       if(qq&&!norm(g.name+" "+title+" "+nums+" "+(extra||"")).includes(qq))return "";
       total++;
       const parts=numParts(nums,g.gates?"":g.ext);
