@@ -241,3 +241,10 @@ L'utilisateur échange en français.
   Appli : rafraîchit toutes les 3 min quand l'onglet est ouvert, réessai après 2 min en cas d'erreur, dernière liste
   gardée (`coa-vols`). Non officiel : si le site change de format, la route casse (message « Vols indisponibles »).
 - Consultation seulement (principe de l'appli) : pas de saisie, pas de parking attribué, le GANTT fait foi.
+
+## Organisation (Raph, 21 nov. 2026)
+- Les **référentiels d'abord** (les plus importants, « à portée de main au cas où ») ; le MUA en fait partie.
+  Thèmes : Référentiels (MUA, Aéroports, Compagnies, Avions, Immatriculations) · Escale MRS (Vols du jour, Météo, NOTAM,
+  Contacts, Aérodrome) · Outils (Temps de vol, Calculs) · Codes et langage. Barre d'onglets dans le même ordre.
+- Calculs : **masse kg ↔ lb et carburant supprimés** (demande de Raph). Restent calculatrice, heure Z ↔ Marseille
+  (avec ligne de résultat « 23:30 Z = 00:30 à Marseille »), durée entre deux heures, heure + durée — libellés avec exemples.

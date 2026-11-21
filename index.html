@@ -401,7 +401,7 @@ const HANDLERS=["Aviapartner","Alyzia","Air France Handling","Onet","WFS","Jetex
 
 /* ---------- État ---------- */
 let AP=[],AL=[],PL=[],loaded=false;
-const TABS=[["home","Accueil"],["vols","Vols du jour"],["mua","MUA"],["ap","Aéroports"],["al","Compagnies"],["pl","Avions"],["immat","Immatriculations"],["fl","Temps de vol"],["wx","Météo"],["notam","NOTAM"],["lfml","Aérodrome"],["ct","Contacts MRS"],["calc","Calculs"],["dl","Codes retard"],["ab","Abréviations"],["nato","Alphabet"],["all","Tout"]];
+const TABS=[["home","Accueil"],["mua","MUA"],["ap","Aéroports"],["al","Compagnies"],["pl","Avions"],["immat","Immatriculations"],["vols","Vols du jour"],["wx","Météo"],["notam","NOTAM"],["ct","Contacts MRS"],["lfml","Aérodrome"],["fl","Temps de vol"],["calc","Calculs"],["dl","Codes retard"],["ab","Abréviations"],["nato","Alphabet"],["all","Tout"]];
 let tab="home";let STRICT=false;
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -411,9 +411,8 @@ function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localSto
 
 $("#tabs").innerHTML=TABS.map(([k,l])=>`<button data-k="${k}">${l}</button>`).join("");
 const THEMES=[["Référentiels",[["mua","MUA · fiches de postes","Postes, avions autorisés, plans"],["ap","Aéroports","Codes IATA et OACI"],["al","Compagnies","Codes IATA, OACI et indicatifs"],["pl","Avions","Types, envergure, sillage"],["immat","Immatriculations","Type, compagnie, sièges (code)"]]],
-  ["Temps de vol",[["fl","Temps de vol","Depuis et vers Marseille"]]],
   ["Escale MRS",[["vols","Vols du jour","Départs et arrivées MRS, statuts, portes"],["wx","Météo et fréquences","METAR, TAF, ATIS, tour, sol"],["notam","NOTAM LFML","Pistes, voies, postes, balisage"],["ct","Contacts MRS","Assistants et services, appeler ou SMS"],["lfml","Aérodrome LFML","AIP, pistes, consignes, AIRAC, SUP AIP"]]],
-  ["Calculs",[["calc","Calculs","Calculatrice, UTC / local, kg / lb, carburant, écart d'heures"]]],
+  ["Outils",[["fl","Temps de vol","Depuis et vers Marseille"],["calc","Calculs","Calculatrice, heure Z ↔ locale, durées"]]],
   ["Codes et langage",[["dl","Codes retard","Codes IATA 00 à 99"],["ab","Abréviations","A-CDM, messages, PMR, météo"],["nato","Alphabet","Alphabet OTAN, épellation"]]],
   ["Recherche",[["home","Accueil","Toutes les rubriques en tuiles"],["all","Tout","Une seule recherche dans toutes les rubriques"]]]];
 const tabName=k=>{for(const [,it] of THEMES)for(const [kk,l] of it)if(kk===k)return l;return ""};
@@ -548,8 +547,8 @@ function apTable(q,limit){
    n'est plus à jour). Assistant : MRS_HANDLER (IATA → assistant), à remplir avec Raph. */
 const MRS_AL="Aegean Airlines|A3|AEE|AEGEAN;Aer Lingus|EI|EIN|SHAMROCK;Air Algérie|AH|DAH|AIR ALGERIE;Air Arabia Maroc|3O|MAC|;Air Corsica|XK|CCM|CORSICA;Air France|AF|AFR|AIRFRANS;Air Nostrum|YW|ANE|AIR NOSTRUM;Air Transat|TS|TSC|TRANSAT;Austrian Airlines|OS|AUA|AUSTRIAN;British Airways|BA|BAW|SPEEDBIRD;Brussels Airlines|SN|BEL|BEELINE;Shanghai Airlines|FM|CSH|SHANGHAI AIR;Corsair|SS|CRL|CORSAIR;easyJet (codes U2 et EZ)|U2|EZY|EASY;easyJet Europe|EC|EJU|ALPINE;El Al|LY|ELY|ELAL;Ethiopian Airlines|ET|ETH|ETHIOPIAN;Eurowings|EW|EWG|EUROWINGS;flynas|XY|KNE|NAS EXPRESS;Iberia|IB|IBE|IBERIA;ITA Airways|AZ|ITY|ITARROW;KLM|KL|KLM|KLM;Lufthansa|LH|DLH|LUFTHANSA;Nouvelair|BJ|LBT|NOUVELAIR;Pegasus|PC|PGT|SUNTURK;Royal Air Maroc|AT|RAM|ROYALAIR MAROC;Ryanair|FR|RYR|RYANAIR;Ryanair UK|RK|RUK|;SAS|SK|SAS|SCANDINAVIAN;Sky Express|GQ|SEH|AIR CRETE;Swiss|LX|SWR|SWISS;TAP Air Portugal|TP|TAP|AIR PORTUGAL;Transavia France|TO|TVF|FRENCH SUN;Transavia|HV|TRA|TRANSAVIA;Tunisair|TU|TAR|TUNAIR;Turkish Airlines|TK|THY|TURKISH;Twin Jet|T7|TJT|TWINJET;Twin Jet fret|ITI||;United Airlines|UA|UAL|UNITED;Volotea|V7|VOE|VOLOTEA;Vueling|VY|VLG|VUELING;ASL Airlines France (fret)|5O|FPO|FRENCH POST;DHL – European Air Transport (fret)|QY|BCS|EUROTRANS;Swiftair (fret)|WT|SWT|SWIFT".split(";").map(x=>x.split("|"));
 const MRS_HANDLER={BA:"Aviapartner",V7:"Aviapartner",TU:"Aviapartner",LH:"Aviapartner",FR:"Aviapartner",IB:"Aviapartner",YW:"Aviapartner",TP:"Aviapartner",BJ:"Aviapartner",A3:"Aviapartner",T7:"Aviapartner",PC:"Aviapartner",AH:"Alyzia",TO:"Alyzia",AT:"Alyzia",SS:"Alyzia",EZ:"Alyzia",U2:"Alyzia",ET:"Alyzia",XK:"Alyzia",EC:"Alyzia",LX:"Aviapartner",SN:"Aviapartner",AZ:"Aviapartner",OS:"Aviapartner",SK:"Aviapartner",EI:"Aviapartner",LY:"Aviapartner",TS:"Aviapartner",UA:"Aviapartner",XY:"Aviapartner","3O":"Aviapartner",GQ:"Aviapartner",RK:"Aviapartner","5O":"Aviapartner",QY:"Aviapartner",WT:"Aviapartner",AF:"Air France",EW:"Onet",TK:"Alyzia",VY:"Aviapartner",ITI:"Aviapartner",KL:"Passage Air France · coordo Aviapartner",FM:"Passage Air France · coordo Alyzia"}; /* donné par Raph le 21/11/2026. Particularité MRS : passage (passagers) et coordination (piste) peuvent être chez deux assistants différents (ex. KLM : passage AF, coordo Aviapartner). */
-/* ---------- Calculs : calculatrice, UTC ↔ heure de Marseille, kg ↔ lb, carburant, écart d'heures ---------- */
-const CALC={expr:"",res:"",utc:"",loc:"",dur1:"",dur2:"",add1:"",add2:"",dens:"0.8"};
+/* ---------- Calculs : calculatrice, heure Z ↔ heure de Marseille, durée entre deux heures, heure + durée ---------- */
+const CALC={expr:"",res:"",utc:"",loc:"",dur1:"",dur2:"",add1:"",add2:""};
 /* calculatrice sans eval : + − × ÷ %, parenthèses, virgule ou point */
 function calcEval(src){
   const t=String(src).replace(/,/g,".").replace(/×/g,"*").replace(/÷/g,"/").replace(/−/g,"-").match(/\d+(?:\.\d*)?|\.\d+|[-+*/%()]/g)||[];
@@ -575,13 +574,10 @@ function calcView(){
   const inp=(id,ph,mode="decimal",v="")=>`<input id="${id}" class="u-input" inputmode="${mode}" autocomplete="off" placeholder="${ph}" value="${esc(v)}">`;
   return box("Calculatrice",`<div class="cdisp"><div id="cExpr" class="sub">${esc(CALC.expr)||"&nbsp;"}</div><div id="cRes">${esc(CALC.res||"0")}</div></div>
     <div class="ckeys">${kb.map(k=>`<button class="btn${k==="="?" p":""}" data-ck="${k}">${k}</button>`).join("")}<button class="btn" data-ck="⌫" style="grid-column:span 4">⌫ effacer le dernier</button></div>`)+
-  box("UTC ↔ heure de Marseille",`<p class="sub">Aujourd'hui : UTC${off>=0?"+":"−"}${Math.abs(off/60)} (${off===120?"heure d'été":"heure d'hiver"}). Tape une heure dans l'une des deux cases.</p>
-    <div class="cgrid"><label>UTC (Z)${inp("cUtc","14:30","numeric",CALC.utc)}</label><label>Marseille${inp("cLoc","15:30","numeric",CALC.loc)}</label></div>`)+
-  box("Masse : kg ↔ lb",`<div class="cgrid"><label>kg${inp("cKg","1000")}</label><label>lb${inp("cLb","2205")}</label></div><p class="sub">1 kg = 2,2046 lb · 1 lb = 0,4536 kg</p>`)+
-  box("Carburant : litres ↔ kg",`<label>Densité (kg/L)${inp("cDens","0,8","decimal",CALC.dens)}</label><p class="sub">Jet A-1 : 0,775 à 0,840 selon la température. Prendre la densité donnée par le pétrolier.</p>
-    <div class="cgrid"><label>Litres${inp("cL","5000")}</label><label>kg${inp("cFkg","4000")}</label><label>Gallons US${inp("cG","1321")}</label><label>lb${inp("cFlb","8818")}</label></div>`)+
-  box("Écart entre deux heures",`<div class="cgrid"><label>Début${inp("cD1","06:45","numeric",CALC.dur1)}</label><label>Fin${inp("cD2","09:10","numeric",CALC.dur2)}</label></div><div id="cDur" class="cout"></div>`)+
-  box("Heure + durée",`<div class="cgrid"><label>Heure${inp("cA1","22:30","numeric",CALC.add1)}</label><label>+ minutes (ou h:mm)${inp("cA2","95","numeric",CALC.add2)}</label></div><div id="cAdd" class="cout"></div>`);
+  box("Heure Z ↔ heure de Marseille",`<p class="sub">Aujourd'hui Marseille = Z ${off>=0?"+":"−"} ${Math.abs(off/60)} h (${off===120?"heure d'été":"heure d'hiver"}). Tape l'heure dans une case, l'autre se remplit.</p>
+    <div class="cgrid"><label>Heure Z (UTC)${inp("cUtc","ex. 14:30","numeric",CALC.utc)}</label><label>Heure de Marseille${inp("cLoc","ex. 15:30","numeric",CALC.loc)}</label></div><div id="cTz" class="cout"></div>`)+
+  box("Durée entre deux heures",`<p class="sub">Exemple : temps d'escale entre l'arrivée et le départ. Passe minuit tout seul.</p><div class="cgrid"><label>Première heure${inp("cD1","ex. 06:45","numeric",CALC.dur1)}</label><label>Deuxième heure${inp("cD2","ex. 09:10","numeric",CALC.dur2)}</label></div><div id="cDur" class="cout"></div>`)+
+  box("Heure + durée",`<p class="sub">Exemple : heure de départ + temps de vol = heure d'arrivée. Durée en minutes (95) ou en h:mm (1:35).</p><div class="cgrid"><label>Heure${inp("cA1","ex. 22:30","numeric",CALC.add1)}</label><label>+ durée${inp("cA2","ex. 1:35","numeric",CALC.add2)}</label></div><div id="cAdd" class="cout"></div>`);
 }
 function bindCalc(){
   const show=()=>{$("#cExpr").textContent=CALC.expr||" ";$("#cRes").textContent=CALC.res||"0"};
@@ -592,15 +588,10 @@ function bindCalc(){
     else{if(done&&/[\d,(]/.test(k))CALC.expr="";CALC.expr+=k}
     try{CALC.res=calcEval(CALC.expr)}catch(e){}show()});
   const date=new Date(),off=parisOffset(date);
-  const tz=(src,dst,sign)=>{const v=$(src).value;CALC[src==="#cUtc"?"utc":"loc"]=v;const m=parseHM(v);$(dst).value=m==null?"":fmtHM((m+sign*off+1440)%1440)};
+  const tzOut=()=>{const z=parseHM($("#cUtc").value),l=parseHM($("#cLoc").value);$("#cTz").innerHTML=z==null||l==null?"":`<b>${fmtHM(z)} Z</b> = <b>${fmtHM(l)}</b> à Marseille${z+off>=1440?' <span class="tag">lendemain</span>':z+off<0?' <span class="tag">veille</span>':""}`};
+  const tz=(src,dst,sign)=>{const v=$(src).value;CALC.utc="";CALC.loc="";CALC[src==="#cUtc"?"utc":"loc"]=v;const m=parseHM(v);$(dst).value=m==null?"":fmtHM((m+sign*off+1440)%1440);tzOut()};
   $("#cUtc").oninput=()=>tz("#cUtc","#cLoc",1);$("#cLoc").oninput=()=>tz("#cLoc","#cUtc",-1);
-  const LB=0.45359237,USG=3.785411784;
-  $("#cKg").oninput=()=>{const x=n2($("#cKg").value);$("#cLb").value=x==null?"":f2(x/LB)};
-  $("#cLb").oninput=()=>{const x=n2($("#cLb").value);$("#cKg").value=x==null?"":f2(x*LB)};
-  const fuel=from=>{const d=n2($("#cDens").value)||0.8;CALC.dens=$("#cDens").value;let L=null;const v=n2($(from).value);
-    if(v!=null)L=from==="#cL"?v:from==="#cFkg"?v/d:from==="#cG"?v*USG:v*LB/d;
-    ["#cL","#cFkg","#cG","#cFlb"].forEach(id=>{if(id===from)return;$(id).value=L==null?"":f2(id==="#cL"?L:id==="#cFkg"?L*d:id==="#cG"?L/USG:L*d/LB,0)})};
-  ["#cL","#cFkg","#cG","#cFlb"].forEach(id=>$(id).oninput=()=>fuel(id));$("#cDens").oninput=()=>fuel("#cL");
+  if(CALC.utc)tz("#cUtc","#cLoc",1);else if(CALC.loc)tz("#cLoc","#cUtc",-1);
   const dur=()=>{CALC.dur1=$("#cD1").value;CALC.dur2=$("#cD2").value;const a=parseHM(CALC.dur1),b=parseHM(CALC.dur2);
     if(a==null||b==null){$("#cDur").textContent="";return}const d=(b-a+1440)%1440;
     $("#cDur").innerHTML=`<b>${Math.floor(d/60)} h ${String(d%60).padStart(2,"0")}</b> · ${d} min${b<a?' <span class="tag">fin le lendemain</span>':""}`};
