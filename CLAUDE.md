@@ -35,6 +35,9 @@ testé (Chrome sans affichage, 390 px de large) et publié (push sur `main` = en
 **Faits le 20 nov. 2026 (demandés) :** « Quel poste pour cet avion ? » avec la synthèse MUA, Compagnies présentes à MRS,
 onglet Calculs (voir plus bas).
 
+**Principe (Raph, 21/11/2026) : l'appli sert à la CONSULTATION, elle ne remplace pas le GANTT** (pas d'outil de planification
+ou d'affectation de postes).
+
 **Travailler avec Raph :** il parle français, utilise surtout l'iPhone (appli installée sur l'écran d'accueil), parfois le Mac.
 Explications courtes, étape par étape, avec une vérification « ✅ » après chaque action et une courte explication de chaque terme
 technique. Toujours tester avant de publier, changer `CACHE` dans sw.js à chaque mise en ligne, mettre à jour CE fichier quand
