@@ -32,6 +32,9 @@ main{max-width:1000px;margin:0 auto;padding:12px calc(12px + env(safe-area-inset
 .info{color:var(--mute);font-size:13px;margin:4px 2px 10px}
 .tabhelp{font-size:13px;line-height:1.45;color:var(--mute);border-left:3px solid var(--acc);padding:4px 10px;margin:2px 0 12px}
 .tabhelp b{color:var(--ink)}
+.vdet{margin-top:8px;padding:8px 10px;border-radius:10px;background:var(--bg);font-size:14px;line-height:1.5;cursor:default}
+.vbtns{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.mvols{margin-top:6px;font-size:13px;border-top:1px dashed var(--line);padding-top:5px}
 table{width:100%;border-collapse:collapse;background:var(--card);border-radius:10px;overflow:hidden;border:1px solid var(--line)}
 th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
 th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute);background:var(--bg)}
@@ -466,8 +469,9 @@ function favsView(){
     return `<div class="u-row"><span class="u-label">${esc(title)} ${favBtn(k).replace('class="fav','style="font-size:16px;margin:0;padding:0 2px" class="fav')}<small>${esc(G.name)}${G.gates&&extra?" · "+esc(extra):""}</small></span><div class="u-nums">${parts.map(p=>numLine(p,title,"","")).join("")||'<div class="u-none">pas de numéro</div>'}</div></div>`}).join("")}</div>`:""}`;
 }
 function homeView(){
-  const extra={mua:MUA.sheets?`${MUA.sheets.length} fiches de postes`:"Fiches de postes (code)",ct:MUA.annu?"Annuaire COA et mes numéros":"Assistants, services, portes"};
-  return '<div class="home">'+`<div data-go="wx" style="cursor:pointer">${wxCard(false)}</div>`+favsView()+THEMES.map(([t,it])=>{const items=it.filter(([k])=>k!=="home"&&k!=="all");if(!items.length)return "";
+  volsLoad();
+  const extra=Object.assign({mua:MUA.sheets?`${MUA.sheets.length} fiches de postes`:"Fiches de postes (code)",ct:MUA.annu?"Annuaire COA et mes numéros":"Assistants, services, portes"},liveTiles());
+  return '<div class="home">'+homeAlerts()+`<div data-go="wx" style="cursor:pointer">${wxCard(false)}</div>`+favsView()+THEMES.map(([t,it])=>{const items=it.filter(([k])=>k!=="home"&&k!=="all");if(!items.length)return "";
     return `<h2>${t}</h2><div class="tiles">`+items.map(([k,l,d])=>`<button class="tile" data-go="${k}"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TI[k]||""}</svg></span><b>${l}</b><small>${extra[k]||d}</small></button>`).join("")+"</div>"}).join("")+"</div>";
 }
 $("#menu").onclick=e=>{const b=e.target.closest(".mitem");if(b){tab=b.dataset.k;location.hash=tab;render()}if(b||e.target.id==="menu")$("#menu").classList.add("hide")};
@@ -801,39 +805,93 @@ async function volsLoad(force){
   try{const r=await fetch(NOTAM_URL+"?vols=1",{cache:"no-store"});const j=await r.json();if(!r.ok||j.error)throw new Error(j.error||r.status);
     VL.data=j;VL.at=Date.now();VL.failAt=0;store("coa-vols",JSON.stringify({data:j,at:VL.at}))}
   catch(e){VL.failAt=Date.now();const m=String(e.message||"réseau");VL.err="Vols indisponibles ("+(/Failed to fetch|NetworkError|Load failed/i.test(m)?"pas de réseau":/vols|404|400|code non autoris/i.test(m)?"relais pas encore mis à jour":m)+")."}
-  VL.loading=false;if(tab==="vols")render();
+  VL.loading=false;if(tab==="vols"||tab==="home"||tab==="mua")render();
 }
-setInterval(()=>{if(!document.hidden&&tab==="vols")volsLoad()},60e3);
+setInterval(()=>{if(!document.hidden&&(tab==="vols"||tab==="home"))volsLoad()},60e3);
 /* porte → poste(s) au contact, d'après l'annuaire (passerelle) et GATE_FIX */
 function standsForGate(g){const G=String(g||"").toUpperCase().replace(/^0+(?=\d)/,"");if(!G||!MUA.annu)return [];const out=new Set();
   MUA.annu.groups.forEach(gr=>{if(!gr.gates)return;gr.items.forEach(([l,n,x])=>{if(l.startsWith("—")||gateGone(l))return;
     if(gateToks(l).map(t=>t.replace(/^0+(?=\d)/,"")).includes(G))gateStand(l,x).forEach(p=>out.add(p))})});
   (GATE_FIX[G]||[]).forEach(p=>out.add(p));return [...out]}
 function volZ(t){const d=new Date(t+"Z");if(isNaN(d))return "";return new Date(d.getTime()-parisOffset(d)*60e3).toISOString().slice(11,16)}
+/* heure réelle (ms) d'un horaire local Paris « 2026-11-21T20:25:00 » */
+function volMs(t){const d=new Date(t+"Z");return isNaN(d)?0:d.getTime()-parisOffset(d)*60e3}
+const volDone=v=>v.cls==="vol-take-off";
+/* liste récente (< 30 min) : sinon l'accueil, la recherche et le MUA n'utilisent pas une vieille copie */
+const volsFresh=()=>!!(VL.data&&Date.now()-VL.at<30*60e3);
+const volKey=v=>v.n+"|"+v.t;
+/* retard lu dans le statut (« Prévu à 00:31 », « Retardé 21:30 »…) : minutes, ou null */
+function volDelay(v){if(volDone(v)||v.cls==="annulee")return null;const m=String(v.st).match(/(\d{1,2}):(\d{2})/);if(!m)return null;
+  const s0=parseHM(v.t.slice(11,16)),s1=+m[1]*60+ +m[2];let d=s1-s0;if(d<-720)d+=1440;if(d>720)d-=1440;return d>=5?d:null}
+function volsOf(day){const D=VL.data;if(!D)return {dep:[],arr:[]};return {dep:D.dep.filter(v=>v.t.slice(0,10)===day),arr:D.arr.filter(v=>v.t.slice(0,10)===day)}}
+const volMatch=(v,q)=>norm([v.n,v.n.replace(/\s/g,""),v.cie,v.ville,v.code,v.porte&&"porte "+v.porte,v.tapis&&"tapis "+v.tapis,MRS_HANDLER[v.al]||""].join(" ")).includes(q);
+/* assistants cités dans MRS_HANDLER (« Passage Air France · coordo Aviapartner » → Air France, Aviapartner) */
+const handlerNames=h=>["Aviapartner","Alyzia","Air France","Onet"].filter(n=>String(h||"").includes(n));
+/* départs prévus par poste (porte au contact) : calculé une fois par liste de vols et annuaire */
+let VBS={at:-1,annu:null,map:{}};
+function volsByStand(){if(!volsFresh()||!MUA.annu)return {};if(VBS.at===VL.at&&VBS.annu===MUA.annu)return VBS.map;const map={},memo={};
+  VL.data.dep.forEach(v=>{if(!v.porte)return;const st=memo[v.porte]||(memo[v.porte]=standsForGate(v.porte));st.forEach(p=>(map[p]=map[p]||[]).push(v))});
+  VBS={at:VL.at,annu:MUA.annu,map};return map}
+function volDetail(v,arr){
+  const al=MRS_AL.find(r=>r[1]===v.al)||(loaded===true&&AL.find(r=>r[0]===v.al));
+  const alTxt=al?(al.length===4?`${al[0]} · ${al[1]}${al[2]?" · "+al[2]:""}${al[3]?" · indicatif "+al[3]:""}`:`${al[2]} · ${al[0]}${al[1]?" · "+al[1]:""}${al[3]?" · indicatif "+al[3]:""}`):v.cie;
+  const ap=loaded===true&&AP.find(r=>r[0]===v.code);const f=ap&&flightInfo(ap[7],ap[8]);
+  const hd=MRS_HANDLER[v.al],st=v.porte?standsForGate(v.porte):[],dl=volDelay(v);
+  const line=(l,x)=>x?`<div><span class="sub">${l}</span> ${x}</div>`:"";
+  return `<div class="vdet">${line("Compagnie",esc(alTxt))}
+    ${line(arr?"Provenance":"Destination",ap?`${esc(ap[2])} · ${esc(ap[3])}, ${esc(pfr(ap[4]))} <span class="u-ext" style="margin:0">${esc(ap[0])} · ${esc(ap[1])}</span>`:esc(v.ville))}
+    ${line("Temps de vol estimé",f?`≈ ${hm(arr?f.back:f.go)} · ${f.d.toLocaleString("fr")} km`:"")}
+    ${line("Horaire",`${esc(v.t.slice(11,16))} locale · ${esc(volZ(v.t))} Z${dl?` · <b style="color:#b26a00">retard ≈ ${dl} min</b>`:""}`)}
+    ${line("Statut",esc([v.st,v.emb].filter(Boolean).join(" · ")))}
+    ${arr?line("Tapis bagages",esc(v.tapis)):line("Porte",esc([v.porte,v.zone&&v.zone!==v.term?"zone "+v.zone:"",v.term].filter(Boolean).join(" · ")))}
+    ${arr?"":line("Banques d'enregistrement",esc(v.banques))}
+    ${line("Assistant",esc(hd||""))}
+    <div class="vbtns">${handlerNames(hd).map(n=>`<button class="glink" data-ctq="${esc(n)}">Contacts ${esc(n)}</button>`).join("")}${st.map(p=>`<button class="glink" data-openposte="${esc(p)}">Fiche MUA ${esc(p)}</button>`).join("")}<button class="glink" data-alq="${esc(v.al)}">Fiche compagnie</button></div></div>`}
+function volRow(v,arr,q){const h=v.t.slice(11,16),z=volZ(v.t),hd=MRS_HANDLER[v.al],open=VL.open===volKey(v),dl=volDelay(v);
+  const stCls=v.cls==="annulee"?"#c62828":volDone(v)?"var(--mute)":dl&&dl>=15||/retard/i.test(v.st)?"#b26a00":v.cls==="expected"||v.cls==="confirmed"?"var(--acc)":"#2e7d32";
+  const where=arr?(v.tapis?"Tapis "+v.tapis:""):[v.porte?"Porte "+v.porte:"",v.term].filter(Boolean).join(" · ");
+  return `<div class="u-row vrow${open?" open":""}" data-vk="${esc(volKey(v))}" data-varr="${arr?1:0}" role="button" tabindex="0" style="display:block;padding:8px 0;cursor:pointer${v.cls==="annulee"?";opacity:.8":""}"><div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">
+      <b style="font-size:17px;min-width:48px">${esc(h)}</b><span class="sub" style="min-width:52px">${esc(z)}Z</span>
+      <b>${hl(v.n,q)}</b><span>${hl(v.ville,q)} <span class="u-ext" style="margin:0">${esc(v.code)}</span></span>
+      ${v.st?`<span style="color:${stCls};font-weight:600;font-size:13px">${esc(v.st)}${dl&&dl>=15?` (+${dl} min)`:""}</span>`:""}<span class="sub" style="margin-left:auto">${open?"▴":"▾"}</span></div>
+      <div class="sub" style="margin-top:2px">${hl(v.cie,q)}${hd?" · "+hl(hd,q):""}${where?" · "+hl(where,q):""}</div>${open?volDetail(v,arr):""}</div>`}
 function volsView(q){
   if(!VL.data)return `<div class="info">${VL.err?esc(VL.err):"Chargement des vols…"}</div>`;
   const D=VL.data,base=new Date(D.today+"T12:00:00Z");const day=new Date(base.getTime()+VL.day*864e5).toISOString().slice(0,10);
-  const arr=VL.dir==="arr";let list=(arr?D.arr:D.dep).filter(v=>v.t.slice(0,10)===day);
-  const all=list.length,canc=list.filter(v=>v.cls==="annulee").length,fini=list.filter(v=>v.cls==="vol-take-off").length;
-  if(!VL.done&&!q)list=list.filter(v=>v.cls!=="vol-take-off");
-  if(q)list=list.filter(v=>norm([v.n,v.n.replace(/\s/g,""),v.cie,v.ville,v.code,v.porte&&"porte "+v.porte,v.tapis&&"tapis "+v.tapis,MRS_HANDLER[v.al]||""].join(" ")).includes(q));
+  const arr=VL.dir==="arr";let list=volsOf(day)[arr?"arr":"dep"];
+  const all=list.length,canc=list.filter(v=>v.cls==="annulee").length,fini=list.filter(volDone).length;
+  if(!VL.done&&!q)list=list.filter(v=>!volDone(v)||VL.open===volKey(v));
+  if(q)list=list.filter(v=>volMatch(v,q));
   const age=Math.round((Date.now()-VL.at)/60e3);
-  const stCls=v=>v.cls==="annulee"?"#c62828":v.cls==="vol-take-off"?"var(--mute)":/retard/i.test(v.st)?"#b26a00":v.cls==="expected"||v.cls==="confirmed"?"var(--acc)":"#2e7d32";
   const dl=["Aujourd'hui","Demain"];
-  const rows=list.map(v=>{const h=v.t.slice(11,16),z=volZ(v.t),hd=MRS_HANDLER[v.al];const st=v.porte?standsForGate(v.porte):[];
-    const where=arr?(v.tapis?"Tapis "+v.tapis:""):[v.porte?"Porte "+v.porte:"",v.zone&&v.zone!==v.term?"zone "+v.zone:"",v.term].filter(Boolean).join(" · ");
-    return `<div class="u-row" style="display:block;padding:8px 0${v.cls==="annulee"?";opacity:.75":""}"><div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">
-      <b style="font-size:17px;min-width:48px">${esc(h)}</b><span class="sub" style="min-width:52px">${esc(z)}Z</span>
-      <b>${hl(v.n,q)}</b><span>${hl(v.ville,q)} <span class="u-ext" style="margin:0">${esc(v.code)}</span></span>
-      ${v.st?`<span style="color:${stCls(v)};font-weight:600;font-size:13px">${esc(v.st)}</span>`:""}</div>
-      <div class="sub" style="margin-top:2px">${hl(v.cie,q)}${hd?" · "+hl(hd,q):""}${where?" · "+hl(where,q):""}${v.emb&&!arr?" · "+esc(v.emb):""}${st.map(p=>` <button class="glink" data-openposte="${esc(p)}">Fiche MUA ${esc(p)}</button>`).join("")}</div></div>`}).join("");
   return `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><div class="seg" id="vlDir"><button data-v="dep" class="${arr?"":"on"}">Départs</button><button data-v="arr" class="${arr?"on":""}">Arrivées</button></div>
     <div class="seg" id="vlDay">${dl.map((l,i)=>`<button data-v="${i}" class="${VL.day===i?"on":""}">${l}</button>`).join("")}</div>
     <label class="sub" style="display:flex;gap:4px;align-items:center"><input type="checkbox" id="vlDone"${VL.done?" checked":""}> ${arr?"vols arrivés":"vols décollés"} (${fini})</label></div>
-  <div class="info">${all} ${arr?"arrivées":"départs"} le ${day.split("-").reverse().join("/")}${canc?` · <b style="color:#c62828">${canc} annulé${canc>1?"s":""}</b>`:""} · heures locales (Z à côté) · site de l'aéroport mis à jour à ${esc(D.maj||"?")}, relu il y a ${age} min${VL.err?" · "+esc(VL.err):""} <button class="btn" id="vlRefresh" style="font-size:12px;padding:3px 8px">Actualiser</button></div>
-  <div class="card" style="padding:2px 12px">${rows||'<div class="info">Aucun vol.</div>'}</div>
+  <div class="info">${all} ${arr?"arrivées":"départs"} le ${day.split("-").reverse().join("/")}${canc?` · <b style="color:#c62828">${canc} annulé${canc>1?"s":""}</b>`:""} · heures locales (Z à côté) · touche un vol pour sa fiche · site de l'aéroport mis à jour à ${esc(D.maj||"?")}, relu il y a ${age} min${VL.err?" · "+esc(VL.err):""} <button class="btn" id="vlRefresh" style="font-size:12px;padding:3px 8px">Actualiser</button></div>
+  <div class="card" style="padding:2px 12px">${list.map(v=>volRow(v,arr,q)).join("")||'<div class="info">Aucun vol.</div>'}</div>
   <p class="sub">Source : tableau public des vols de l'aéroport Marseille Provence. Consultation seulement : horaires indicatifs, le GANTT et les messages compagnie font foi.${MUA.annu?"":" Déverrouille le MUA pour voir le poste au contact des portes."}</p>`;
 }
+/* recherche « Tout » : un numéro de vol (AF7343, AF 7343, 7343) */
+function volsSearch(q){if(!volsFresh())return null;const c=q.replace(/\s/g,"");if(!/^([a-z0-9]{2}\d{1,4}[a-z]?|\d{3,4})$/.test(c))return null;
+  const hit=v=>{const n=norm(v.n).replace(/\s/g,"");return n===c||n.replace(/^[a-z0-9]{2}/,"")===c};
+  const d=VL.data.dep.filter(hit),a=VL.data.arr.filter(hit);if(!d.length&&!a.length)return null;
+  return `<div class="card" style="padding:2px 12px">${d.map(v=>volRow(v,false,"")).join("")}${a.map(v=>volRow(v,true,"")).join("")}</div>`}
+/* bandeau d'alertes de l'accueil : vols annulés et gros retards (aujourd'hui, à venir) */
+function homeAlerts(){if(!volsFresh())return "";const now=Date.now(),{dep,arr}=volsOf(VL.data.today);const items=[];
+  const canc=[...dep.map(v=>[v,0]),...arr.map(v=>[v,1])].filter(([v])=>v.cls==="annulee"&&volMs(v.t)>now-2*3600e3);
+  if(canc.length)items.push(`<div class="wxa danger" data-go="vols"><b>${canc.length} vol${canc.length>1?"s":""} annulé${canc.length>1?"s":""}</b> : ${canc.slice(0,4).map(([v,a])=>`${esc(v.n)} ${a?"de":"vers"} ${esc(v.ville)} (${esc(v.t.slice(11,16))})`).join(", ")}${canc.length>4?"…":""}</div>`);
+  const late=[...dep.map(v=>[v,0]),...arr.map(v=>[v,1])].map(([v,a])=>[v,a,volDelay(v)]).filter(([v,,d])=>d>=30&&volMs(v.t)+d*60e3>now).sort((x,y)=>y[2]-x[2]);
+  if(late.length)items.push(`<div class="wxa warn" data-go="vols"><b>Retard${late.length>1?"s":""} de 30 min ou plus</b> : ${late.slice(0,4).map(([v,a,d])=>`${esc(v.n)} ${a?"de":"vers"} ${esc(v.ville)} +${d} min`).join(", ")}${late.length>4?"…":""}</div>`);
+  return items.length?`<div class="wxal" style="cursor:pointer">${items.join("")}</div>`:""}
+/* sous-titres en direct des tuiles de l'accueil */
+function liveTiles(){const o={};
+  if(volsFresh()){const now=Date.now(),{dep,arr}=volsOf(VL.data.today);const soon=[...dep,...arr].filter(v=>!volDone(v)&&v.cls!=="annulee"&&volMs(v.t)>=now-15*60e3&&volMs(v.t)<=now+2*3600e3).length;
+    const c=[...dep,...arr].filter(v=>v.cls==="annulee").length;o.vols=`${soon} mouvement${soon>1?"s":""} dans les 2 h${c?` · <b style="color:#c62828">${c} annulé${c>1?"s":""}</b>`:""}`}
+  if(WX.metar){const w=wxDecode(WX.metar.replace(/^(METAR|SPECI)\s+/,"").replace(/^LFML\s+/,""));o.wx=esc([w.wind&&"Vent "+w.wind.replace(/ \(de .*\)/,""),w.qnh&&"QNH "+w.qnh.replace(" hPa","")].filter(Boolean).join(" · "))}
+  const c=airacCycles(2);if(c.length>1){const n=Math.ceil((c[1].date-Date.now())/864e5);o.lfml=`AIRAC ${c[0].id} · ${c[1].id} dans ${n} j`}
+  if(NT.list){const now=Date.now(),n=NT.list.filter(x=>!x.end||/PERM/i.test(x.end)||new Date(x.end).getTime()>now).length;o.notam=`${n} NOTAM en vigueur ou à venir`}
+  const off=parisOffset(new Date());o.calc=`Calculatrice · Marseille = Z + ${off/60} h`;
+  return o}
 const NQG=[["Postes et aires de trafic",/^M[NKP]/],["Voies de circulation",/^MX/],["Pistes",/^M[RSTDUA]/],["Balisage",/^L/],["Radionavigation et ILS",/^[ING]/],
   ["Aérodrome et services",/^[FSC]/],["Procédures",/^P/],["Obstacles",/^O/],["Espace aérien",/^[ARW]/],["Autres",/./]];
 const NQC={LC:"fermé",AS:"hors service",AU:"indisponible",CH:"modifié",CA:"activé",CS:"installé",CR:"remplacé",LT:"limité",AH:"horaires modifiés",AW:"retiré",LH:"fermé sauf…",LW:"travaux",HW:"travaux",XX:""};
@@ -1227,6 +1285,8 @@ function muaCard(s,q){
   ${av.slice(0,5).map(a=>`<div class="mav">${hl(a.t,q)} <span class="sub">· RdN ${esc(a.rdn)}${a.info?" · "+esc(a.info):""}</span></div>`).join("")||'<div class="sub">Plan et consignes : toucher pour ouvrir</div>'}${more}
   ${muaPostes(s).filter(p=>MUA.dims&&MUA.dims[p]).map(p=>`<div class="sub" style="margin-top:3px">${muaPostes(s).length>1?`<b>${esc(p)}</b> · `:""}Max : envergure ${f2(MUA.dims[p].ws,2)} m · longueur ${f2(MUA.dims[p].lg,2)} m</div>`).join("")}
   ${muaPostes(s).map(p=>[p,synthOf(p)]).filter(([,e])=>e).map(([p,e])=>`<div class="sub" style="margin-top:3px">${muaPostes(s).length>1?`<b>${esc(p)}</b> · `:""}${esc(shortDep(e.depart))} · neutralise ${esc(e.neutr.replace(/\.$/,""))}</div>`).join("")}
+  ${(()=>{const m=volsByStand(),now=Date.now();const vs=[...new Set(muaPostes(s).flatMap(p=>m[p]||[]))].filter(v=>!volDone(v)&&v.cls!=="annulee"&&volMs(v.t)>now-30*60e3).sort((a,b)=>a.t<b.t?-1:1);
+    return vs.length?`<div class="mvols"><b>Départs prévus à ses portes</b> <span class="sub">(site de l'aéroport, indicatif)</span>${vs.slice(0,3).map(v=>`<div>${esc(v.t.slice(11,16))} · <b>${esc(v.n)}</b> ${esc(v.ville)} · porte ${esc(v.porte)}${v.t.slice(0,10)!==VL.data.today?" · demain":""}</div>`).join("")}${vs.length>3?`<div class="sub">+ ${vs.length-3} autre(s)</div>`:""}</div>`:""})()}
   ${s.consignes.length?`<div class="sub" style="margin-top:4px">${s.consignes.length} consigne(s) d'exploitation</div>`:""}</div>`;
 }
 function muaView(q,limit){
@@ -1325,12 +1385,13 @@ function render(){
     case "vols":h=volsView(q);volsLoad();break;
     case "fl":h=flView(q);break;
     case "calc":h=calcView();break;
-    case "mua":h=muaView(q);break;
+    case "mua":h=muaView(q);if(MUA.annu)volsLoad();break;
     case "immat":h=immatView(q,60);break;
     case "lfml":h=lfmlView();break;
     default:{
       if(!q){h=`<div class="card"><b>Recherche globale</b><p class="sub">Une seule barre pour tout : poste MUA, code aéroport, compagnie, type d'avion, code retard, abréviation ou contact. Les onglets filtrent par rubrique.</p></div>`;break}
       const parts=[];STRICT=true;
+      {const v=volsSearch(q);if(v)parts.push(["Vols du jour","vols",v,9])}
       const Q=q.toUpperCase();
       if(loaded===true){
         const a=search(AP,r=>[r[0],r[1]],r=>[r[2],r[3],r[4],pfr(r[4])],q,8);if(a.total)parts.push(["Aéroports","ap",apTable(q,8),a.best]);
@@ -1356,7 +1417,10 @@ function render(){
   const wr=$("#wxRefresh");if(wr)wr.onclick=()=>{wr.textContent="…";wxLoad(true)};
   const nr=$("#ntRefresh");if(nr)nr.onclick=()=>{nr.textContent="…";notamLoad(true)};
   const vr=$("#vlRefresh");if(vr)vr.onclick=()=>{vr.textContent="…";volsLoad(true)};
-  document.querySelectorAll("#vlDir button").forEach(b=>b.onclick=()=>{VL.dir=b.dataset.v;render()});
+  document.querySelectorAll("#vlDir button").forEach(b=>b.onclick=()=>{VL.dir=b.dataset.v;VL.open=null;render()});
+  document.querySelectorAll(".vrow").forEach(r=>{const go=e=>{if(e.target.closest("button,a"))return;VL.open=VL.open===r.dataset.vk?null:r.dataset.vk;if(tab!=="vols"){VL.dir=r.dataset.varr==="1"?"arr":"dep";VL.day=r.dataset.vk.split("|")[1].slice(0,10)===VL.data.today?0:1;tab="vols";location.hash="vols"}render()};r.onclick=go;r.onkeydown=e=>{if(e.key==="Enter")go(e)}});
+  document.querySelectorAll("[data-ctq]").forEach(b=>b.onclick=()=>{$("#q").value=b.dataset.ctq;tab="ct";location.hash="ct";render();scrollTo(0,0)});
+  document.querySelectorAll("[data-alq]").forEach(b=>b.onclick=()=>{$("#q").value=b.dataset.alq;tab="al";location.hash="al";render();scrollTo(0,0)});
   document.querySelectorAll("#vlDay button").forEach(b=>b.onclick=()=>{VL.day=+b.dataset.v;render()});
   const vd=$("#vlDone");if(vd)vd.onchange=()=>{VL.done=vd.checked;render()};
 }

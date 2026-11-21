@@ -248,3 +248,13 @@ L'utilisateur échange en français.
   Contacts, Aérodrome) · Outils (Temps de vol, Calculs) · Codes et langage. Barre d'onglets dans le même ordre.
 - Calculs : **masse kg ↔ lb et carburant supprimés** (demande de Raph). Restent calculatrice, heure Z ↔ Marseille
   (avec ligne de résultat « 23:30 Z = 00:30 à Marseille »), durée entre deux heures, heure + durée — libellés avec exemples.
+
+## Explicatifs et infos dynamiques (21 nov. 2026)
+- `HELP` : texte d'explication en haut de chaque rubrique (`.tabhelp`), masqué pendant une recherche.
+- Accueil : `homeAlerts()` (vols annulés, retards ≥ 30 min à venir — les alertes météo restent dans la carte météo) et
+  `liveTiles()` (sous-titres en direct : mouvements dans les 2 h, vent / QNH, AIRAC + jours avant le suivant, NOTAM, Z + n h).
+- Vols : touche un vol → `volDetail` (compagnie + indicatif, aéroport, temps de vol estimé `flightInfo`, retard `volDelay`
+  lu dans le statut, banques, boutons Contacts <assistant> / Fiche MUA / Fiche compagnie). `VL.open` = vol ouvert.
+- Recherche « Tout » : numéro de vol (AF7343, AF 7343, 7343) → « Vols du jour » en tête (`volsSearch`).
+- Carte MUA : « Départs prévus à ses portes » (3 prochains, `volsByStand`, mémorisé par liste de vols + annuaire), marqué
+  indicatif. Accueil / recherche / MUA n'utilisent la liste que si elle a moins de 30 min (`volsFresh`).
