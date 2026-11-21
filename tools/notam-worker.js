@@ -33,13 +33,21 @@ async function arToken(env) {
   const cache = caches.default, key = new Request('https://notam-cache.local/ar-token');
   const hit = await cache.match(key);
   if (hit) return (await hit.json()).t;
+  const failKey = new Request('https://notam-cache.local/ar-fail');
+  const fail = await cache.match(failKey);
+  if (fail) throw new Error((await fail.json()).msg + ' (nouvel essai dans moins de 20 min)');
   const r = await fetch('https://api.autorouter.aero/v1.0/oauth2/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({ grant_type: 'client_credentials', client_id: env.AR_EMAIL, client_secret: env.AR_PASSWORD }),
   });
   const j = await r.json().catch(() => ({}));
-  if (!r.ok || !j.access_token) throw new Error('autorouter connexion ' + r.status + (j.error_description ? ' : ' + j.error_description : ''));
+  if (!r.ok || !j.access_token) {
+    // échec de connexion gardé 20 min : ne jamais insister (autorouter bloque après plusieurs échecs)
+    const msg = 'autorouter connexion ' + r.status + (j.error_description ? ' : ' + j.error_description : '');
+    await cache.put(failKey, new Response(JSON.stringify({ msg }), { headers: { 'Cache-Control': 'max-age=1200' } }));
+    throw new Error(msg);
+  }
   await cache.put(key, new Response(JSON.stringify({ t: j.access_token }), { headers: { 'Cache-Control': 'max-age=3000' } }));
   return j.access_token;
 }
