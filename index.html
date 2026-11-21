@@ -30,6 +30,8 @@ nav button{flex:none;border:0;background:transparent;color:var(--mute);padding:7
 nav button.on{background:var(--acc2);color:var(--acc);font-weight:600}
 main{max-width:1000px;margin:0 auto;padding:12px calc(12px + env(safe-area-inset-right)) calc(12px + env(safe-area-inset-bottom)) calc(12px + env(safe-area-inset-left))}
 .info{color:var(--mute);font-size:13px;margin:4px 2px 10px}
+.tabhelp{font-size:13px;line-height:1.45;color:var(--mute);border-left:3px solid var(--acc);padding:4px 10px;margin:2px 0 12px}
+.tabhelp b{color:var(--ink)}
 table{width:100%;border-collapse:collapse;background:var(--card);border-radius:10px;overflow:hidden;border:1px solid var(--line)}
 th,td{text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
 th{font-size:12px;text-transform:uppercase;letter-spacing:.04em;color:var(--mute);background:var(--bg)}
@@ -415,6 +417,24 @@ const THEMES=[["Référentiels",[["mua","MUA · fiches de postes","Postes, avion
   ["Outils",[["fl","Temps de vol","Depuis et vers Marseille"],["calc","Calculs","Calculatrice, heure Z ↔ locale, durées"]]],
   ["Codes et langage",[["dl","Codes retard","Codes IATA 00 à 99"],["ab","Abréviations","A-CDM, messages, PMR, météo"],["nato","Alphabet","Alphabet OTAN, épellation"]]],
   ["Recherche",[["home","Accueil","Toutes les rubriques en tuiles"],["all","Tout","Une seule recherche dans toutes les rubriques"]]]];
+/* explicatif affiché en haut de chaque rubrique (masqué pendant une recherche) */
+const HELP={
+ mua:"<b>Fiches MUA des postes de stationnement.</b> Tape un poste (5B), un type d'avion (A321) ou utilise « Quel poste pour cet avion ? ». Chaque fiche donne les avions autorisés, les consignes et le plan. La fiche la plus récente est toujours celle affichée. Accès par code.",
+ ap:"<b>Aéroports du monde.</b> Cherche par code IATA (ORY), OACI (LFPO), ville ou pays en français. Le temps de vol estimé depuis Marseille s'affiche avec le résultat.",
+ al:"<b>Compagnies aériennes.</b> Code IATA (AF), OACI (AFR), indicatif radio (AIRFRANS) ou nom. En tête : les compagnies de Marseille avec leur assistant (passage et coordination).",
+ pl:"<b>Types d'avions.</b> Code IATA (321) ou OACI (A321), nom du modèle : lettre de code OACI (A à F), catégorie de turbulence de sillage et envergure.",
+ immat:"<b>Immatriculations.</b> Tape une immatriculation (F-HBXA ou FHBXA) : type d'avion, compagnie, nombre de sièges et masse maximale. Base interne, accès par code.",
+ vols:"<b>Vols du jour à Marseille</b>, d'après le tableau public de l'aéroport, mis à jour toutes les 3 minutes. Départs ou arrivées, aujourd'hui ou demain : statut, porte, tapis, assistant. Le bouton « Fiche MUA » ouvre le poste au contact de la porte. Consultation seulement : le GANTT fait foi.",
+ wx:"<b>Météo de Marseille.</b> METAR (observation) et TAF (prévision) décodés, alertes vent, orages et visibilité, lever et coucher du soleil, fréquences utiles. Mise à jour automatique.",
+ notam:"<b>NOTAM de Marseille</b> classés par thème (postes, voies, pistes, balisage…). Aide à la consultation : le briefing officiel du SIA fait foi.",
+ ct:"<b>Contacts de l'escale.</b> Assistants, services et portes : touche un numéro pour appeler ou envoyer un SMS. Les postes internes à 4 chiffres ne sont pas joignables de l'extérieur. Tu peux ajouter tes propres numéros.",
+ lfml:"<b>Aérodrome de Marseille.</b> Pistes et distances, consignes d'exploitation, services, cycle AIRAC en cours et SUP AIP, avec les liens vers le SIA.",
+ fl:"<b>Temps de vol depuis et vers Marseille.</b> Touche une destination de la liste ou tape une ville ou un pays. Estimation porte à porte : l'horaire de la compagnie fait foi.",
+ calc:"<b>Calculs rapides.</b> Calculatrice, conversion heure Z ↔ heure de Marseille (été / hiver automatique), durée entre deux heures et heure + durée. Passe minuit tout seul.",
+ dl:"<b>Codes retard IATA</b> (00 à 99) avec leur signification. Tape un numéro (93) ou un mot (météo).",
+ ab:"<b>Abréviations</b> de l'exploitation : A-CDM, messages, PMR, météo, masses, urgences… Tape le sigle ou un mot.",
+ nato:"<b>Alphabet OTAN.</b> Tape un mot ou une immatriculation pour l'avoir épelée (FHBXA → Foxtrot Hotel Bravo X-ray Alfa).",
+ all:"<b>Recherche dans toute la boîte à outils</b> : poste, code, compagnie, avion, immatriculation, contact… Les meilleurs résultats de chaque rubrique s'affichent ensemble."};
 const tabName=k=>{for(const [,it] of THEMES)for(const [kk,l] of it)if(kk===k)return l;return ""};
 function openMenu(){$("#menuList").innerHTML=THEMES.map(([t,it])=>`<div class="mtheme">${t}</div>`+it.map(([k,l,d])=>`<button class="mitem${k===tab?" on":""}" data-k="${k}">${l}<small>${d}</small></button>`).join("")).join("");$("#menu").classList.remove("hide")}
 $("#menuBtn").onclick=openMenu;
@@ -1328,7 +1348,7 @@ function render(){
       h=parts.length?parts.map(([t,k,x])=>`<h2>${t} <button class="btn" style="font-size:11px;padding:2px 8px" onclick="tab='${k}';render()">voir tout</button></h2>${x}`).join(""):`<div class="info">Aucun résultat.</div>`;
     }
   }
-  out.innerHTML=h;
+  out.innerHTML=(HELP[tab]&&!q?`<p class="tabhelp">${HELP[tab]}</p>`:"")+h;
   if(tab==="ct")bindContacts();
   if(tab==="calc")bindCalc();
   bindMua();
