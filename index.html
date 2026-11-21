@@ -836,7 +836,7 @@ function numLine(p,label,note,q){
   return `<div class="u-line"><div class="u-text"><span class="u-tel">${hl(p.t,q)}${p.kind==="freq"?" MHz":""}${tag}</span>${note?`<span class="u-note">${hl(note,q)}</span>`:""}</div>${call}${sms}</div>`;
 }
 /* corrections porte → poste données par Raph (prioritaires sur ce que l'annuaire laisse deviner) */
-const GATE_FIX={"41B":"1A"};
+const GATE_FIX={"41B":"1A","40B":"4B"};
 const gateOf=l=>String(l).includes("/")?String(l).split("/")[1].trim():String(l).trim();
 function gateStand(label,extra){const fx=GATE_FIX[gateOf(label).toUpperCase()];if(fx)return fx;const a=String(label).match(/^(\d{1,2}[A-Z])\b/);const b=String(extra||"").match(/(\d{1,2}[A-Z])\s*$/);
   const c=[a&&a[1],b&&b[1]].filter(Boolean);return c.find(p=>MUA.sheets&&MUA.sheets.some(s=>muaPostes(s).includes(p)))||null}
