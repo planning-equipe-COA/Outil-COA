@@ -174,6 +174,10 @@ html[data-nav=menu] nav#tabs{display:none}
 .ckeys{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .ckeys .btn{font-size:20px;padding:12px 0}
 .cout{margin-top:10px;font-size:18px}
+.wxal{margin:8px 0}
+.wxa{border-radius:8px;padding:6px 9px;margin-bottom:5px;font-size:14px}
+.wxa.warn{background:#fff3cd;color:#664d03}
+.wxa.danger{background:#f8d7da;color:#842029}
 .mbadge.sm{font-size:14px;letter-spacing:0;max-width:120px;line-height:1.25}
 .mav{font-size:13px;line-height:1.35;margin:2px 0;color:var(--ink)}
 .mav .sub{font-size:12px}
@@ -195,7 +199,7 @@ html[data-nav=menu] nav#tabs{display:none}
 </head>
 <body>
 <header>
-  <h1>Boîte à outils COA <span>MRS · LFML</span><button id="homeBtn" class="btn" title="Accueil" aria-label="Accueil"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 11 12 4l8.5 7M6 9.5V20h4.5v-5.5h3V20H18V9.5"/></svg></button><button id="gear" class="btn" style="margin-left:6px;padding:4px 8px;display:flex" title="Réglages" aria-label="Réglages"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></h1>
+  <h1>Boîte à outils COA <span id="clk">MRS · LFML</span><button id="homeBtn" class="btn" title="Accueil" aria-label="Accueil"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 11 12 4l8.5 7M6 9.5V20h4.5v-5.5h3V20H18V9.5"/></svg></button><button id="gear" class="btn" style="margin-left:6px;padding:4px 8px;display:flex" title="Réglages" aria-label="Réglages"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></h1>
   <input id="q" type="search" placeholder="Rechercher : 5B, A321, MRS, LFML, AFR, 93, WCHR…" autocomplete="off" autofocus>
   <button id="menuBtn" type="button" aria-haspopup="true"><span aria-hidden="true">☰</span><b id="menuCur"></b><span aria-hidden="true">▾</span></button>
   <nav id="tabs"></nav>
@@ -646,11 +650,12 @@ const WX={metar:"",taf:"",at:0,err:"",loading:false};
 try{Object.assign(WX,JSON.parse(store("coa-wx")||"{}"))}catch(e){}
 async function wxLoad(force){
   if(WX.loading||(!force&&Date.now()-WX.at<10*60e3&&WX.metar))return;
+  if(!force&&WX.failAt&&Date.now()-WX.failAt<2*60e3)return; /* pas de boucle d'essais si le réseau manque */
   WX.loading=true;
   try{const get=async u=>{const r=await fetch(u,{cache:"no-cache"});if(!r.ok)throw 0;return (await r.text()).trim().split("\n").filter(Boolean).pop()||""};
     const [m,t]=await Promise.all([get("https://api.met.no/weatherapi/tafmetar/1.0/metar.txt?icao=LFML"),get("https://api.met.no/weatherapi/tafmetar/1.0/taf.txt?icao=LFML")]);
     Object.assign(WX,{metar:m.replace(/=$/,""),taf:t.replace(/=$/,""),at:Date.now(),err:""});store("coa-wx",JSON.stringify({metar:WX.metar,taf:WX.taf,at:WX.at}));
-  }catch(e){WX.err="Météo indisponible (pas de réseau ?)"}
+  }catch(e){WX.err="Météo indisponible (pas de réseau ?)";WX.failAt=Date.now()}
   WX.loading=false;if(tab==="home"||tab==="wx")render();
 }
 setInterval(()=>{if(!document.hidden)wxLoad()},60e3);
@@ -684,6 +689,60 @@ const FREQ=[["ATIS","PROVENCE","125.355",""],["Tour","PROVENCE Tour","133.100","
 function freqView(){return `<div class="wx"><div class="wxh"><b>Fréquences LFML</b><span class="sub">AIP · AD 2 LFML.18</span></div>
   ${FREQ.map(([s,cs,f,n])=>`<div class="u-line" style="padding:5px 0;border-bottom:1px solid var(--line)"><div class="u-text"><span><b>${s}</b> <span class="sub">${esc(cs)}</span></span>${n?`<span class="u-note">${esc(n)}</span>`:""}</div><span class="u-tel" style="font-weight:700">${esc(f)}</span></div>`).join("")}
   <p class="sub">Source : AIP France, AD 2 LFML.18 (AIRAC du 19 mars 2026), toutes H24. Les fréquences peuvent changer à chaque cycle AIRAC : vérifie l'AIP en vigueur sur sia.aviation-civile.gouv.fr. L'ATIS n'existe qu'en radio (pas de version texte publique).</p></div>`}
+/* ---------- Heure UTC / Marseille dans l'en-tête, soleil à LFML ---------- */
+function clockTick(){if(document.hidden)return;const d=new Date(),p=n=>String(n).padStart(2,"0");
+  const loc=new Intl.DateTimeFormat("fr-FR",{timeZone:"Europe/Paris",hour:"2-digit",minute:"2-digit"}).format(d);
+  const el=$("#clk");if(el){el.textContent=`${p(d.getUTCHours())}:${p(d.getUTCMinutes())} Z · ${loc} L`;el.title="Heure UTC (Z) et heure locale de Marseille (L)"}}
+setInterval(clockTick,15e3);setTimeout(clockTick,0);document.addEventListener("visibilitychange",clockTick);
+/* lever / coucher du soleil (algorithme NOAA simplifié, précision ~1 min) ; nuit aéronautique en France :
+   du coucher + 30 min au lever − 30 min */
+function sunTimes(date,lat=43.436,lon=5.215){
+  const rad=Math.PI/180,d0=Date.UTC(date.getUTCFullYear(),date.getUTCMonth(),date.getUTCDate());
+  const n=Math.ceil((d0-Date.UTC(2000,0,1,12))/864e5+0.0008),calc=(rise)=>{
+    const J=n-lon/360,M=(357.5291+0.98560028*J)%360,C=1.9148*Math.sin(M*rad)+0.02*Math.sin(2*M*rad)+0.0003*Math.sin(3*M*rad);
+    const L=(M+C+180+102.9372)%360,Jt=J+0.0053*Math.sin(M*rad)-0.0069*Math.sin(2*L*rad);
+    const dec=Math.asin(Math.sin(L*rad)*Math.sin(23.44*rad)),cosH=(Math.sin(-0.833*rad)-Math.sin(lat*rad)*Math.sin(dec))/(Math.cos(lat*rad)*Math.cos(dec));
+    const H=Math.acos(Math.max(-1,Math.min(1,cosH)))/rad;return new Date(Date.UTC(2000,0,1,12)+(Jt+(rise?-H:H)/360)*864e5)};
+  return {rise:calc(true),set:calc(false)};
+}
+function sunLine(){const s=sunTimes(new Date()),z=d=>d.toISOString().slice(11,16);
+  const nb=new Date(s.set.getTime()+30*60e3),ne=new Date(s.rise.getTime()-30*60e3);
+  return `Soleil : lever <b>${z(s.rise)}</b> · coucher <b>${z(s.set)}</b> UTC · nuit aéronautique ${z(nb)} → ${z(ne)} UTC`}
+/* ---------- Alertes tirées du METAR et du TAF (aide : ne remplace pas les MAA de Météo-France) ---------- */
+function wxPhen(tokens){const out=[];
+  for(const t of tokens){
+    let m=t.match(/^(\d{3}|VRB)(\d{2,3})(?:G(\d{2,3}))?KT$/);
+    if(m){const f=+m[2],g=m[3]?+m[3]:0;if(g>=25)out.push(["warn",`rafales ${g} kt`]);else if(f>=20)out.push(["warn",`vent ${f} kt`]);continue}
+    if(/^(\d{4})$/.test(t)&&t!=="9999"){const v=+t;if(v<800)out.push(["danger",`visibilité ${v} m`]);else if(v<1500)out.push(["warn",`visibilité ${v} m`]);continue}
+    if(/^[+-]?(VC)?(TS|.*TS)/.test(t)&&/TS/.test(t))out.push(["danger","orage"+(/GR/.test(t)?" avec grêle":"")]);
+    else if(/FZ/.test(t))out.push(["danger","précipitations ou brouillard givrants"]);
+    else if(/GR|GS/.test(t))out.push(["danger","grêle"]);
+    else if(/SN|PL/.test(t))out.push(["warn","neige"]);
+    else if(/^FG$|^(MI|BC|PR)?FG$/.test(t))out.push(["warn","brouillard"]);
+    else if(/SQ|FC/.test(t))out.push(["danger","grains"]);
+    else if(/^\+/.test(t))out.push(["warn","forte précipitation"]);
+    if(/CB$/.test(t))out.push(["warn","cumulonimbus"]);
+    m=t.match(/^(BKN|OVC|VV)(\d{3})/);if(m&&+m[2]<3)out.push(["warn",`plafond ${+m[2]*100} ft`]);
+  }
+  const seen=new Set();return out.filter(([,x])=>!seen.has(x)&&seen.add(x));
+}
+function tafPeriod(g){const z=(d,h)=>`${+d} à ${h} h`;
+  let m=g.match(/(\d{2})(\d{2})\/(\d{2})(\d{2})/);if(m)return `${m[1]===m[3]?`le ${+m[1]}, ${+m[2]} h – ${+m[4]} h`:`du ${z(m[1],m[2])} au ${z(m[3],m[4])}`} UTC`;
+  m=g.match(/FM(\d{2})(\d{2})(\d{2})/);if(m)return `à partir du ${+m[1]} à ${m[2]}:${m[3]} UTC`;return ""}
+function wxAlerts(){const res=[];
+  if(WX.metar){/* observation et tendance (TEMPO / BECMG des 2 h suivantes) séparées */
+    const [obs,...tr]=WX.metar.split(/\s+(?=(?:TEMPO|BECMG|NOSIG)\b)/);
+    const add=(txt,when)=>{const ph=wxPhen(txt.split(/\s+/));if(ph.length)res.push({lvl:ph.some(p=>p[0]==="danger")?"danger":"warn",when,txt:ph.map(p=>p[1]).join(", ")})};
+    add(obs,"Maintenant");tr.forEach(g=>add(g,/^TEMPO/.test(g)?"Tendance 2 h · par moments":"Tendance 2 h · devenant"))}
+  if(WX.taf){const body=WX.taf.replace(/^TAF\s+(AMD\s+|COR\s+)?LFML\s+\d{6}Z\s+/,"");
+    const parts=body.split(/(?<!PROB\d{2})\s+(?=(?:BECMG|TEMPO|PROB\d{2}|FM\d{6})\b)/);
+    parts.forEach((g,i)=>{const toks=g.split(/\s+/);const ph=wxPhen(toks);if(!ph.length)return;
+      const kind=i===0?"Prévu":/^PROB(\d{2})/.test(g)?`Possible (${g.match(/^PROB(\d{2})/)[1]} %)`:/^TEMPO/.test(g)?"Par moments":/^BECMG/.test(g)?"Devenant":"Prévu";
+      res.push({lvl:ph.some(p=>p[0]==="danger")?"danger":"warn",when:`TAF · ${kind} ${tafPeriod(g)}`.trim(),txt:ph.map(p=>p[1]).join(", ")})})}
+  return res;
+}
+function wxAlertBox(){const a=wxAlerts();if(!a.length)return "";
+  return `<div class="wxal">${a.map(x=>`<div class="wxa ${x.lvl}"><b>${esc(x.when)}</b> : ${esc(x.txt)}</div>`).join("")}<div class="sub" style="margin-top:4px">Lu dans le METAR et le TAF : aide seulement, ne remplace pas les MAA de Météo-France.</div></div>`}
 function wxCard(full){
   if(!WX.metar&&!WX.loading)wxLoad();
   if(!WX.metar)return `<div class="wx"><div class="wxh"><b>Météo LFML</b></div><div class="sub">${WX.err?esc(WX.err):"Chargement…"}</div></div>`;
@@ -691,9 +750,11 @@ function wxCard(full){
   const age=Math.round((Date.now()-WX.at)/60e3);
   const cell=(l,v)=>v?`<div><span>${l}</span>${esc(v)}</div>`:"";
   return `<div class="wx"><div class="wxh"><b>Météo LFML</b><span class="sub">${esc(o.time)}</span>${full?'<button class="btn" id="wxRefresh" style="margin-left:auto;font-size:12px;padding:4px 8px">Actualiser</button>':""}</div>
+  ${wxAlertBox()}
   <div class="wxgrid">${cell("Vent",o.wind)}${cell("Visibilité",o.vis)}${cell("Temps",o.wx.join(", "))}${cell("Nuages",o.clouds.join(", "))}${cell("Température",o.temp)}${cell("Point de rosée",o.dew)}${cell("QNH",o.qnh)}</div>
   ${o.trend?`<div class="sub" style="margin-top:6px">Tendance : ${esc(o.trend)}</div>`:""}
   <div class="sub" style="margin-top:6px">ATIS <b>125.355</b> · Tour <b>133.100</b> · Sol <b>121.905</b> · Prévol <b>121.730</b></div>
+  ${full?`<div class="sub" style="margin-top:6px">${sunLine()}</div>`:""}
   ${full?`<div class="raw">METAR ${esc(WX.metar)}</div><div class="raw">TAF ${esc(WX.taf)}</div><p class="sub">Source : MET Norway (api.met.no), relevés officiels de LFML. ${WX.err?esc(WX.err)+" · ":""}Relevé chargé il y a ${age} min. Le décodage est une aide : le METAR et le TAF bruts font foi.</p>`:`<div class="sub" style="margin-top:6px">Toucher pour le METAR et le TAF complets${age>60?` · relevé d'il y a ${age} min`:""}</div>`}</div>`;
 }
 

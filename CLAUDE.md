@@ -130,6 +130,18 @@ L'utilisateur échange en français.
   parenthèses, virgule), UTC ↔ Marseille (décalage du jour via Intl Europe/Paris), kg ↔ lb, carburant L ↔ kg ↔ USG ↔ lb
   (densité modifiable, 0,8 par défaut), écart entre deux heures (passage minuit), heure + durée.
 
+## Ajouts du 21 nov. 2026 (demandés)
+- **Horloge** dans l'en-tête (`#clk`, `clockTick` toutes les 15 s, arrêt si page cachée) : « 20:22 Z · 21:22 L ».
+- **Soleil à LFML** (`sunTimes`, équation NOAA, ~1 min ; vérifié 21/11 : lever 06:40, coucher 16:10 UTC) et **nuit aéronautique**
+  (coucher + 30 min → lever − 30 min), dans la carte Météo complète.
+- **Alertes METAR / TAF** (`wxPhen`, `wxAlerts`, `wxAlertBox`, en tête des cartes météo, accueil compris) : orage, grêle, givrant,
+  grains, neige, brouillard, forte précipitation, CB, rafales ≥ 25 kt ou vent ≥ 20 kt, visibilité < 1 500 m (rouge < 800 m),
+  plafond < 300 ft. METAR : observation (« Maintenant ») séparée de la tendance TEMPO/BECMG (« Tendance 2 h »). TAF découpé en
+  groupes (PROB30 TEMPO gardé ensemble) avec période en clair. Mention : aide, **ne remplace pas les MAA**.
+- **MAA** (messages d'avertissement d'aérodrome) : pas de source publique trouvée ; Météo-France les diffuse par le serveur
+  AEROWEB, code d'accès sous convention. À voir avec Raph (son employeur a peut-être un accès).
+- Météo : plus de boucle d'essais si le réseau manque (`WX.failAt`, 2 min).
+
 ## Annuaire COA — chiffré (même code que le MUA)
 - Numéros internes (assistants, AMP, aviation générale, autres, passerelle avec portables nominatifs, postes des portes),
   transcrits des feuilles plastifiées du COA le 20 nov. 2026 → `mua/annuaire.enc`, **jamais en clair dans le dépôt**.
