@@ -2,6 +2,7 @@
 
   MUA_CODE="…" python3 tools/annuaire.py encrypt SOURCE.json   -> mua/annuaire.enc
   MUA_CODE="…" python3 tools/annuaire.py decrypt SORTIE.json    -> relit l'annuaire en clair (hors du dépôt !)
+  MUA_CODE="…" python3 tools/annuaire.py gates               -> liste des portes (porte, passerelle, poste déduit), SANS numéros
   MUA_CODE="…" python3 tools/annuaire.py remove MOT [MOT…]      -> supprime LA ligne dont le libellé + remarque contient
       tous les mots (sans accents ni majuscules) ; refuse s'il y en a 0 ou plusieurs ; n'affiche jamais de numéro
 Le fichier source en clair ne doit JAMAIS être ajouté au dépôt (public). Même clé et même format que tools/mua_build.py.
@@ -17,6 +18,18 @@ def key():
     return AESGCM(hashlib.pbkdf2_hmac('sha256', code.encode(), base64.b64decode(meta['salt']), meta['iter'], 32))
 if __name__ == '__main__':
     cmd, path = sys.argv[1], sys.argv[2]; aes = key(); target = os.path.join(mua, 'annuaire.enc')
+    if cmd == 'gates':
+        import re
+        b = open(target, 'rb').read(); d = json.loads(aes.decrypt(b[:12], b[12:], None))
+        for g in d['groups']:
+            if not g.get('gates'): continue
+            print('##', g['name'])
+            for it in g['items']:
+                lab = it[0]; x = it[2] if len(it) > 2 else ''
+                if lab.startswith('—'): print('  ', lab); continue
+                a = re.match(r'^(\d{1,2}[A-Z])\b', lab); c = re.search(r'(\d{1,2}[A-Z])\s*$', x or '')
+                print(f'  porte « {lab} »  | passerelle « {x} »  | poste déduit : {(a and a.group(1)) or (c and c.group(1)) or "—"}')
+        sys.exit(0)
     if cmd == 'remove':
         import unicodedata
         n = lambda t: unicodedata.normalize('NFD', str(t)).encode('ascii', 'ignore').decode().lower()
