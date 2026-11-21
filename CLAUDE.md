@@ -143,7 +143,11 @@ L'utilisateur échange en français.
 - **QRP / QRF** (définitions de Raph, ajoutées aux Abréviations, groupe Urgences) : QRP = retour parking, le vol n'a pas
   décollé ; QRF = retour sur la plateforme de départ après le décollage. Idée en cours : être prévenu des déroutements vers MRS,
   des QRF et QRP (source temps réel nécessaire : FlightAware AeroAPI payant à l'usage à étudier ; OpenSky ne connaît pas la
-  destination prévue).
+  destination prévue). **Étude FlightAware AeroAPI (21/11)** : 0,005 $ par page de 15 vols (arrivées / départs), 5 $ offerts
+  par mois ; ~280 mouvements/jour à MRS → interrogation toutes les 30 min ≈ 14 $/mois (≈ 9 $ après crédit). **Mais l'offre
+  Personal exclut l'usage professionnel interne** (outil d'équipe COA = usage pro) ; Standard = 100 $/mois minimum ; alertes
+  push non incluses en Personal. QRP indétectable par ces services. Conclusion présentée à Raph : pas de FlightAware à titre
+  personnel ; piste = outils de l'aéroport (base de vols / AODB) si l'employeur l'autorise.
 - Météo : plus de boucle d'essais si le réseau manque (`WX.failAt`, 2 min).
 
 ## Annuaire COA — chiffré (même code que le MUA)
