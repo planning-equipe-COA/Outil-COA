@@ -840,7 +840,7 @@ const GATE_FIX={"41B":["1A"],"40B":["4B"],"20":["8B","8C"]}; /* 01/20 (PP8) → 
 /* portes qui n'existent plus (Raph, 21/11/2026) : masquées même si l'annuaire les contient encore */
 const GATE_GONE=["6AB","8AB"];
 /* portes sans passerelle (Raph, 21/11/2026) : remplace la passerelle indiquée par l'annuaire */
-const GATE_NOTE={"41A":"sans passerelle · semi-contact ou embarquement au large"};
+const GATE_NOTE={"41A":"sans passerelle · semi-contact ou embarquement au large","40A":"sans passerelle · semi-contact ou embarquement au large"};
 const gateToks=l=>String(l).split("/").map(t=>t.trim().toUpperCase()).filter(Boolean);
 const gateGone=l=>gateToks(l).some(t=>GATE_GONE.includes(t.replace(/\s+/g,"")));
 const gateOf=l=>{const t=gateToks(l);return t[t.length-1]||""};

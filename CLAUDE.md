@@ -76,7 +76,7 @@ L'utilisateur échange en français.
 
 ## Ajouts du 20 nov. 2026 (demandés)
 - **Corrections porte → poste** (`GATE_FIX`, prioritaire sur l'annuaire, affichée même si la porte manque à l'annuaire) :
-  41B → 1A, 40B → 4B (Raph, 21/11/2026). 41A = sans passerelle (semi-contact / embarquement au large) : `GATE_NOTE`.
+  41B → 1A, 40B → 4B (Raph, 21/11/2026). 41A et 40A = sans passerelle (semi-contact / embarquement au large) : `GATE_NOTE`.
   Porte 01/20 (PP8) → postes 8B et 8C (Raph, 21/11/2026). `GATE_FIX` : porte → LISTE de postes ; `gateStand` renvoie un tableau. Référence complète poste ↔ porte à obtenir de Raph (déduction depuis l'annuaire = fragile).
 - **Portes ↔ fiches MUA** : `gateStand(libellé, passerelle)` → poste lu UNIQUEMENT dans la passerelle (« PP6 – 6A » → 6A,
   « PP9 – 9A » → 9A ; « DAL n » = pas de poste) s'il existe une fiche, sauf `GATE_FIX`. Portes mixtes « 5B / 28 » (fiche plastifiée

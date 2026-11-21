@@ -1,6 +1,6 @@
 // Boîte à outils COA — copie hors connexion (réseau d'abord, copie du téléphone si pas de réseau).
 // Changer CACHE purge l'ancienne copie.
-const CACHE = 'coa-outils-v35';
+const CACHE = 'coa-outils-v36';
 const FILES = ['./', 'index.html', 'airports.json', 'airlines.json', 'aircraft.json', 'manifest.json', 'icon-192.png', 'icon-512.png', 'apple-touch-icon.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting())); });
 self.addEventListener('activate', e => { e.waitUntil(caches.keys().then(k => Promise.all(k.filter(x => x.startsWith('coa-outils') && x !== CACHE).map(x => caches.delete(x)))).then(() => self.clients.claim())); });
