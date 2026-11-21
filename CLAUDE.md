@@ -5,7 +5,7 @@ Appli en ligne et utilisée : https://planning-equipe-coa.github.io/Outil-COA/ �
 testé (Chrome sans affichage, 390 px de large) et publié (push sur `main` = en ligne en ~1 min).
 
 **En attente de l'utilisateur (Raph) — rien à coder tant qu'il ne l'a pas fait :**
-1. **NOTAM** (repris le 20 nov. 2026) : source conseillée **autorouter.aero** (base NOTAM européenne EAD d'Eurocontrol, donc les
+1. **NOTAM** (21 nov. 2026 : worker `coa-notam` en ligne, https://coa-notam.k8ggjsddnp.workers.dev/, secrets posés, branché dans `NOTAM_URL` ; **compte autorouter en attente d'activation** puis accès API à confirmer ; faire un vrai appel dès que Raph confirme) — repris le 20 nov. 2026 : source conseillée **autorouter.aero** (base NOTAM européenne EAD d'Eurocontrol, donc les
    NOTAM français ; la couverture de LFML par l'API FAA n'a jamais pu être confirmée et l'accès FAA est validé à la main). Raph :
    crée un compte autorouter (gratuit), demande l'accès API par ticket de support, crée le worker Cloudflare `coa-notam` avec
    `tools/notam-worker.js` et les secrets AR_EMAIL / AR_PASSWORD (mot de passe propre à autorouter). Ensuite : adresse

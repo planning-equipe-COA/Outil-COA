@@ -699,7 +699,7 @@ function wxCard(full){
 
 /* NOTAM LFML : relais Cloudflare (tools/notam-worker.js) qui garde les identifiants de la source (autorouter.aero, sinon FAA).
    NOTAM_URL vide = pas encore branché. Dernière liste gardée (coa-notam) pour l'usage hors connexion. */
-const NOTAM_URL="";
+const NOTAM_URL="https://coa-notam.k8ggjsddnp.workers.dev/";
 const NT={list:null,at:0,err:"",loading:false,src:""};
 try{const c=JSON.parse(store("coa-notam")||"null");if(c){NT.list=c.list;NT.at=c.at;NT.src=c.src||""}}catch(e){}
 async function notamLoad(force){
@@ -707,7 +707,7 @@ async function notamLoad(force){
   NT.loading=true;NT.err="";
   try{const r=await fetch(NOTAM_URL+"?icao=LFML",{cache:"no-store"});const j=await r.json();if(!r.ok||j.error)throw new Error(j.error||r.status);
     NT.list=j.notams||[];NT.at=Date.now();NT.src=j.source||"";store("coa-notam",JSON.stringify({list:NT.list,at:NT.at,src:NT.src}))}
-  catch(e){NT.err="NOTAM indisponibles ("+(e.message||"réseau")+")."}
+  catch(e){const m=String(e.message||"réseau");NT.err="NOTAM indisponibles ("+(/not been activated/i.test(m)?"compte autorouter pas encore activé":/invalid_client|credentials/i.test(m)?"identifiants autorouter refusés":/Failed to fetch|NetworkError|Load failed/i.test(m)?"pas de réseau":m)+")."}
   NT.loading=false;if(tab==="notam")render();
 }
 const NQG=[["Postes et aires de trafic",/^M[NKP]/],["Voies de circulation",/^MX/],["Pistes",/^M[RSTDUA]/],["Balisage",/^L/],["Radionavigation et ILS",/^[ING]/],
