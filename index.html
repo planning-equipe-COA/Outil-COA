@@ -835,12 +835,17 @@ function numLine(p,label,note,q){
   const sms=p.kind==="tel"&&p.sms?`<a class="u-act" href="sms:${esc(p.dial)}" aria-label="SMS à ${esc(label)}">${IC_MSG}</a>`:'<span class="u-act ph"></span>';
   return `<div class="u-line"><div class="u-text"><span class="u-tel">${hl(p.t,q)}${p.kind==="freq"?" MHz":""}${tag}</span>${note?`<span class="u-note">${hl(note,q)}</span>`:""}</div>${call}${sms}</div>`;
 }
-function gateStand(label,extra){const a=String(label).match(/^(\d{1,2}[A-Z])\b/);const b=String(extra||"").match(/(\d{1,2}[A-Z])\s*$/);
+/* corrections porte → poste données par Raph (prioritaires sur ce que l'annuaire laisse deviner) */
+const GATE_FIX={"41B":"1A"};
+const gateOf=l=>String(l).includes("/")?String(l).split("/")[1].trim():String(l).trim();
+function gateStand(label,extra){const fx=GATE_FIX[gateOf(label).toUpperCase()];if(fx)return fx;const a=String(label).match(/^(\d{1,2}[A-Z])\b/);const b=String(extra||"").match(/(\d{1,2}[A-Z])\s*$/);
   const c=[a&&a[1],b&&b[1]].filter(Boolean);return c.find(p=>MUA.sheets&&MUA.sheets.some(s=>muaPostes(s).includes(p)))||null}
 /* postes couverts par une fiche (« 30A / 30D » → 30A, 30D) ; anciennes fiches : un seul poste */
 function muaPostes(s){return s.postes||[s.poste]}
 function standGates(s){const poste=muaPostes(s);const out=[];if(!MUA.annu)return out;MUA.annu.groups.forEach(g=>{if(!g.gates)return;g.items.forEach(([l,n,x])=>{if(l.startsWith("—"))return;
-  if(poste.includes(gateStand(l,x))){const porte=l.includes("/")?l.split("/")[1].trim():l;out.push({porte,pp:x,tel:n})}})});return out}
+  if(poste.includes(gateStand(l,x))){const porte=l.includes("/")?l.split("/")[1].trim():l;out.push({porte,pp:x,tel:n})}})});
+  /* porte corrigée absente de l'annuaire : on l'affiche quand même */
+  Object.entries(GATE_FIX).forEach(([g,p])=>{if(poste.includes(p)&&!out.some(o=>o.porte.toUpperCase()===g))out.push({porte:g,pp:"",tel:""})});return out}
 function annuView(q,limit){
   const A=MUA.annu;if(!A)return "";
   const qq=q||"";let total=0;

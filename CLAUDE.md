@@ -75,6 +75,8 @@ L'utilisateur échange en français.
   au-dessus d'une piste + « COA », fond violet ; demandé le 20 nov. 2026 ; `?v=2` dans les liens, à changer si l'icône change).
 
 ## Ajouts du 20 nov. 2026 (demandés)
+- **Corrections porte → poste** (`GATE_FIX`, prioritaire sur l'annuaire, affichée même si la porte manque à l'annuaire) :
+  41B → 1A (Raph, 21/11/2026).
 - **Portes ↔ fiches MUA** : `gateStand(libellé, passerelle)` → poste (« 5B / 28 » → 5B, « PP9 – 9A » → 9A) s'il existe une fiche ;
   bouton « Fiche MUA 5B » dans l'annuaire (`data-openposte`, gestionnaire global) ; la carte MUA affiche « Porte 28 · PP6 – 6A ·
   poste …… » (`standGates`).
