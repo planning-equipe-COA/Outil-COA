@@ -125,7 +125,7 @@ L'utilisateur échange en français.
   aussi en tête des recherches (étiquette MRS). Colonne Assistant prévue (`MRS_HANDLER` IATA → nom), **Assistants remplis le 21/11 (Raph)** : Air France (AF) ; Alyzia (AH, TO, AT, SS, EZ, U2, ET, XK, EC, TK) ; Onet (EW) ;
   Aviapartner (tout le reste donné + tout le fret) ; **particularité MRS : passage et coordination séparés** (KL : passage AF,
   coordo Aviapartner ; FM Shanghai Airlines, ajoutée : passage AF, coordo Alyzia). VY et ITI : Aviapartner ; EZ : Alyzia (ITI = Twin Jet fret, ligne ajoutée ; EZ = easyJet,
-  ajouté au nom de la ligne easyJet) ; China Eastern retirée (ne vient pas à MRS, seule Shanghai Airlines) ; DS à préciser (le GANTT la garde dans son localStorage, illisible depuis le Mac).
+  ajouté au nom de la ligne easyJet) ; China Eastern retirée (ne vient pas à MRS, seule Shanghai Airlines) ; easyJet Switzerland (DS) retirée (pas vue à MRS) (le GANTT la garde dans son localStorage, illisible depuis le Mac).
 - **Onglet Calculs** (thème « Calculs », `calcView`/`bindCalc`, état `CALC`) : calculatrice sans eval (`calcEval` : + − × ÷ %,
   parenthèses, virgule), UTC ↔ Marseille (décalage du jour via Intl Europe/Paris), kg ↔ lb, carburant L ↔ kg ↔ USG ↔ lb
   (densité modifiable, 0,8 par défaut), écart entre deux heures (passage minuit), heure + durée.
