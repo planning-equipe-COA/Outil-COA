@@ -77,9 +77,12 @@ L'utilisateur échange en français.
 ## Ajouts du 20 nov. 2026 (demandés)
 - **Corrections porte → poste** (`GATE_FIX`, prioritaire sur l'annuaire, affichée même si la porte manque à l'annuaire) :
   41B → 1A, 40B → 4B (Raph, 21/11/2026). Référence complète poste ↔ porte à obtenir de Raph (déduction depuis l'annuaire = fragile).
-- **Portes ↔ fiches MUA** : `gateStand(libellé, passerelle)` → poste (« 5B / 28 » → 5B, « PP9 – 9A » → 9A) s'il existe une fiche ;
-  bouton « Fiche MUA 5B » dans l'annuaire (`data-openposte`, gestionnaire global) ; la carte MUA affiche « Porte 28 · PP6 – 6A ·
-  poste …… » (`standGates`).
+- **Portes ↔ fiches MUA** : `gateStand(libellé, passerelle)` → poste lu UNIQUEMENT dans la passerelle (« PP6 – 6A » → 6A,
+  « PP9 – 9A » → 9A ; « DAL n » = pas de poste) s'il existe une fiche, sauf `GATE_FIX`. Portes mixtes « 5B / 28 » (fiche plastifiée
+  COA, photo du 21/11/2026) : 1re porte = configuration **internationale** (selon les cloisons), 2e = **national / Europe**
+  (`gateLabel` → « 5B (Intl) / 28 (Nat./Europe) »). Le 1er nombre n'est PAS un poste (ancienne erreur : 5B/28 rattachée au poste 5B).
+  Portes **6AB et 8AB supprimées** (n'existent plus) : `GATE_GONE`, masquées même si l'annuaire chiffré les contient encore.
+  Bouton « Fiche MUA 6A » dans l'annuaire (`data-openposte`) ; la carte MUA affiche les portes (`standGates`).
 - **Quel poste pour cet avion ?** (haut de l'onglet MUA) : menu des types (`muaTypes` = `typeAliases` de chaque ligne avion,
   « tous types » retiré, « NE0 » → NEO) → tableau poste / avion / infos ; toucher le badge ouvre la fiche. `MUA.finder`.
 - **Temps de vol MRS ↔ aéroport** : `airports.json` a maintenant lat/lon (colonnes 8 et 9). `flightInfo` : orthodromie,
