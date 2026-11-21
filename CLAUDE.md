@@ -153,6 +153,22 @@ L'utilisateur échange en français.
   personnel ; piste = outils de l'aéroport (base de vols / AODB) si l'employeur l'autorise.
 - Météo : plus de boucle d'essais si le réseau manque (`WX.failAt`, 2 min).
 
+## Ajouts du 21 nov. 2026, soir (demandés : « tout implémenter »)
+- **Aérodrome LFML** (rubrique `lfml`, thème Escale MRS, `lfmlView`) : cycles AIRAC calculés (`airacCycles`, réf. 19/03/2026 =
+  2603, 28 jours), pistes (TODA/LDA), consignes clés (31L interdit si traversier > 12 kt piste mouillée, D1–D8 prioritaires,
+  F3/F7 ≤ 24 m, D6 sans balisage axial…), services (SSLIA niveau 9 H24, Jet A1…), dernier SUP AIP connu (014/26, postes 21-23,
+  terminé le 29/10/2026) + lien SIA. Source : AIP AD 2 LFML (cartes VAC, AMDT jusqu'à 04/26) du GANTT (`assets/AD-2.LFML.pdf`).
+  Textes écrits à la main : **à revoir si l'AIP change** (pas de mise à jour automatique).
+- **Immatriculations** (rubrique `immat`, Référentiels) : `mua/immat.enc` (gzip + AES, même code que le MUA) fait par
+  `tools/immat_build.py` depuis `~/Dev/flight-planning/Recherche_Aircraft.csv` (export interne de l'aéroport, 26 000 avions).
+  **On ne garde que immat, compagnie, type, sièges, MTOW** (jamais comptes clients, marges, TVA, groupes acoustiques).
+  Recherche avec ou sans tiret, préfixe, nom de compagnie ; aussi dans « Tout ». Noms de types : `TYPE_EXTRA` + aircraft.json.
+  Décompression `DecompressionStream` (Safari ≥ 16.4).
+- **Dimensions par poste** (`~/Dev/MUA_source/dims.json` = `PARKING_MAX_DIMENSIONS` du GANTT `data.js`, 74 postes, chiffré dans
+  l'index : `idx.dims`) : ligne « Max : envergure · longueur » sur les cartes MUA ; « Quel poste pour cet avion ? » a une
+  recherche « par dimensions » (`dimView`, postes du plus juste au plus large).
+- Commande de mise à jour (Raph, avec le code) : `mua_build.py ~/Dev/MUA_source && immat_build.py <csv>`.
+
 ## Annuaire COA — chiffré (même code que le MUA)
 - Numéros internes (assistants, AMP, aviation générale, autres, passerelle avec portables nominatifs, postes des portes),
   transcrits des feuilles plastifiées du COA le 20 nov. 2026 → `mua/annuaire.enc`, **jamais en clair dans le dépôt**.

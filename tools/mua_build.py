@@ -153,7 +153,11 @@ def main(src):
     if synth:
         covered = {p for x in sheets for p in x['postes']}
         print('synthèse :', len(synth['postes']), 'postes ; sans fiche :', sorted(set(synth['postes']) - covered) or 'aucun')
-    idx = json.dumps({'v': 1, 'sheets': sheets, 'synth': synth}, ensure_ascii=False).encode()
+    # dimensions maximales par poste (envergure ws / longueur lg, en m) tirées du GANTT : DOSSIER/dims.json
+    dpath2 = os.path.join(src, 'dims.json')
+    dims = json.load(open(dpath2, encoding='utf-8')) if os.path.exists(dpath2) else None
+    if dims: print('dimensions :', len(dims), 'postes')
+    idx = json.dumps({'v': 1, 'sheets': sheets, 'synth': synth, 'dims': dims}, ensure_ascii=False).encode()
     open(os.path.join(out, 'index.enc'), 'wb').write(enc(idx))
     json.dump({'v': 1, 'iter': ITER, 'salt': base64.b64encode(salt).decode(), 'count': len(sheets)}, open(meta_path, 'w'))
     print(len(sheets), 'fiches chiffrées dans', os.path.normpath(out))
