@@ -32,6 +32,17 @@ main{max-width:1000px;margin:0 auto;padding:12px calc(12px + env(safe-area-inset
 .info{color:var(--mute);font-size:13px;margin:4px 2px 10px}
 .tabhelp{font-size:13px;line-height:1.45;color:var(--mute);border-left:3px solid var(--acc);padding:4px 10px;margin:2px 0 12px}
 .tabhelp b{color:var(--ink)}
+.rcard{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:10px;cursor:pointer}
+.rhead{display:flex;gap:6px;align-items:baseline;flex-wrap:wrap;margin:0 2px 8px;font-size:14px}
+.rgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.rhalf{border-radius:10px;padding:8px 9px;background:var(--bg);min-width:0;line-height:1.4;border-top:3px solid var(--line)}
+.rhalf.ra{border-top-color:var(--acc)}.rhalf.rd{border-top-color:#2e7d32}
+.rlab{font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;color:var(--mute)}
+.rcity{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rt{font-size:20px;font-weight:700;font-variant-numeric:tabular-nums}
+.rhalf.none{display:grid;place-items:center;text-align:center;color:var(--mute);font-size:13px;border-top-style:dashed}
+.rdh{margin:10px 2px 0;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--mute)}
+.rcard .vdet{margin-top:4px}
 .vdet{margin-top:8px;padding:8px 10px;border-radius:10px;background:var(--bg);font-size:14px;line-height:1.5;cursor:default}
 .vbtns{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
 .mvols{margin-top:6px;font-size:13px;border-top:1px dashed var(--line);padding-top:5px}
@@ -969,13 +980,22 @@ function volsRotations(day){const D=VL.data;const prev=new Date(Date.parse(day+"
   /* tri sur l'heure du jour affiché : arrivée du jour, sinon départ (nightstop arrivé la veille) */
   const key=r=>r.a&&r.a.t.slice(0,10)===day?r.a.t:(r.d||r.a).t;
   return out.sort((x,y)=>key(x)<key(y)?-1:1)}
-function rotRow(r,q){const {a,d}=r;if(!a)return volRow(d,false,q,"↑");if(!d)return volRow(a,true,q,"↓");
-  const k=volKey(a)+"#"+volKey(d),open=VL.open===k,hd=MRS_HANDLER[a.al];
-  const half=(v,arr)=>{const dl=volDelay(v);const c=v.cls==="annulee"?"#c62828":volDone(v)?"var(--mute)":dl&&dl>=15?"#b26a00":"#2e7d32";
-    return `<div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><span class="sub" style="width:14px">${arr?"↓":"↑"}</span><b style="font-size:16px;min-width:46px">${esc(v.t.slice(11,16))}</b>${v.t.slice(0,10)!==VL.dayShown?`<span class="sub">${v.t.slice(0,10)<VL.dayShown?"la veille":"le lendemain"}</span>`:""}<span class="sub" style="min-width:48px">${esc(volZ(v.t))}Z</span><b>${hl(v.n,q)}</b>${v.st?`<span style="color:${c};font-weight:600;font-size:13px">${esc(v.st)}${dl&&dl>=15?` (+${dl} min)`:""}</span>`:""}${arr?(v.tapis?`<span class="sub">tapis ${esc(v.tapis)}</span>`:""):(v.porte?`<span class="sub">porte ${esc(v.porte)}</span>`:"")}</div>`};
-  return `<div class="u-row vrow${open?" open":""}" data-vk="${esc(k)}" data-varr="2" role="button" tabindex="0" style="display:block;padding:8px 0;cursor:pointer">
-    <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><b>${hl(a.ville,q)}</b> <span class="u-ext" style="margin:0">${esc(a.code)}</span><span class="sub">${hl(a.cie,q)}${hd?" · "+hl(hd,q):""} · escale ${hm(r.g)}</span>${d.t.slice(0,10)!==a.t.slice(0,10)?`<span class="u-ext" style="margin:0;color:var(--acc);border-color:var(--acc)">Nightstop</span>`:""}<span class="sub" style="margin-left:auto">${open?"▴":"▾"}</span></div>
-    ${half(a,true)}${half(d,false)}${open?volDetail(a,true)+volDetail(d,false):""}</div>`}
+/* vue « Arr. + Dép. » : une carte par avion, arrivée et départ côte à côte, chacun avec sa provenance / destination */
+function rotRow(r,q){const {a,d}=r,v0=a||d;const k=a&&d?volKey(a)+"#"+volKey(d):volKey(v0),open=VL.open===k,hd=MRS_HANDLER[v0.al];
+  const half=(v,arr)=>{if(!v)return `<div class="rhalf none">${arr?"↓ Arrivée":"↑ Départ"}<br>non trouvé${arr?"e":""}</div>`;
+    const dl=volDelay(v);const c=v.cls==="annulee"?"#c62828":volDone(v)?"var(--mute)":dl&&dl>=15?"#b26a00":"#2e7d32";
+    const other=v.t.slice(0,10)!==VL.dayShown?(v.t.slice(0,10)<VL.dayShown?"la veille":"le lendemain"):"";
+    return `<div class="rhalf ${arr?"ra":"rd"}"><div class="rlab">${arr?"↓ Arrivée de":"↑ Départ vers"}${other?` <span style="color:var(--acc)">· ${other}</span>`:""}</div>
+      <div class="rcity">${hl(v.ville,q)} <span class="u-ext" style="margin:0">${esc(v.code)}</span></div>
+      <div><span class="rt">${esc(v.t.slice(11,16))}</span> <span class="sub">${esc(volZ(v.t))}Z</span></div>
+      <div><b>${hl(v.n,q)}</b></div>
+      ${v.st?`<div style="color:${c};font-weight:600;font-size:13px">${esc(v.st)}${dl&&dl>=15?` (+${dl} min)`:""}</div>`:""}
+      <div class="sub">${arr?(v.tapis?"Tapis "+esc(v.tapis):""):(v.porte?"Porte "+esc(v.porte):"")}</div></div>`};
+  const ns=a&&d&&d.t.slice(0,10)!==a.t.slice(0,10);
+  return `<div class="rcard vrow${open?" open":""}" data-vk="${esc(k)}" data-varr="2" role="button" tabindex="0">
+    <div class="rhead"><b>${hl(v0.cie,q)}</b>${hd?`<span class="sub">· ${hl(hd,q)}</span>`:""}${a&&d?`<span class="sub">· escale ${hm(r.g)}</span>`:""}${ns?`<span class="u-ext" style="margin:0;color:var(--acc);border-color:var(--acc)">Nightstop</span>`:""}<span class="sub" style="margin-left:auto">${open?"▴":"▾"}</span></div>
+    <div class="rgrid">${half(a,true)}${half(d,false)}</div>
+    ${open?(a?`<div class="rdh">↓ Arrivée ${esc(a.n)}</div>${volDetail(a,true)}`:"")+(d?`<div class="rdh">↑ Départ ${esc(d.n)}</div>${volDetail(d,false)}`:""):""}</div>`}
 function volsView(q){
   if(!VL.data)return VL.err?`<div class="info">${esc(VL.err)}</div>`:`<div class="card">${SKEL(5)}</div>`;
   const D=VL.data,base=new Date(D.today+"T12:00:00Z");const day=new Date(base.getTime()+VL.day*864e5).toISOString().slice(0,10);VL.dayShown=day;
@@ -992,7 +1012,7 @@ function volsView(q){
     <div class="seg" id="vlDay">${dl.map((l,i)=>`<button data-v="${i}" class="${VL.day===i?"on":""}">${l}</button>`).join("")}</div>
     <label class="sub" style="display:flex;gap:4px;align-items:center"><input type="checkbox" id="vlDone"${VL.done?" checked":""}> ${rot?"rotations terminées":arr?"vols arrivés":"vols décollés"}${rot?"":` (${fini})`}</label></div>
   ${rot?`<div class="info">${nRot} rotations le ${day.split("-").reverse().join("/")} : arrivée ↓ et départ ↑ du même avion, rapprochés par compagnie, escale et numéros de vol (rapprochement probable, le GANTT fait foi). Les vols sans rotation trouvée sont seuls. Site de l'aéroport mis à jour à ${esc(D.maj||"?")}, relu <span data-ago="${VL.at}">il y a ${age} min</span> <button class="btn" id="vlRefresh" style="font-size:12px;padding:3px 8px">Actualiser</button></div>
-  <div class="card" style="padding:2px 12px">${rots.map(r=>rotRow(r,q)).join("")||'<div class="info">Aucun vol.</div>'}</div>`:`<div class="info">${all} ${arr?"arrivées":"départs"} le ${day.split("-").reverse().join("/")}${canc?` · <b style="color:#c62828">${canc} annulé${canc>1?"s":""}</b>`:""} · heures locales (Z à côté) · touche un vol pour sa fiche · site de l'aéroport mis à jour à ${esc(D.maj||"?")}, relu <span data-ago="${VL.at}">il y a ${age} min</span>${VL.err?" · "+esc(VL.err):""} <button class="btn" id="vlRefresh" style="font-size:12px;padding:3px 8px">Actualiser</button></div>
+  <div class="rlist">${rots.map(r=>rotRow(r,q)).join("")||'<div class="info">Aucun vol.</div>'}</div>`:`<div class="info">${all} ${arr?"arrivées":"départs"} le ${day.split("-").reverse().join("/")}${canc?` · <b style="color:#c62828">${canc} annulé${canc>1?"s":""}</b>`:""} · heures locales (Z à côté) · touche un vol pour sa fiche · site de l'aéroport mis à jour à ${esc(D.maj||"?")}, relu <span data-ago="${VL.at}">il y a ${age} min</span>${VL.err?" · "+esc(VL.err):""} <button class="btn" id="vlRefresh" style="font-size:12px;padding:3px 8px">Actualiser</button></div>
   <div class="card" style="padding:2px 12px">${list.map(v=>volRow(v,arr,q)).join("")||'<div class="info">Aucun vol.</div>'}</div>`}
   <p class="sub">Source : tableau public des vols de l'aéroport Marseille Provence. Consultation seulement : horaires indicatifs, le GANTT et les messages compagnie font foi.${MUA.annu?"":" Déverrouille le MUA pour voir le poste au contact des portes."}</p>`;
 }
