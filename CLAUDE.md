@@ -50,6 +50,21 @@ Le Planning COA est dans le dépôt `planning-equipe-COA/horaires` et a seulemen
 **Aucun lien ni mention du Planning dans cette appli** (demandé par l'utilisateur).
 L'utilisateur échange en français.
 
+## Passe design du 22 nov. 2026 (validée par Raph, captures avant/après)
+- **Barre d'onglets en bas** (`#bnav`, `BNAV`, `bnavRender` appelé par `render`) : Accueil · Vols · Météo · MUA · Rubriques
+  (ouvre `#menu`, rangé par thème ; affiche le nom de la rubrique en cours si elle n'est pas dans la barre). Point rouge qui
+  pulse sur Vols (annulés / retards ≥ 30 min, `homeAlerts`) et sur Météo (`wxAlerts`). Retoucher l'onglet en cours = remonter.
+  Le ruban d'onglets du haut, le bouton maison et le choix Réglages → Navigation sont masqués (code gardé, sans effet).
+- En-tête : titre + heure **Z · L** en pastille (`#clk`, innerHTML), réglages. Recherche sans `autofocus` (contour violet
+  seulement pendant la saisie).
+- Météo : sur l'accueil, **une seule ligne d'alerte** (phénomènes sans doublon, « en ce moment / dans les 2 h / prévu »,
+  « +N autres périodes ») ; le détail reste dans l'onglet Météo (`wxAlertBox(full)`). Couleurs d'alerte adoucies en sombre.
+  **Flèche du vent** (`.vane`, `--d` = direction METAR) qui oscille doucement, plus vite avec rafales, tourne si VRB.
+- Rubriques vides : **recherches récentes** par rubrique (`coa-recent-<onglet>`, 6 max, retenues 1,8 s après la frappe,
+  `QUICK_TABS`) et, pour Aéroports, les **lignes MRS** (`MRS_LINES`) en pastilles (`data-qq`).
+- « Sources » déplacé du pied de page vers Réglages. Entrée douce du contenu au changement de rubrique seulement (`lastTab`,
+  `#out.enter`). Tout est immobile avec « réduire les animations ».
+
 ## Fichiers
 - `index.html` — toute l'appli (HTML + CSS + JS). **Page d'accueil** (onglet « Accueil », ouverte au lancement, bouton maison en
   haut à droite ; demandée le 20 nov. 2026) : thèmes de haut en bas (`THEMES` sauf Recherche), tuiles encadrées 2 par ligne en

@@ -200,17 +200,70 @@ html[data-nav=menu] nav#tabs{display:none}
 #vrot.on{background:#5b3fa8}
 #viewer.rot .vbar{padding:6px calc(8px + env(safe-area-inset-bottom)) 6px calc(8px + env(safe-area-inset-top))}
 #viewer:not(.rot) .vbar{padding-left:calc(8px + env(safe-area-inset-left));padding-right:calc(8px + env(safe-area-inset-right))}
+/* ══ Passe design du 22 nov. 2026 (validée par l'utilisateur) ══ */
+header{padding-bottom:10px}
+h1{margin-bottom:10px}
+h1 .ttl{font-weight:700;color:var(--ink);font-size:17px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#clk{flex:none;font-variant-numeric:tabular-nums;font-weight:700;color:var(--acc);background:var(--acc2);border-radius:999px;padding:4px 10px;font-size:14px;white-space:nowrap}
+#clk .l{font-weight:500;color:var(--mute);font-size:13px}
+#homeBtn,nav#tabs,#menuBtn,html[data-nav=menu] #menuBtn{display:none!important}
+#gear{margin-left:0!important;border-radius:999px!important}
+#q:focus{outline:2px solid var(--acc);outline-offset:-1px;border-color:transparent}
+main{padding-bottom:calc(86px + env(safe-area-inset-bottom))}
+#bnav{position:fixed;left:0;right:0;bottom:0;z-index:6;display:flex;justify-content:space-around;border-top:1px solid var(--line);
+  background:color-mix(in srgb,var(--card) 90%,transparent);-webkit-backdrop-filter:saturate(1.6) blur(14px);backdrop-filter:saturate(1.6) blur(14px);
+  padding:6px calc(4px + env(safe-area-inset-right)) calc(6px + env(safe-area-inset-bottom)) calc(4px + env(safe-area-inset-left))}
+#bnav button{flex:1;max-width:120px;min-width:0;display:flex;flex-direction:column;align-items:center;gap:3px;border:0;background:none;color:var(--mute);font:inherit;font-size:11px;font-weight:600;padding:4px 2px;cursor:pointer;position:relative;-webkit-tap-highlight-color:transparent}
+#bnav button span{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#bnav svg{width:24px;height:24px;transition:transform .3s cubic-bezier(.2,.8,.2,1.5)}
+#bnav button.on{color:var(--acc)}
+#bnav button.on svg{transform:translateY(-1px) scale(1.1)}
+#bnav button:active svg{transform:scale(.88)}
+#bnav .bdot{position:absolute;top:3px;left:calc(50% + 9px);width:8px;height:8px;border-radius:50%;background:#e5484d;box-shadow:0 0 0 2px var(--card);display:none}
+#bnav .bdot.show{display:block;animation:bdot 2s ease-in-out infinite}
+@keyframes bdot{0%,100%{transform:scale(1)}50%{transform:scale(1.25)}}
+#menu{padding-bottom:calc(90px + env(safe-area-inset-bottom))}
+/* alertes météo : une ligne sur l'accueil, couleurs douces en mode sombre */
+.wx1{display:flex;gap:8px;align-items:flex-start}
+.wxh{flex-wrap:wrap}.wxh b{white-space:nowrap}
+.wxi{flex:none}
+.wxn{opacity:.75;font-size:13px;white-space:nowrap}
+@media (prefers-color-scheme:dark){html:not([data-theme=light]) .wxa.warn{background:#3a2e12;color:#f2d38a}html:not([data-theme=light]) .wxa.danger{background:#3d1a1d;color:#ffb3b3}}
+html[data-theme=dark] .wxa.warn{background:#3a2e12;color:#f2d38a}
+html[data-theme=dark] .wxa.danger{background:#3d1a1d;color:#ffb3b3}
+/* flèche du vent (flèche vers le bas tournée de la direction METAR = sens où le vent souffle), oscille doucement (plus vite avec des rafales) */
+.vane{display:inline-grid;place-items:center;width:30px;height:30px;border-radius:50%;background:var(--acc2);color:var(--acc);flex:none}
+.vane svg{width:20px;height:20px;transform:rotate(var(--d));animation:vane 3.2s ease-in-out infinite}
+.vane.gust svg{animation-duration:1.3s}
+.vane.vrb svg{animation:vaneSpin 6s linear infinite}
+@keyframes vane{0%,100%{transform:rotate(calc(var(--d) - 5deg))}50%{transform:rotate(calc(var(--d) + 5deg))}}
+@keyframes vaneSpin{to{transform:rotate(360deg)}}
+/* rubriques vides : recherches récentes, lignes de MRS */
+.quick{display:grid;gap:8px;margin:0 0 12px}
+.qrow{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;align-items:center;padding:1px 0}
+.qrow::-webkit-scrollbar{display:none}
+.qlab{flex:none;font-size:12px;color:var(--mute);font-weight:600;margin-right:2px}
+.qchip{flex:none;border:1px solid var(--line);background:var(--card);color:var(--ink);font:inherit;font-size:14px;font-weight:600;padding:6px 12px;border-radius:999px;cursor:pointer}
+.qchip:active{transform:scale(.95)}
+/* entrée douce quand on change de rubrique (pas à chaque lettre tapée) */
+@keyframes riseIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+#out.enter>*{animation:riseIn .38s cubic-bezier(.2,.8,.2,1) both}
+#out.enter>:nth-child(2){animation-delay:.04s}#out.enter>:nth-child(3){animation-delay:.08s}#out.enter>:nth-child(4){animation-delay:.12s}#out.enter>:nth-child(n+5){animation-delay:.16s}
+#out.enter .home .tile{animation:riseIn .4s cubic-bezier(.2,.8,.2,1) both}
+@media (prefers-reduced-motion:reduce){#out.enter>*,#out.enter .home .tile,.vane svg,#bnav .bdot.show,#bnav svg{animation:none!important;transition:none!important}.vane svg{transform:rotate(var(--d))}}
+@media print{#bnav{display:none}}
 </style>
 </head>
 <body>
 <header>
-  <h1>Boîte à outils COA <span id="clk">MRS · LFML</span><button id="homeBtn" class="btn" title="Accueil" aria-label="Accueil"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 11 12 4l8.5 7M6 9.5V20h4.5v-5.5h3V20H18V9.5"/></svg></button><button id="gear" class="btn" style="margin-left:6px;padding:4px 8px;display:flex" title="Réglages" aria-label="Réglages"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></h1>
-  <input id="q" type="search" placeholder="Rechercher : 5B, A321, MRS, LFML, AFR, 93, WCHR…" autocomplete="off" autofocus>
+  <h1><span class="ttl">Boîte à outils COA</span> <span id="clk">MRS · LFML</span><button id="homeBtn" class="btn" title="Accueil" aria-label="Accueil"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 11 12 4l8.5 7M6 9.5V20h4.5v-5.5h3V20H18V9.5"/></svg></button><button id="gear" class="btn" style="margin-left:6px;padding:4px 8px;display:flex" title="Réglages" aria-label="Réglages"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></h1>
+  <input id="q" type="search" placeholder="Rechercher : 5B, A321, MRS, LFML, AFR, 93, WCHR…" autocomplete="off">
   <button id="menuBtn" type="button" aria-haspopup="true"><span aria-hidden="true">☰</span><b id="menuCur"></b><span aria-hidden="true">▾</span></button>
   <nav id="tabs"></nav>
 </header>
 <div id="menu" class="hide" role="dialog" aria-label="Rubriques"><div class="card" id="menuList"></div></div>
 <main id="out"></main>
+<nav id="bnav" aria-label="Navigation"></nav>
 <div id="viewer" class="hide" role="dialog" aria-label="Fiche MUA">
  <div class="vbar"><b id="vtitle"></b><button id="vprev" aria-label="Fiche précédente">‹</button><button id="vnext" aria-label="Fiche suivante">›</button><button id="vrot" aria-label="Paysage automatique" title="Paysage automatique">⟳</button><button id="vout" aria-label="Dézoomer">−</button><button id="vin" aria-label="Zoomer">+</button><button id="vclose" aria-label="Fermer">✕</button></div>
  <div id="vscroll"><img id="vimg" alt=""></div>
@@ -222,9 +275,9 @@ html[data-nav=menu] nav#tabs{display:none}
   <h2>Affichage</h2>
   <div class="seg" id="themeSeg"><button data-v="auto">Auto</button><button data-v="light">Clair</button><button data-v="dark">Sombre</button></div>
   <p class="sub">Auto suit le réglage du téléphone.</p>
-  <h2>Navigation</h2>
+  <div class="hide"><h2>Navigation</h2>
   <div class="seg" id="navSeg"><button data-v="tabs">Onglets</button><button data-v="menu">Menu par thème</button></div>
-  <p class="sub">Menu par thème : un bouton en haut ouvre les rubriques rangées par thème.</p>
+  <p class="sub">Menu par thème : un bouton en haut ouvre les rubriques rangées par thème.</p></div>
   <h2>Partager l'application</h2>
   <p class="sub">Fais scanner ce QR code avec l'appareil photo du téléphone.</p>
   <div style="background:#fff;padding:14px;border-radius:12px;width:min(220px,100%);margin:10px auto"><svg viewBox="0 0 33 33" role="img" aria-label="QR code vers la Boîte à outils COA" shape-rendering="crispEdges" style="display:block;width:100%;height:auto;fill:#000"><path d="M0 0h1v1h-1zM1 0h1v1h-1zM2 0h1v1h-1zM3 0h1v1h-1zM4 0h1v1h-1zM5 0h1v1h-1zM6 0h1v1h-1zM16 0h1v1h-1zM19 0h1v1h-1zM20 0h1v1h-1zM21 0h1v1h-1zM23 0h1v1h-1zM26 0h1v1h-1zM27 0h1v1h-1zM28 0h1v1h-1zM29 0h1v1h-1zM30 0h1v1h-1zM31 0h1v1h-1zM32 0h1v1h-1zM0 1h1v1h-1zM6 1h1v1h-1zM9 1h1v1h-1zM12 1h1v1h-1zM15 1h1v1h-1zM16 1h1v1h-1zM18 1h1v1h-1zM20 1h1v1h-1zM24 1h1v1h-1zM26 1h1v1h-1zM32 1h1v1h-1zM0 2h1v1h-1zM2 2h1v1h-1zM3 2h1v1h-1zM4 2h1v1h-1zM6 2h1v1h-1zM8 2h1v1h-1zM10 2h1v1h-1zM11 2h1v1h-1zM12 2h1v1h-1zM14 2h1v1h-1zM16 2h1v1h-1zM21 2h1v1h-1zM22 2h1v1h-1zM23 2h1v1h-1zM26 2h1v1h-1zM28 2h1v1h-1zM29 2h1v1h-1zM30 2h1v1h-1zM32 2h1v1h-1zM0 3h1v1h-1zM2 3h1v1h-1zM3 3h1v1h-1zM4 3h1v1h-1zM6 3h1v1h-1zM8 3h1v1h-1zM9 3h1v1h-1zM11 3h1v1h-1zM15 3h1v1h-1zM18 3h1v1h-1zM19 3h1v1h-1zM21 3h1v1h-1zM22 3h1v1h-1zM23 3h1v1h-1zM24 3h1v1h-1zM26 3h1v1h-1zM28 3h1v1h-1zM29 3h1v1h-1zM30 3h1v1h-1zM32 3h1v1h-1zM0 4h1v1h-1zM2 4h1v1h-1zM3 4h1v1h-1zM4 4h1v1h-1zM6 4h1v1h-1zM8 4h1v1h-1zM10 4h1v1h-1zM13 4h1v1h-1zM14 4h1v1h-1zM15 4h1v1h-1zM16 4h1v1h-1zM20 4h1v1h-1zM26 4h1v1h-1zM28 4h1v1h-1zM29 4h1v1h-1zM30 4h1v1h-1zM32 4h1v1h-1zM0 5h1v1h-1zM6 5h1v1h-1zM8 5h1v1h-1zM10 5h1v1h-1zM12 5h1v1h-1zM18 5h1v1h-1zM19 5h1v1h-1zM21 5h1v1h-1zM26 5h1v1h-1zM32 5h1v1h-1zM0 6h1v1h-1zM1 6h1v1h-1zM2 6h1v1h-1zM3 6h1v1h-1zM4 6h1v1h-1zM5 6h1v1h-1zM6 6h1v1h-1zM8 6h1v1h-1zM10 6h1v1h-1zM12 6h1v1h-1zM14 6h1v1h-1zM16 6h1v1h-1zM18 6h1v1h-1zM20 6h1v1h-1zM22 6h1v1h-1zM24 6h1v1h-1zM26 6h1v1h-1zM27 6h1v1h-1zM28 6h1v1h-1zM29 6h1v1h-1zM30 6h1v1h-1zM31 6h1v1h-1zM32 6h1v1h-1zM8 7h1v1h-1zM9 7h1v1h-1zM10 7h1v1h-1zM11 7h1v1h-1zM14 7h1v1h-1zM16 7h1v1h-1zM18 7h1v1h-1zM19 7h1v1h-1zM20 7h1v1h-1zM21 7h1v1h-1zM22 7h1v1h-1zM0 8h1v1h-1zM2 8h1v1h-1zM3 8h1v1h-1zM4 8h1v1h-1zM5 8h1v1h-1zM6 8h1v1h-1zM9 8h1v1h-1zM10 8h1v1h-1zM13 8h1v1h-1zM14 8h1v1h-1zM17 8h1v1h-1zM19 8h1v1h-1zM22 8h1v1h-1zM23 8h1v1h-1zM24 8h1v1h-1zM26 8h1v1h-1zM27 8h1v1h-1zM28 8h1v1h-1zM29 8h1v1h-1zM30 8h1v1h-1zM0 9h1v1h-1zM1 9h1v1h-1zM2 9h1v1h-1zM8 9h1v1h-1zM9 9h1v1h-1zM12 9h1v1h-1zM13 9h1v1h-1zM14 9h1v1h-1zM16 9h1v1h-1zM17 9h1v1h-1zM18 9h1v1h-1zM19 9h1v1h-1zM20 9h1v1h-1zM23 9h1v1h-1zM26 9h1v1h-1zM27 9h1v1h-1zM29 9h1v1h-1zM30 9h1v1h-1zM32 9h1v1h-1zM0 10h1v1h-1zM1 10h1v1h-1zM2 10h1v1h-1zM6 10h1v1h-1zM7 10h1v1h-1zM9 10h1v1h-1zM13 10h1v1h-1zM14 10h1v1h-1zM15 10h1v1h-1zM17 10h1v1h-1zM20 10h1v1h-1zM22 10h1v1h-1zM24 10h1v1h-1zM25 10h1v1h-1zM26 10h1v1h-1zM28 10h1v1h-1zM30 10h1v1h-1zM31 10h1v1h-1zM2 11h1v1h-1zM3 11h1v1h-1zM4 11h1v1h-1zM7 11h1v1h-1zM9 11h1v1h-1zM10 11h1v1h-1zM11 11h1v1h-1zM13 11h1v1h-1zM16 11h1v1h-1zM17 11h1v1h-1zM18 11h1v1h-1zM20 11h1v1h-1zM21 11h1v1h-1zM22 11h1v1h-1zM23 11h1v1h-1zM25 11h1v1h-1zM26 11h1v1h-1zM28 11h1v1h-1zM29 11h1v1h-1zM30 11h1v1h-1zM31 11h1v1h-1zM3 12h1v1h-1zM4 12h1v1h-1zM6 12h1v1h-1zM11 12h1v1h-1zM14 12h1v1h-1zM16 12h1v1h-1zM20 12h1v1h-1zM21 12h1v1h-1zM22 12h1v1h-1zM23 12h1v1h-1zM24 12h1v1h-1zM25 12h1v1h-1zM27 12h1v1h-1zM29 12h1v1h-1zM31 12h1v1h-1zM0 13h1v1h-1zM5 13h1v1h-1zM8 13h1v1h-1zM10 13h1v1h-1zM11 13h1v1h-1zM13 13h1v1h-1zM15 13h1v1h-1zM18 13h1v1h-1zM23 13h1v1h-1zM24 13h1v1h-1zM25 13h1v1h-1zM26 13h1v1h-1zM30 13h1v1h-1zM31 13h1v1h-1zM32 13h1v1h-1zM0 14h1v1h-1zM2 14h1v1h-1zM5 14h1v1h-1zM6 14h1v1h-1zM7 14h1v1h-1zM11 14h1v1h-1zM14 14h1v1h-1zM15 14h1v1h-1zM16 14h1v1h-1zM20 14h1v1h-1zM22 14h1v1h-1zM24 14h1v1h-1zM25 14h1v1h-1zM26 14h1v1h-1zM28 14h1v1h-1zM31 14h1v1h-1zM1 15h1v1h-1zM3 15h1v1h-1zM5 15h1v1h-1zM8 15h1v1h-1zM11 15h1v1h-1zM13 15h1v1h-1zM15 15h1v1h-1zM21 15h1v1h-1zM25 15h1v1h-1zM26 15h1v1h-1zM28 15h1v1h-1zM30 15h1v1h-1zM0 16h1v1h-1zM1 16h1v1h-1zM5 16h1v1h-1zM6 16h1v1h-1zM9 16h1v1h-1zM10 16h1v1h-1zM11 16h1v1h-1zM14 16h1v1h-1zM15 16h1v1h-1zM17 16h1v1h-1zM18 16h1v1h-1zM20 16h1v1h-1zM22 16h1v1h-1zM23 16h1v1h-1zM24 16h1v1h-1zM25 16h1v1h-1zM27 16h1v1h-1zM28 16h1v1h-1zM32 16h1v1h-1zM0 17h1v1h-1zM2 17h1v1h-1zM4 17h1v1h-1zM7 17h1v1h-1zM8 17h1v1h-1zM9 17h1v1h-1zM10 17h1v1h-1zM11 17h1v1h-1zM13 17h1v1h-1zM18 17h1v1h-1zM19 17h1v1h-1zM20 17h1v1h-1zM21 17h1v1h-1zM23 17h1v1h-1zM25 17h1v1h-1zM26 17h1v1h-1zM27 17h1v1h-1zM29 17h1v1h-1zM30 17h1v1h-1zM31 17h1v1h-1zM32 17h1v1h-1zM6 18h1v1h-1zM10 18h1v1h-1zM11 18h1v1h-1zM12 18h1v1h-1zM15 18h1v1h-1zM16 18h1v1h-1zM18 18h1v1h-1zM20 18h1v1h-1zM21 18h1v1h-1zM25 18h1v1h-1zM27 18h1v1h-1zM28 18h1v1h-1zM30 18h1v1h-1zM31 18h1v1h-1zM3 19h1v1h-1zM4 19h1v1h-1zM7 19h1v1h-1zM8 19h1v1h-1zM9 19h1v1h-1zM12 19h1v1h-1zM13 19h1v1h-1zM15 19h1v1h-1zM21 19h1v1h-1zM22 19h1v1h-1zM24 19h1v1h-1zM25 19h1v1h-1zM27 19h1v1h-1zM28 19h1v1h-1zM29 19h1v1h-1zM30 19h1v1h-1zM2 20h1v1h-1zM3 20h1v1h-1zM6 20h1v1h-1zM11 20h1v1h-1zM12 20h1v1h-1zM13 20h1v1h-1zM15 20h1v1h-1zM18 20h1v1h-1zM24 20h1v1h-1zM25 20h1v1h-1zM27 20h1v1h-1zM28 20h1v1h-1zM29 20h1v1h-1zM32 20h1v1h-1zM0 21h1v1h-1zM1 21h1v1h-1zM2 21h1v1h-1zM3 21h1v1h-1zM4 21h1v1h-1zM7 21h1v1h-1zM8 21h1v1h-1zM9 21h1v1h-1zM12 21h1v1h-1zM14 21h1v1h-1zM15 21h1v1h-1zM16 21h1v1h-1zM17 21h1v1h-1zM20 21h1v1h-1zM21 21h1v1h-1zM23 21h1v1h-1zM25 21h1v1h-1zM26 21h1v1h-1zM27 21h1v1h-1zM29 21h1v1h-1zM32 21h1v1h-1zM0 22h1v1h-1zM4 22h1v1h-1zM5 22h1v1h-1zM6 22h1v1h-1zM7 22h1v1h-1zM8 22h1v1h-1zM10 22h1v1h-1zM11 22h1v1h-1zM19 22h1v1h-1zM22 22h1v1h-1zM28 22h1v1h-1zM31 22h1v1h-1zM0 23h1v1h-1zM2 23h1v1h-1zM5 23h1v1h-1zM11 23h1v1h-1zM12 23h1v1h-1zM14 23h1v1h-1zM16 23h1v1h-1zM19 23h1v1h-1zM20 23h1v1h-1zM21 23h1v1h-1zM22 23h1v1h-1zM24 23h1v1h-1zM28 23h1v1h-1zM29 23h1v1h-1zM30 23h1v1h-1zM0 24h1v1h-1zM4 24h1v1h-1zM5 24h1v1h-1zM6 24h1v1h-1zM7 24h1v1h-1zM9 24h1v1h-1zM10 24h1v1h-1zM12 24h1v1h-1zM17 24h1v1h-1zM19 24h1v1h-1zM20 24h1v1h-1zM23 24h1v1h-1zM24 24h1v1h-1zM25 24h1v1h-1zM26 24h1v1h-1zM27 24h1v1h-1zM28 24h1v1h-1zM8 25h1v1h-1zM11 25h1v1h-1zM14 25h1v1h-1zM16 25h1v1h-1zM17 25h1v1h-1zM18 25h1v1h-1zM19 25h1v1h-1zM20 25h1v1h-1zM24 25h1v1h-1zM28 25h1v1h-1zM30 25h1v1h-1zM32 25h1v1h-1zM0 26h1v1h-1zM1 26h1v1h-1zM2 26h1v1h-1zM3 26h1v1h-1zM4 26h1v1h-1zM5 26h1v1h-1zM6 26h1v1h-1zM10 26h1v1h-1zM11 26h1v1h-1zM13 26h1v1h-1zM15 26h1v1h-1zM16 26h1v1h-1zM17 26h1v1h-1zM20 26h1v1h-1zM22 26h1v1h-1zM23 26h1v1h-1zM24 26h1v1h-1zM26 26h1v1h-1zM28 26h1v1h-1zM30 26h1v1h-1zM31 26h1v1h-1zM0 27h1v1h-1zM6 27h1v1h-1zM8 27h1v1h-1zM10 27h1v1h-1zM11 27h1v1h-1zM16 27h1v1h-1zM17 27h1v1h-1zM18 27h1v1h-1zM20 27h1v1h-1zM21 27h1v1h-1zM22 27h1v1h-1zM23 27h1v1h-1zM24 27h1v1h-1zM28 27h1v1h-1zM29 27h1v1h-1zM30 27h1v1h-1zM0 28h1v1h-1zM2 28h1v1h-1zM3 28h1v1h-1zM4 28h1v1h-1zM6 28h1v1h-1zM8 28h1v1h-1zM9 28h1v1h-1zM13 28h1v1h-1zM16 28h1v1h-1zM21 28h1v1h-1zM24 28h1v1h-1zM25 28h1v1h-1zM26 28h1v1h-1zM27 28h1v1h-1zM28 28h1v1h-1zM29 28h1v1h-1zM31 28h1v1h-1zM0 29h1v1h-1zM2 29h1v1h-1zM3 29h1v1h-1zM4 29h1v1h-1zM6 29h1v1h-1zM8 29h1v1h-1zM11 29h1v1h-1zM14 29h1v1h-1zM15 29h1v1h-1zM18 29h1v1h-1zM24 29h1v1h-1zM25 29h1v1h-1zM28 29h1v1h-1zM31 29h1v1h-1zM32 29h1v1h-1zM0 30h1v1h-1zM2 30h1v1h-1zM3 30h1v1h-1zM4 30h1v1h-1zM6 30h1v1h-1zM8 30h1v1h-1zM9 30h1v1h-1zM10 30h1v1h-1zM11 30h1v1h-1zM12 30h1v1h-1zM14 30h1v1h-1zM15 30h1v1h-1zM16 30h1v1h-1zM17 30h1v1h-1zM18 30h1v1h-1zM21 30h1v1h-1zM22 30h1v1h-1zM23 30h1v1h-1zM26 30h1v1h-1zM27 30h1v1h-1zM29 30h1v1h-1zM30 30h1v1h-1zM0 31h1v1h-1zM6 31h1v1h-1zM10 31h1v1h-1zM11 31h1v1h-1zM12 31h1v1h-1zM13 31h1v1h-1zM15 31h1v1h-1zM21 31h1v1h-1zM22 31h1v1h-1zM25 31h1v1h-1zM28 31h1v1h-1zM29 31h1v1h-1zM30 31h1v1h-1zM0 32h1v1h-1zM1 32h1v1h-1zM2 32h1v1h-1zM3 32h1v1h-1zM4 32h1v1h-1zM5 32h1v1h-1zM6 32h1v1h-1zM8 32h1v1h-1zM10 32h1v1h-1zM12 32h1v1h-1zM13 32h1v1h-1zM15 32h1v1h-1zM17 32h1v1h-1zM22 32h1v1h-1zM23 32h1v1h-1zM24 32h1v1h-1zM27 32h1v1h-1zM31 32h1v1h-1z"/></svg></div>
@@ -236,6 +289,8 @@ html[data-nav=menu] nav#tabs{display:none}
   <p><button class="btn hide" id="muaLock">Verrouiller le MUA sur ce téléphone</button></p>
   <h2>Sauvegarde des contacts</h2>
   <p class="sub">Les numéros restent sur ce téléphone. Onglet Contacts MRS → « Copier (sauvegarde) » pour les transférer sur un autre appareil.</p>
+  <h2>Sources</h2>
+  <p class="sub">Sources : aéroports OurAirports (domaine public) ; compagnies et types d'avions OpenFlights (ODbL) — la base compagnies n'est pas à jour pour les créations/disparitions récentes. Codes retard et abréviations : référence IATA, à vérifier avec le manuel de ta compagnie.</p>
  </div>
 </div>
 
@@ -427,7 +482,7 @@ const HELP={
  al:"<b>Compagnies aériennes.</b> Code IATA (AF), OACI (AFR), indicatif radio (AIRFRANS) ou nom. En tête : les compagnies de Marseille avec leur assistant (passage et coordination).",
  pl:"<b>Types d'avions.</b> Code IATA (321) ou OACI (A321), nom du modèle : lettre de code OACI (A à F), catégorie de turbulence de sillage et envergure.",
  immat:"<b>Immatriculations.</b> Tape une immatriculation (F-HBXA ou FHBXA) : type d'avion, compagnie, nombre de sièges et masse maximale. Base interne, accès par code.",
- vols:"<b>Vols du jour à Marseille</b>, d'après le tableau public de l'aéroport, mis à jour toutes les 3 minutes. Départs ou arrivées, aujourd'hui ou demain : statut, porte, tapis, assistant. Le bouton « Fiche MUA » ouvre le poste au contact de la porte. Consultation seulement : le GANTT fait foi.",
+ vols:"<b>Vols du jour à Marseille</b>, d'après le tableau public de l'aéroport, mis à jour toutes les 3 minutes. Départs, arrivées, ou « Arr. + Dép. » (arrivée et départ du même avion sur une ligne, avec le temps d'escale), aujourd'hui ou demain : statut, porte, tapis, assistant. Le bouton « Fiche MUA » ouvre le poste au contact de la porte. Consultation seulement : le GANTT fait foi.",
  wx:"<b>Météo de Marseille.</b> METAR (observation) et TAF (prévision) décodés, alertes vent, orages et visibilité, lever et coucher du soleil, fréquences utiles. Mise à jour automatique.",
  notam:"<b>NOTAM de Marseille</b> classés par thème (postes, voies, pistes, balisage…). Aide à la consultation : le briefing officiel du SIA fait foi.",
  ct:"<b>Contacts de l'escale.</b> Assistants, services et portes : touche un numéro pour appeler ou envoyer un SMS. Les postes internes à 4 chiffres ne sont pas joignables de l'extérieur. Tu peux ajouter tes propres numéros.",
@@ -441,6 +496,14 @@ const HELP={
 const tabName=k=>{for(const [,it] of THEMES)for(const [kk,l] of it)if(kk===k)return l;return ""};
 function openMenu(){$("#menuList").innerHTML=THEMES.map(([t,it])=>`<div class="mtheme">${t}</div>`+it.map(([k,l,d])=>`<button class="mitem${k===tab?" on":""}" data-k="${k}">${l}<small>${d}</small></button>`).join("")).join("");$("#menu").classList.remove("hide")}
 $("#menuBtn").onclick=openMenu;
+/* barre d'onglets en bas (passe design du 22 nov. 2026) : 4 rubriques les plus utilisées + « Rubriques » (menu par thème) */
+const BNAV=[["home","Accueil",'<path d="M3.5 11 12 4l8.5 7M6 9.5V20h4.5v-5.5h3V20H18V9.5"/>'],["vols","Vols",null],["wx","Météo",null],["mua","MUA",null],["more","Rubriques",'<rect x="3.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.8"/>']];
+function bnavRender(){const main=BNAV.some(([k])=>k===tab);
+  $("#bnav").innerHTML=BNAV.map(([k,l,ic])=>`<button type="button" data-b="${k}" class="${k===tab||(k==="more"&&!main)?"on":""}"${k===tab?' aria-current="page"':""}>${'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'}${ic||TI[k]}</svg><span>${k==="more"&&!main?esc(tabName(tab)||l):l}</span><i class="bdot${(k==="vols"&&volsFresh()&&homeAlerts())||(k==="wx"&&WX.metar&&wxAlerts().length)?" show":""}"></i></button>`).join("")}
+$("#bnav").onclick=e=>{const b=e.target.closest("button");if(!b)return;const k=b.dataset.b;
+  if(k==="more"){openMenu();return}
+  if(k===tab&&!$("#q").value){scrollTo({top:0,behavior:"smooth"});return}
+  tab=k;$("#q").value="";location.hash=k;render();scrollTo(0,0)};
 $("#homeBtn").onclick=()=>{tab="home";$("#q").value="";location.hash="home";render();scrollTo(0,0)};
 const TI={
  all:'<path d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15zM16 16l5 5"/>',
@@ -482,7 +545,7 @@ $("#themeSeg").onclick=e=>{const b=e.target.closest("button");if(b)applyTheme(b.
 $("#navSeg").onclick=e=>{const b=e.target.closest("button");if(b)applyNav(b.dataset.v)};
 setSeg("themeSeg",store("coa-theme")||"auto");setSeg("navSeg",store("coa-nav")||"tabs");
 $("#tabs").onclick=e=>{const k=e.target.dataset.k;if(k){tab=k;location.hash=k;render()}};
-$("#q").oninput=()=>render();
+$("#q").oninput=()=>{render();rememberSearch()};
 window.addEventListener("hashchange",()=>{const h=location.hash.slice(1);if(TABS.some(t=>t[0]===h)){tab=h;render()}});
 {const h=location.hash.slice(1);if(TABS.some(t=>t[0]===h))tab=h;}
 
@@ -728,7 +791,7 @@ function freqView(){return `<div class="wx"><div class="wxh"><b>Fréquences LFML
 /* ---------- Heure UTC / Marseille dans l'en-tête, soleil à LFML ---------- */
 function clockTick(){if(document.hidden)return;const d=new Date(),p=n=>String(n).padStart(2,"0");
   const loc=new Intl.DateTimeFormat("fr-FR",{timeZone:"Europe/Paris",hour:"2-digit",minute:"2-digit"}).format(d);
-  const el=$("#clk");if(el){el.textContent=`${p(d.getUTCHours())}:${p(d.getUTCMinutes())} Z · ${loc} L`;el.title="Heure UTC (Z) et heure locale de Marseille (L)"}}
+  const el=$("#clk");if(el){el.innerHTML=`${p(d.getUTCHours())}:${p(d.getUTCMinutes())} Z <span class="l">· ${loc} L</span>`;el.title="Heure UTC (Z) et heure locale de Marseille (L)"}}
 setInterval(clockTick,15e3);setTimeout(clockTick,0);document.addEventListener("visibilitychange",clockTick);
 /* lever / coucher du soleil (algorithme NOAA simplifié, précision ~1 min) ; nuit aéronautique en France :
    du coucher + 30 min au lever − 30 min */
@@ -777,7 +840,11 @@ function wxAlerts(){const res=[];
       res.push({lvl:ph.some(p=>p[0]==="danger")?"danger":"warn",when:`TAF · ${kind} ${tafPeriod(g)}`.trim(),txt:ph.map(p=>p[1]).join(", ")})})}
   return res;
 }
-function wxAlertBox(){const a=wxAlerts();if(!a.length)return "";
+function wxAlertBox(full){const a=wxAlerts();if(!a.length)return "";
+  if(!full){/* accueil : une seule ligne (les phénomènes, sans doublon, et jusqu'à quand le TAF les annonce) */
+    const ph=[...new Set(a.flatMap(x=>x.txt.split(", ")))],lvl=a.some(x=>x.lvl==="danger")?"danger":"warn";
+    const now=a.some(x=>x.when==="Maintenant")?"en ce moment":a.some(x=>/^Tendance/.test(x.when))?"dans les 2 h":"prévu";
+    return `<div class="wxal"><div class="wxa ${lvl} wx1"><span class="wxi" aria-hidden="true">⚠︎</span><span><b>${esc(ph.join(", ").replace(/^./,c=>c.toUpperCase()))}</b> · ${now}${a.length>1?` <span class="wxn">+${a.length-1} autre${a.length>2?"s":""} période${a.length>2?"s":""}</span>`:""}</span></div></div>`}
   return `<div class="wxal">${a.map(x=>`<div class="wxa ${x.lvl}"><b>${esc(x.when)}</b> : ${esc(x.txt)}</div>`).join("")}<div class="sub" style="margin-top:4px">Lu dans le METAR et le TAF : aide seulement, ne remplace pas les MAA de Météo-France.</div></div>`}
 function wxCard(full){
   if(!WX.metar&&!WX.loading)wxLoad();
@@ -785,8 +852,10 @@ function wxCard(full){
   const o=wxDecode(WX.metar.replace(/^(METAR|SPECI)\s+/,"").replace(/^LFML\s+/,""));
   const age=Math.round((Date.now()-WX.at)/60e3);
   const cell=(l,v)=>v?`<div><span>${l}</span>${esc(v)}</div>`:"";
-  return `<div class="wx"><div class="wxh"><b>Météo LFML</b><span class="sub">${esc(o.time)}</span>${full?'<button class="btn" id="wxRefresh" style="margin-left:auto;font-size:12px;padding:4px 8px">Actualiser</button>':""}</div>
-  ${wxAlertBox()}
+  const wm=WX.metar.match(/\b(\d{3}|VRB)(\d{2,3})(?:G(\d{2,3}))?KT\b/);
+  const vane=wm?`<span class="vane${wm[3]?" gust":""}${wm[1]==="VRB"?" vrb":""}" style="--d:${wm[1]==="VRB"?0:+wm[1]}deg" title="Vent ${esc(wm[1])}° ${+wm[2]} kt"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v15M7 13l5 6 5-6" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span>`:"";
+  return `<div class="wx"><div class="wxh">${vane}<b>Météo LFML</b><span class="sub">${esc(o.time)}</span>${full?'<button class="btn" id="wxRefresh" style="margin-left:auto;font-size:12px;padding:4px 8px">Actualiser</button>':""}</div>
+  ${wxAlertBox(full)}
   <div class="wxgrid">${cell("Vent",o.wind)}${cell("Visibilité",o.vis)}${cell("Temps",o.wx.join(", "))}${cell("Nuages",o.clouds.join(", "))}${cell("Température",o.temp)}${cell("Point de rosée",o.dew)}${cell("QNH",o.qnh)}</div>
   ${o.trend?`<div class="sub" style="margin-top:6px">Tendance : ${esc(o.trend)}</div>`:""}
   <div class="sub" style="margin-top:6px">ATIS <b>125.355</b> · Tour <b>133.100</b> · Sol <b>121.905</b> · Prévol <b>121.730</b></div>
@@ -862,28 +931,48 @@ function volDetail(v,arr){
     ${arr?"":line("Banques d'enregistrement",esc(v.banques))}
     ${line("Assistant",esc(hd||""))}
     <div class="vbtns">${handlerNames(hd).map(n=>`<button class="glink" data-ctq="${esc(n)}">Contacts ${esc(n)}</button>`).join("")}${st.map(p=>`<button class="glink" data-openposte="${esc(p)}">Fiche MUA ${esc(p)}</button>`).join("")}<button class="glink" data-alq="${esc(v.al)}">Fiche compagnie</button></div></div>`}
-function volRow(v,arr,q){const h=v.t.slice(11,16),z=volZ(v.t),hd=MRS_HANDLER[v.al],open=VL.open===volKey(v),dl=volDelay(v);
+function volRow(v,arr,q,ico){const h=v.t.slice(11,16),z=volZ(v.t),hd=MRS_HANDLER[v.al],open=VL.open===volKey(v),dl=volDelay(v);
   const stCls=v.cls==="annulee"?"#c62828":volDone(v)?"var(--mute)":dl&&dl>=15||/retard/i.test(v.st)?"#b26a00":v.cls==="expected"||v.cls==="confirmed"?"var(--acc)":"#2e7d32";
   const where=arr?(v.tapis?"Tapis "+v.tapis:""):[v.porte?"Porte "+v.porte:"",v.term].filter(Boolean).join(" · ");
   return `<div class="u-row vrow${open?" open":""}" data-vk="${esc(volKey(v))}" data-varr="${arr?1:0}" role="button" tabindex="0" style="display:block;padding:8px 0;cursor:pointer${v.cls==="annulee"?";opacity:.8":""}"><div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">
-      <b style="font-size:17px;min-width:48px">${esc(h)}</b><span class="sub" style="min-width:52px">${esc(z)}Z</span>
+      ${ico?`<span class="sub" style="width:14px">${ico}</span>`:""}<b style="font-size:17px;min-width:48px">${esc(h)}</b><span class="sub" style="min-width:52px">${esc(z)}Z</span>
       <b>${hl(v.n,q)}</b><span>${hl(v.ville,q)} <span class="u-ext" style="margin:0">${esc(v.code)}</span></span>
       ${v.st?`<span style="color:${stCls};font-weight:600;font-size:13px">${esc(v.st)}${dl&&dl>=15?` (+${dl} min)`:""}</span>`:""}<span class="sub" style="margin-left:auto">${open?"▴":"▾"}</span></div>
       <div class="sub" style="margin-top:2px">${hl(v.cie,q)}${hd?" · "+hl(hd,q):""}${where?" · "+hl(where,q):""}</div>${open?volDetail(v,arr):""}</div>`}
+/* vue rotations : arrivée + départ du même avion, rapprochés par compagnie, escale et numéros de vol voisins
+   (AF 7342 → AF 7343), départ 20 min à 14 h après l'arrivée. Rapprochement probable, pas une donnée de l'aéroport. */
+function volsRotations(day){const D=VL.data;const A=D.arr.filter(v=>v.t.slice(0,10)===day),P=D.dep.filter(v=>v.t.slice(0,10)>=day);
+  const num=v=>+String(v.n.split(" ")[1]||"").replace(/\D/g,"");const used=new Set(),out=[];
+  A.forEach(a=>{let best=null;P.forEach(d=>{if(used.has(d)||d.al!==a.al||d.code!==a.code||Math.abs(num(d)-num(a))>1)return;
+    const g=(volMs(d.t)-volMs(a.t))/60e3;if(g<20||g>14*60)return;if(!best||g<best[1])best=[d,g]});
+    if(best){used.add(best[0]);out.push({a,d:best[0],g:Math.round(best[1])})}else out.push({a})});
+  D.dep.filter(d=>d.t.slice(0,10)===day&&!used.has(d)).forEach(d=>out.push({d}));
+  return out.sort((x,y)=>((x.a||x.d).t<(y.a||y.d).t?-1:1))}
+function rotRow(r,q){const {a,d}=r;if(!a)return volRow(d,false,q,"↑");if(!d)return volRow(a,true,q,"↓");
+  const k=volKey(a)+"#"+volKey(d),open=VL.open===k,hd=MRS_HANDLER[a.al];
+  const half=(v,arr)=>{const dl=volDelay(v);const c=v.cls==="annulee"?"#c62828":volDone(v)?"var(--mute)":dl&&dl>=15?"#b26a00":"#2e7d32";
+    return `<div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><span class="sub" style="width:14px">${arr?"↓":"↑"}</span><b style="font-size:16px;min-width:46px">${esc(v.t.slice(11,16))}</b><span class="sub" style="min-width:48px">${esc(volZ(v.t))}Z</span><b>${hl(v.n,q)}</b>${v.st?`<span style="color:${c};font-weight:600;font-size:13px">${esc(v.st)}${dl&&dl>=15?` (+${dl} min)`:""}</span>`:""}${arr?(v.tapis?`<span class="sub">tapis ${esc(v.tapis)}</span>`:""):(v.porte?`<span class="sub">porte ${esc(v.porte)}</span>`:"")}</div>`};
+  return `<div class="u-row vrow${open?" open":""}" data-vk="${esc(k)}" data-varr="2" role="button" tabindex="0" style="display:block;padding:8px 0;cursor:pointer">
+    <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><b>${hl(a.ville,q)}</b> <span class="u-ext" style="margin:0">${esc(a.code)}</span><span class="sub">${hl(a.cie,q)}${hd?" · "+hl(hd,q):""} · escale ${hm(r.g)}${d.t.slice(0,10)!==a.t.slice(0,10)?" · départ le lendemain":""}</span><span class="sub" style="margin-left:auto">${open?"▴":"▾"}</span></div>
+    ${half(a,true)}${half(d,false)}${open?volDetail(a,true)+volDetail(d,false):""}</div>`}
 function volsView(q){
   if(!VL.data)return `<div class="info">${VL.err?esc(VL.err):"Chargement des vols…"}</div>`;
   const D=VL.data,base=new Date(D.today+"T12:00:00Z");const day=new Date(base.getTime()+VL.day*864e5).toISOString().slice(0,10);
-  const arr=VL.dir==="arr";let list=volsOf(day)[arr?"arr":"dep"];
+  const arr=VL.dir==="arr",rot=VL.dir==="rot";let list=volsOf(day)[arr?"arr":"dep"];
   const all=list.length,canc=list.filter(v=>v.cls==="annulee").length,fini=list.filter(volDone).length;
   if(!VL.done&&!q)list=list.filter(v=>!volDone(v)||VL.open===volKey(v));
   if(q)list=list.filter(v=>volMatch(v,q));
   const age=Math.round((Date.now()-VL.at)/60e3);
   const dl=["Aujourd'hui","Demain"];
-  return `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><div class="seg" id="vlDir"><button data-v="dep" class="${arr?"":"on"}">Départs</button><button data-v="arr" class="${arr?"on":""}">Arrivées</button></div>
+  let rots=null;if(rot){rots=volsRotations(day);if(!VL.done&&!q)rots=rots.filter(r=>!(r.d?volDone(r.d):volDone(r.a))||VL.open&&VL.open.includes(volKey(r.a||r.d)));
+    if(q)rots=rots.filter(r=>(r.a&&volMatch(r.a,q))||(r.d&&volMatch(r.d,q)))}
+  const nRot=rot?volsRotations(day).filter(r=>r.a&&r.d).length:0;
+  return `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><div class="seg" id="vlDir"><button data-v="dep" class="${!arr&&!rot?"on":""}">Départs</button><button data-v="arr" class="${arr?"on":""}">Arrivées</button><button data-v="rot" class="${rot?"on":""}">Arr. + Dép.</button></div>
     <div class="seg" id="vlDay">${dl.map((l,i)=>`<button data-v="${i}" class="${VL.day===i?"on":""}">${l}</button>`).join("")}</div>
-    <label class="sub" style="display:flex;gap:4px;align-items:center"><input type="checkbox" id="vlDone"${VL.done?" checked":""}> ${arr?"vols arrivés":"vols décollés"} (${fini})</label></div>
-  <div class="info">${all} ${arr?"arrivées":"départs"} le ${day.split("-").reverse().join("/")}${canc?` · <b style="color:#c62828">${canc} annulé${canc>1?"s":""}</b>`:""} · heures locales (Z à côté) · touche un vol pour sa fiche · site de l'aéroport mis à jour à ${esc(D.maj||"?")}, relu il y a ${age} min${VL.err?" · "+esc(VL.err):""} <button class="btn" id="vlRefresh" style="font-size:12px;padding:3px 8px">Actualiser</button></div>
-  <div class="card" style="padding:2px 12px">${list.map(v=>volRow(v,arr,q)).join("")||'<div class="info">Aucun vol.</div>'}</div>
+    <label class="sub" style="display:flex;gap:4px;align-items:center"><input type="checkbox" id="vlDone"${VL.done?" checked":""}> ${rot?"rotations terminées":arr?"vols arrivés":"vols décollés"}${rot?"":` (${fini})`}</label></div>
+  ${rot?`<div class="info">${nRot} rotations le ${day.split("-").reverse().join("/")} : arrivée ↓ et départ ↑ du même avion, rapprochés par compagnie, escale et numéros de vol (rapprochement probable, le GANTT fait foi). Les vols sans rotation trouvée sont seuls. Site de l'aéroport mis à jour à ${esc(D.maj||"?")}, relu il y a ${age} min <button class="btn" id="vlRefresh" style="font-size:12px;padding:3px 8px">Actualiser</button></div>
+  <div class="card" style="padding:2px 12px">${rots.map(r=>rotRow(r,q)).join("")||'<div class="info">Aucun vol.</div>'}</div>`:`<div class="info">${all} ${arr?"arrivées":"départs"} le ${day.split("-").reverse().join("/")}${canc?` · <b style="color:#c62828">${canc} annulé${canc>1?"s":""}</b>`:""} · heures locales (Z à côté) · touche un vol pour sa fiche · site de l'aéroport mis à jour à ${esc(D.maj||"?")}, relu il y a ${age} min${VL.err?" · "+esc(VL.err):""} <button class="btn" id="vlRefresh" style="font-size:12px;padding:3px 8px">Actualiser</button></div>
+  <div class="card" style="padding:2px 12px">${list.map(v=>volRow(v,arr,q)).join("")||'<div class="info">Aucun vol.</div>'}</div>`}
   <p class="sub">Source : tableau public des vols de l'aéroport Marseille Provence. Consultation seulement : horaires indicatifs, le GANTT et les messages compagnie font foi.${MUA.annu?"":" Déverrouille le MUA pour voir le poste au contact des portes."}</p>`;
 }
 /* recherche « Tout » : un numéro de vol (AF7343, AF 7343, 7343) */
@@ -1377,6 +1466,17 @@ function muaSettings(){const on=!!MUA.sheets;$("#muaLock").classList.toggle("hid
   $("#muaSetInfo").textContent=on?`Ouvert sur ce téléphone (${MUA.sheets.length} fiches, gardées pour l'usage hors connexion).`:"Pas encore ouvert sur ce téléphone : onglet MUA, puis code d'accès.";}
 muaRestore();
 
+/* rubriques vides au départ : recherches récentes (gardées sur le téléphone) et, pour les aéroports, les lignes de MRS */
+let lastTab="";
+const QUICK_TABS=["ap","al","pl","immat","dl","ab","fl"],MRS_LINES=["ORY","CDG","LGW","LHR","STN","Milan","IST","CRL","BRU"];
+function recents(k){try{return JSON.parse(store("coa-recent-"+k)||"[]")}catch(e){return []}}
+function quickView(k){if(!QUICK_TABS.includes(k))return "";const r=recents(k),chips=(l,a)=>a.map(x=>`<button type="button" class="qchip" data-qq="${esc(x)}">${esc(x)}</button>`).join("");
+  const parts=[];if(r.length)parts.push(`<div class="qrow"><span class="qlab">Récentes</span>${chips("r",r)}</div>`);
+  if(k==="ap")parts.push(`<div class="qrow"><span class="qlab">Lignes MRS</span>${chips("l",MRS_LINES)}</div>`);
+  return parts.length?`<div class="quick">${parts.join("")}</div>`:""}
+let recentT=0;
+function rememberSearch(){clearTimeout(recentT);recentT=setTimeout(()=>{const v=$("#q").value.trim();if(v.length<2||!QUICK_TABS.includes(tab))return;
+  const k=tab,a=recents(k).filter(x=>norm(x)!==norm(v));a.unshift(v);store("coa-recent-"+k,JSON.stringify(a.slice(0,6)))},1800)}
 function render(){
   document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.k===tab));
   $("#menuCur").textContent=tabName(tab);
@@ -1424,7 +1524,10 @@ function render(){
       h=parts.length?parts.map(([t,k,x])=>`<h2>${t} <button class="btn" style="font-size:11px;padding:2px 8px" onclick="tab='${k}';render()">voir tout</button></h2>${x}`).join(""):`<div class="info">Aucun résultat.</div>`;
     }
   }
-  out.innerHTML=(HELP[tab]&&!q?`<p class="tabhelp">${HELP[tab]}</p>`:"")+h;
+  out.innerHTML=(HELP[tab]&&!q?`<p class="tabhelp">${HELP[tab]}</p>`:"")+(q?"":quickView(tab))+h;
+  bnavRender();
+  if(tab!==lastTab){lastTab=tab;out.classList.remove("enter");void out.offsetWidth;out.classList.add("enter")}
+  document.querySelectorAll("[data-qq]").forEach(b=>b.onclick=()=>{$("#q").value=b.dataset.qq;render();scrollTo(0,0)});
   if(tab==="ct")bindContacts();
   if(tab==="calc")bindCalc();
   bindMua();
@@ -1433,7 +1536,7 @@ function render(){
   const nr=$("#ntRefresh");if(nr)nr.onclick=()=>{nr.textContent="…";notamLoad(true)};
   const vr=$("#vlRefresh");if(vr)vr.onclick=()=>{vr.textContent="…";volsLoad(true)};
   document.querySelectorAll("#vlDir button").forEach(b=>b.onclick=()=>{VL.dir=b.dataset.v;VL.open=null;render()});
-  document.querySelectorAll(".vrow").forEach(r=>{const go=e=>{if(e.target.closest("button,a"))return;VL.open=VL.open===r.dataset.vk?null:r.dataset.vk;if(tab!=="vols"){VL.dir=r.dataset.varr==="1"?"arr":"dep";VL.day=r.dataset.vk.split("|")[1].slice(0,10)===VL.data.today?0:1;tab="vols";location.hash="vols"}render()};r.onclick=go;r.onkeydown=e=>{if(e.key==="Enter")go(e)}});
+  document.querySelectorAll(".vrow").forEach(r=>{const go=e=>{if(e.target.closest("button,a"))return;VL.open=VL.open===r.dataset.vk?null:r.dataset.vk;if(tab!=="vols"){VL.dir=r.dataset.varr==="1"?"arr":r.dataset.varr==="2"?"rot":"dep";VL.day=r.dataset.vk.split("|")[1].slice(0,10)===VL.data.today?0:1;tab="vols";location.hash="vols"}render()};r.onclick=go;r.onkeydown=e=>{if(e.key==="Enter")go(e)}});
   document.querySelectorAll("[data-ctq]").forEach(b=>b.onclick=()=>{$("#q").value=b.dataset.ctq;tab="ct";location.hash="ct";render();scrollTo(0,0)});
   document.querySelectorAll("[data-alq]").forEach(b=>b.onclick=()=>{$("#q").value=b.dataset.alq;tab="al";location.hash="al";render();scrollTo(0,0)});
   document.querySelectorAll("#vlDay button").forEach(b=>b.onclick=()=>{VL.day=+b.dataset.v;render()});
@@ -1451,6 +1554,6 @@ $("#shareCopy").onclick=async()=>{const b=$("#shareCopy");
   try{await navigator.clipboard.writeText(SHARE_URL);b.textContent="Lien copié ✓"}catch(e){b.textContent=SHARE_URL}
   setTimeout(()=>{b.textContent="Envoyer le lien"},2500)};
 </script>
-<footer style="max-width:1000px;margin:20px auto;padding:0 14px 30px" class="sub">Sources : aéroports OurAirports (domaine public) ; compagnies et types d'avions OpenFlights (ODbL) — la base compagnies n'est pas à jour pour les créations/disparitions récentes. Codes retard et abréviations : référence IATA, à vérifier avec le manuel de ta compagnie.</footer>
+
 </body>
 </html>
