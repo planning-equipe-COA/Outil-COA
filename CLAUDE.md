@@ -279,3 +279,7 @@ L'utilisateur échange en français.
   indicatif. Accueil / recherche / MUA n'utilisent la liste que si elle a moins de 30 min (`volsFresh`).
 - Calculs : « Heure d'arrivée à Marseille » (demande de Raph) : escale (IATA/OACI) + ED en Z (+ temps de vol connu facultatif)
   → ETA Z et heure de Marseille ; sinon temps estimé porte à porte `flightInfo(...).back`.
+- Vue « Arr. + Dép. » (rotations, `volsRotations`) : compagnie + escale + numéros voisins (±1), escale 20 min à 18 h.
+  Nightstops : le relais garde aussi les arrivées de la VEILLE à partir de 14 h (heure de Paris) ; badge « Nightstop »,
+  « la veille » / « le lendemain » devant l'heure. Les listes Départs / Arrivées, l'accueil et la recherche ignorent
+  ces arrivées de la veille (`volsOf(day)` filtre la date).

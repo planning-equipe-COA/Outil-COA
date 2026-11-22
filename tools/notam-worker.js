@@ -158,8 +158,10 @@ async function vols(origin, ctx) {
     const stopDay = parisDay(new Date(now.getTime() + 2 * 86400000)); // on garde aujourd'hui et demain
     const [dep, arr] = await Promise.all([fetchBoard('departures', stopDay), fetchBoard('arrivals', stopDay)]);
     const keep = r => r.t.slice(0, 10) >= today;
+    // arrivées de la veille à partir de 14 h (heure de Paris) : pour retrouver les nightstops (arrivée la veille, départ ce matin)
+    const veille = parisDay(new Date(now.getTime() - 86400000)) + 'T14:00';
     const body = { at: now.toISOString(), today, source: 'marseille.aeroport.fr (tableau public des vols)',
-      maj: dep.maj || arr.maj, dep: dep.rows.filter(keep), arr: arr.rows.filter(keep) };
+      maj: dep.maj || arr.maj, dep: dep.rows.filter(keep), arr: arr.rows.filter(r => r.t >= veille) };
     ctx.waitUntil(cache.put(key, new Response(JSON.stringify(body), { headers: { 'Cache-Control': `max-age=${VOLS_CACHE_SECONDS}` } })));
     return json(body, 200, origin, { 'X-Cache': 'MISS' });
   } catch (e) {

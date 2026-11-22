@@ -957,23 +957,28 @@ function volRow(v,arr,q,ico){const h=v.t.slice(11,16),z=volZ(v.t),hd=MRS_HANDLER
       <div class="sub" style="margin-top:2px">${hl(v.cie,q)}${hd?" · "+hl(hd,q):""}${where?" · "+hl(where,q):""}</div>${open?volDetail(v,arr):""}</div>`}
 /* vue rotations : arrivée + départ du même avion, rapprochés par compagnie, escale et numéros de vol voisins
    (AF 7342 → AF 7343), départ 20 min à 14 h après l'arrivée. Rapprochement probable, pas une donnée de l'aéroport. */
-function volsRotations(day){const D=VL.data;const A=D.arr.filter(v=>v.t.slice(0,10)===day),P=D.dep.filter(v=>v.t.slice(0,10)>=day);
+/* nightstops : on rapproche aussi les arrivées de la veille à partir de 14 h (gardées par le relais) et on accepte 18 h d'escale */
+function volsRotations(day){const D=VL.data;const prev=new Date(Date.parse(day+"T12:00:00Z")-864e5).toISOString().slice(0,10)+"T14:00";
+  const A=D.arr.filter(v=>v.t.slice(0,10)===day||(v.t>=prev&&v.t.slice(0,10)<day)),P=D.dep.filter(v=>v.t.slice(0,10)>=day);
   const num=v=>+String(v.n.split(" ")[1]||"").replace(/\D/g,"");const used=new Set(),out=[];
   A.forEach(a=>{let best=null;P.forEach(d=>{if(used.has(d)||d.al!==a.al||d.code!==a.code||Math.abs(num(d)-num(a))>1)return;
-    const g=(volMs(d.t)-volMs(a.t))/60e3;if(g<20||g>14*60)return;if(!best||g<best[1])best=[d,g]});
-    if(best){used.add(best[0]);out.push({a,d:best[0],g:Math.round(best[1])})}else out.push({a})});
+    const g=(volMs(d.t)-volMs(a.t))/60e3;if(g<20||g>18*60)return;if(!best||g<best[1])best=[d,g]});
+    if(best){used.add(best[0]);if(a.t.slice(0,10)===day||best[0].t.slice(0,10)===day)out.push({a,d:best[0],g:Math.round(best[1])})}
+    else if(a.t.slice(0,10)===day)out.push({a})});
   D.dep.filter(d=>d.t.slice(0,10)===day&&!used.has(d)).forEach(d=>out.push({d}));
-  return out.sort((x,y)=>((x.a||x.d).t<(y.a||y.d).t?-1:1))}
+  /* tri sur l'heure du jour affiché : arrivée du jour, sinon départ (nightstop arrivé la veille) */
+  const key=r=>r.a&&r.a.t.slice(0,10)===day?r.a.t:(r.d||r.a).t;
+  return out.sort((x,y)=>key(x)<key(y)?-1:1)}
 function rotRow(r,q){const {a,d}=r;if(!a)return volRow(d,false,q,"↑");if(!d)return volRow(a,true,q,"↓");
   const k=volKey(a)+"#"+volKey(d),open=VL.open===k,hd=MRS_HANDLER[a.al];
   const half=(v,arr)=>{const dl=volDelay(v);const c=v.cls==="annulee"?"#c62828":volDone(v)?"var(--mute)":dl&&dl>=15?"#b26a00":"#2e7d32";
-    return `<div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><span class="sub" style="width:14px">${arr?"↓":"↑"}</span><b style="font-size:16px;min-width:46px">${esc(v.t.slice(11,16))}</b><span class="sub" style="min-width:48px">${esc(volZ(v.t))}Z</span><b>${hl(v.n,q)}</b>${v.st?`<span style="color:${c};font-weight:600;font-size:13px">${esc(v.st)}${dl&&dl>=15?` (+${dl} min)`:""}</span>`:""}${arr?(v.tapis?`<span class="sub">tapis ${esc(v.tapis)}</span>`:""):(v.porte?`<span class="sub">porte ${esc(v.porte)}</span>`:"")}</div>`};
+    return `<div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><span class="sub" style="width:14px">${arr?"↓":"↑"}</span><b style="font-size:16px;min-width:46px">${esc(v.t.slice(11,16))}</b>${v.t.slice(0,10)!==VL.dayShown?`<span class="sub">${v.t.slice(0,10)<VL.dayShown?"la veille":"le lendemain"}</span>`:""}<span class="sub" style="min-width:48px">${esc(volZ(v.t))}Z</span><b>${hl(v.n,q)}</b>${v.st?`<span style="color:${c};font-weight:600;font-size:13px">${esc(v.st)}${dl&&dl>=15?` (+${dl} min)`:""}</span>`:""}${arr?(v.tapis?`<span class="sub">tapis ${esc(v.tapis)}</span>`:""):(v.porte?`<span class="sub">porte ${esc(v.porte)}</span>`:"")}</div>`};
   return `<div class="u-row vrow${open?" open":""}" data-vk="${esc(k)}" data-varr="2" role="button" tabindex="0" style="display:block;padding:8px 0;cursor:pointer">
-    <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><b>${hl(a.ville,q)}</b> <span class="u-ext" style="margin:0">${esc(a.code)}</span><span class="sub">${hl(a.cie,q)}${hd?" · "+hl(hd,q):""} · escale ${hm(r.g)}${d.t.slice(0,10)!==a.t.slice(0,10)?" · départ le lendemain":""}</span><span class="sub" style="margin-left:auto">${open?"▴":"▾"}</span></div>
+    <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><b>${hl(a.ville,q)}</b> <span class="u-ext" style="margin:0">${esc(a.code)}</span><span class="sub">${hl(a.cie,q)}${hd?" · "+hl(hd,q):""} · escale ${hm(r.g)}</span>${d.t.slice(0,10)!==a.t.slice(0,10)?`<span class="u-ext" style="margin:0;color:var(--acc);border-color:var(--acc)">Nightstop</span>`:""}<span class="sub" style="margin-left:auto">${open?"▴":"▾"}</span></div>
     ${half(a,true)}${half(d,false)}${open?volDetail(a,true)+volDetail(d,false):""}</div>`}
 function volsView(q){
   if(!VL.data)return VL.err?`<div class="info">${esc(VL.err)}</div>`:`<div class="card">${SKEL(5)}</div>`;
-  const D=VL.data,base=new Date(D.today+"T12:00:00Z");const day=new Date(base.getTime()+VL.day*864e5).toISOString().slice(0,10);
+  const D=VL.data,base=new Date(D.today+"T12:00:00Z");const day=new Date(base.getTime()+VL.day*864e5).toISOString().slice(0,10);VL.dayShown=day;
   const arr=VL.dir==="arr",rot=VL.dir==="rot";let list=volsOf(day)[arr?"arr":"dep"];
   const all=list.length,canc=list.filter(v=>v.cls==="annulee").length,fini=list.filter(volDone).length;
   if(!VL.done&&!q)list=list.filter(v=>!volDone(v)||VL.open===volKey(v));
@@ -994,7 +999,7 @@ function volsView(q){
 /* recherche « Tout » : un numéro de vol (AF7343, AF 7343, 7343) */
 function volsSearch(q){if(!volsFresh())return null;const c=q.replace(/\s/g,"");if(!/^([a-z0-9]{2}\d{1,4}[a-z]?|\d{3,4})$/.test(c))return null;
   const hit=v=>{const n=norm(v.n).replace(/\s/g,"");return n===c||n.replace(/^[a-z0-9]{2}/,"")===c};
-  const d=VL.data.dep.filter(hit),a=VL.data.arr.filter(hit);if(!d.length&&!a.length)return null;
+  const d=VL.data.dep.filter(hit),a=VL.data.arr.filter(v=>v.t.slice(0,10)>=VL.data.today&&hit(v));if(!d.length&&!a.length)return null;
   return `<div class="card" style="padding:2px 12px">${d.map(v=>volRow(v,false,"")).join("")}${a.map(v=>volRow(v,true,"")).join("")}</div>`}
 /* bandeau d'alertes de l'accueil : vols annulés et gros retards (aujourd'hui, à venir) */
 function homeAlerts(){if(!volsFresh())return "";const now=Date.now(),{dep,arr}=volsOf(VL.data.today);const items=[];
