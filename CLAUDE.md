@@ -62,6 +62,10 @@ L'utilisateur échange en français.
   **Flèche du vent** (`.vane`, `--d` = direction METAR) qui oscille doucement, plus vite avec rafales, tourne si VRB.
 - Rubriques vides : **recherches récentes** par rubrique (`coa-recent-<onglet>`, 6 max, retenues 1,8 s après la frappe,
   `QUICK_TABS`) et, pour Aéroports, les **lignes MRS** (`MRS_LINES`) en pastilles (`data-qq`).
+- Ajouts du même soir (demandés) : **compte à rebours** sur les vols à venir (`.vcd`, `cdText`, heure prévue + retard annoncé,
+  3 h à l'avance au plus, « maintenant » jusqu'à 10 min après, pastille pleine qui pulse à 15 min ou moins), **« relu il y a N
+  min » qui avance tout seul** (`data-ago`), les deux rafraîchis par `liveTick` (20 s, appelé aussi par `render`) ; **blocs qui
+  scintillent** pendant le chargement (`SKEL`) à la place des textes « Chargement… » (météo, vols, NOTAM, bases).
 - « Sources » déplacé du pied de page vers Réglages. Entrée douce du contenu au changement de rubrique seulement (`lastTab`,
   `#out.enter`). Tout est immobile avec « réduire les animations ».
 

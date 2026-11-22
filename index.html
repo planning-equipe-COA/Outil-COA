@@ -252,6 +252,15 @@ html[data-theme=dark] .wxa.danger{background:#3d1a1d;color:#ffb3b3}
 #out.enter .home .tile{animation:riseIn .4s cubic-bezier(.2,.8,.2,1) both}
 @media (prefers-reduced-motion:reduce){#out.enter>*,#out.enter .home .tile,.vane svg,#bnav .bdot.show,#bnav svg{animation:none!important;transition:none!important}.vane svg{transform:rotate(var(--d))}}
 @media print{#bnav{display:none}}
+/* compte à rebours des vols, chargement qui scintille */
+.vcd{font-size:12px;font-weight:700;color:var(--acc);background:var(--acc2);border-radius:999px;padding:1px 8px;white-space:nowrap}
+.vcd:empty{display:none}
+.vcd.soon{background:var(--acc);color:#fff;animation:vcdPulse 1.8s ease-in-out infinite}
+@keyframes vcdPulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--acc) 55%,transparent)}60%{box-shadow:0 0 0 6px transparent}}
+.skel{display:grid;gap:10px;padding:4px 0}
+.skel i{display:block;height:14px;border-radius:7px;background:linear-gradient(90deg,var(--line) 25%,color-mix(in srgb,var(--line) 40%,var(--card)) 50%,var(--line) 75%);background-size:300% 100%;animation:skel 1.4s ease-in-out infinite}
+@keyframes skel{from{background-position:100% 0}to{background-position:0 0}}
+@media (prefers-reduced-motion:reduce){.vcd.soon,.skel i{animation:none}}
 </style>
 </head>
 <body>
@@ -848,7 +857,7 @@ function wxAlertBox(full){const a=wxAlerts();if(!a.length)return "";
   return `<div class="wxal">${a.map(x=>`<div class="wxa ${x.lvl}"><b>${esc(x.when)}</b> : ${esc(x.txt)}</div>`).join("")}<div class="sub" style="margin-top:4px">Lu dans le METAR et le TAF : aide seulement, ne remplace pas les MAA de Météo-France.</div></div>`}
 function wxCard(full){
   if(!WX.metar&&!WX.loading)wxLoad();
-  if(!WX.metar)return `<div class="wx"><div class="wxh"><b>Météo LFML</b></div><div class="sub">${WX.err?esc(WX.err):"Chargement…"}</div></div>`;
+  if(!WX.metar)return `<div class="wx"><div class="wxh"><b>Météo LFML</b></div>${WX.err?`<div class="sub">${esc(WX.err)}</div>`:SKEL(4)}</div>`;
   const o=wxDecode(WX.metar.replace(/^(METAR|SPECI)\s+/,"").replace(/^LFML\s+/,""));
   const age=Math.round((Date.now()-WX.at)/60e3);
   const cell=(l,v)=>v?`<div><span>${l}</span>${esc(v)}</div>`:"";
@@ -860,7 +869,7 @@ function wxCard(full){
   ${o.trend?`<div class="sub" style="margin-top:6px">Tendance : ${esc(o.trend)}</div>`:""}
   <div class="sub" style="margin-top:6px">ATIS <b>125.355</b> · Tour <b>133.100</b> · Sol <b>121.905</b> · Prévol <b>121.730</b></div>
   ${full?`<div class="sub" style="margin-top:6px">${sunLine()}</div>`:""}
-  ${full?`<div class="raw">METAR ${esc(WX.metar)}</div><div class="raw">TAF ${esc(WX.taf)}</div><p class="sub">Source : MET Norway (api.met.no), relevés officiels de LFML. ${WX.err?esc(WX.err)+" · ":""}Relevé chargé il y a ${age} min. Le décodage est une aide : le METAR et le TAF bruts font foi.</p>`:`<div class="sub" style="margin-top:6px">Toucher pour le METAR et le TAF complets${age>60?` · relevé d'il y a ${age} min`:""}</div>`}</div>`;
+  ${full?`<div class="raw">METAR ${esc(WX.metar)}</div><div class="raw">TAF ${esc(WX.taf)}</div><p class="sub">Source : MET Norway (api.met.no), relevés officiels de LFML. ${WX.err?esc(WX.err)+" · ":""}Relevé chargé <span data-ago="${WX.at}">il y a ${age} min</span>. Le décodage est une aide : le METAR et le TAF bruts font foi.</p>`:`<div class="sub" style="margin-top:6px">Toucher pour le METAR et le TAF complets${age>60?` · relevé d'il y a ${age} min`:""}</div>`}</div>`;
 }
 
 /* NOTAM LFML : relais Cloudflare (tools/notam-worker.js) qui garde les identifiants de la source (autorouter.aero, sinon FAA).
@@ -931,11 +940,18 @@ function volDetail(v,arr){
     ${arr?"":line("Banques d'enregistrement",esc(v.banques))}
     ${line("Assistant",esc(hd||""))}
     <div class="vbtns">${handlerNames(hd).map(n=>`<button class="glink" data-ctq="${esc(n)}">Contacts ${esc(n)}</button>`).join("")}${st.map(p=>`<button class="glink" data-openposte="${esc(p)}">Fiche MUA ${esc(p)}</button>`).join("")}<button class="glink" data-alq="${esc(v.al)}">Fiche compagnie</button></div></div>`}
+/* compte à rebours « dans 12 min » (3 h à l'avance au plus), « maintenant » jusqu'à 10 min après ; rafraîchi par liveTick */
+function cdText(ms){const m=Math.round((ms-Date.now())/60e3);if(m<-10||m>180)return "";if(m<=0)return "maintenant";
+  return "dans "+(m<60?m+" min":Math.floor(m/60)+" h"+(m%60?" "+String(m%60).padStart(2,"0"):""))}
+function liveTick(){if(document.hidden)return;
+  document.querySelectorAll("[data-cd]").forEach(el=>{const ms=+el.dataset.cd,t=cdText(ms);if(el.textContent!==t)el.textContent=t;el.classList.toggle("soon",!!t&&ms-Date.now()<=15*60e3)});
+  document.querySelectorAll("[data-ago]").forEach(el=>{const m=Math.max(0,Math.round((Date.now()-+el.dataset.ago)/60e3)),t=m<1?"à l'instant":`il y a ${m} min`;if(el.textContent!==t)el.textContent=t})}
+setInterval(liveTick,20e3);document.addEventListener("visibilitychange",liveTick);
 function volRow(v,arr,q,ico){const h=v.t.slice(11,16),z=volZ(v.t),hd=MRS_HANDLER[v.al],open=VL.open===volKey(v),dl=volDelay(v);
   const stCls=v.cls==="annulee"?"#c62828":volDone(v)?"var(--mute)":dl&&dl>=15||/retard/i.test(v.st)?"#b26a00":v.cls==="expected"||v.cls==="confirmed"?"var(--acc)":"#2e7d32";
   const where=arr?(v.tapis?"Tapis "+v.tapis:""):[v.porte?"Porte "+v.porte:"",v.term].filter(Boolean).join(" · ");
   return `<div class="u-row vrow${open?" open":""}" data-vk="${esc(volKey(v))}" data-varr="${arr?1:0}" role="button" tabindex="0" style="display:block;padding:8px 0;cursor:pointer${v.cls==="annulee"?";opacity:.8":""}"><div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">
-      ${ico?`<span class="sub" style="width:14px">${ico}</span>`:""}<b style="font-size:17px;min-width:48px">${esc(h)}</b><span class="sub" style="min-width:52px">${esc(z)}Z</span>
+      ${ico?`<span class="sub" style="width:14px">${ico}</span>`:""}<b style="font-size:17px;min-width:48px">${esc(h)}</b><span class="sub" style="min-width:52px">${esc(z)}Z</span>${volDone(v)||v.cls==="annulee"?"":`<span class="vcd" data-cd="${volMs(v.t)+(dl||0)*60e3}">${cdText(volMs(v.t)+(dl||0)*60e3)}</span>`}
       <b>${hl(v.n,q)}</b><span>${hl(v.ville,q)} <span class="u-ext" style="margin:0">${esc(v.code)}</span></span>
       ${v.st?`<span style="color:${stCls};font-weight:600;font-size:13px">${esc(v.st)}${dl&&dl>=15?` (+${dl} min)`:""}</span>`:""}<span class="sub" style="margin-left:auto">${open?"▴":"▾"}</span></div>
       <div class="sub" style="margin-top:2px">${hl(v.cie,q)}${hd?" · "+hl(hd,q):""}${where?" · "+hl(where,q):""}</div>${open?volDetail(v,arr):""}</div>`}
@@ -956,7 +972,7 @@ function rotRow(r,q){const {a,d}=r;if(!a)return volRow(d,false,q,"↑");if(!d)re
     <div style="display:flex;gap:8px;align-items:baseline;flex-wrap:wrap"><b>${hl(a.ville,q)}</b> <span class="u-ext" style="margin:0">${esc(a.code)}</span><span class="sub">${hl(a.cie,q)}${hd?" · "+hl(hd,q):""} · escale ${hm(r.g)}${d.t.slice(0,10)!==a.t.slice(0,10)?" · départ le lendemain":""}</span><span class="sub" style="margin-left:auto">${open?"▴":"▾"}</span></div>
     ${half(a,true)}${half(d,false)}${open?volDetail(a,true)+volDetail(d,false):""}</div>`}
 function volsView(q){
-  if(!VL.data)return `<div class="info">${VL.err?esc(VL.err):"Chargement des vols…"}</div>`;
+  if(!VL.data)return VL.err?`<div class="info">${esc(VL.err)}</div>`:`<div class="card">${SKEL(5)}</div>`;
   const D=VL.data,base=new Date(D.today+"T12:00:00Z");const day=new Date(base.getTime()+VL.day*864e5).toISOString().slice(0,10);
   const arr=VL.dir==="arr",rot=VL.dir==="rot";let list=volsOf(day)[arr?"arr":"dep"];
   const all=list.length,canc=list.filter(v=>v.cls==="annulee").length,fini=list.filter(volDone).length;
@@ -970,8 +986,8 @@ function volsView(q){
   return `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><div class="seg" id="vlDir"><button data-v="dep" class="${!arr&&!rot?"on":""}">Départs</button><button data-v="arr" class="${arr?"on":""}">Arrivées</button><button data-v="rot" class="${rot?"on":""}">Arr. + Dép.</button></div>
     <div class="seg" id="vlDay">${dl.map((l,i)=>`<button data-v="${i}" class="${VL.day===i?"on":""}">${l}</button>`).join("")}</div>
     <label class="sub" style="display:flex;gap:4px;align-items:center"><input type="checkbox" id="vlDone"${VL.done?" checked":""}> ${rot?"rotations terminées":arr?"vols arrivés":"vols décollés"}${rot?"":` (${fini})`}</label></div>
-  ${rot?`<div class="info">${nRot} rotations le ${day.split("-").reverse().join("/")} : arrivée ↓ et départ ↑ du même avion, rapprochés par compagnie, escale et numéros de vol (rapprochement probable, le GANTT fait foi). Les vols sans rotation trouvée sont seuls. Site de l'aéroport mis à jour à ${esc(D.maj||"?")}, relu il y a ${age} min <button class="btn" id="vlRefresh" style="font-size:12px;padding:3px 8px">Actualiser</button></div>
-  <div class="card" style="padding:2px 12px">${rots.map(r=>rotRow(r,q)).join("")||'<div class="info">Aucun vol.</div>'}</div>`:`<div class="info">${all} ${arr?"arrivées":"départs"} le ${day.split("-").reverse().join("/")}${canc?` · <b style="color:#c62828">${canc} annulé${canc>1?"s":""}</b>`:""} · heures locales (Z à côté) · touche un vol pour sa fiche · site de l'aéroport mis à jour à ${esc(D.maj||"?")}, relu il y a ${age} min${VL.err?" · "+esc(VL.err):""} <button class="btn" id="vlRefresh" style="font-size:12px;padding:3px 8px">Actualiser</button></div>
+  ${rot?`<div class="info">${nRot} rotations le ${day.split("-").reverse().join("/")} : arrivée ↓ et départ ↑ du même avion, rapprochés par compagnie, escale et numéros de vol (rapprochement probable, le GANTT fait foi). Les vols sans rotation trouvée sont seuls. Site de l'aéroport mis à jour à ${esc(D.maj||"?")}, relu <span data-ago="${VL.at}">il y a ${age} min</span> <button class="btn" id="vlRefresh" style="font-size:12px;padding:3px 8px">Actualiser</button></div>
+  <div class="card" style="padding:2px 12px">${rots.map(r=>rotRow(r,q)).join("")||'<div class="info">Aucun vol.</div>'}</div>`:`<div class="info">${all} ${arr?"arrivées":"départs"} le ${day.split("-").reverse().join("/")}${canc?` · <b style="color:#c62828">${canc} annulé${canc>1?"s":""}</b>`:""} · heures locales (Z à côté) · touche un vol pour sa fiche · site de l'aéroport mis à jour à ${esc(D.maj||"?")}, relu <span data-ago="${VL.at}">il y a ${age} min</span>${VL.err?" · "+esc(VL.err):""} <button class="btn" id="vlRefresh" style="font-size:12px;padding:3px 8px">Actualiser</button></div>
   <div class="card" style="padding:2px 12px">${list.map(v=>volRow(v,arr,q)).join("")||'<div class="info">Aucun vol.</div>'}</div>`}
   <p class="sub">Source : tableau public des vols de l'aéroport Marseille Provence. Consultation seulement : horaires indicatifs, le GANTT et les messages compagnie font foi.${MUA.annu?"":" Déverrouille le MUA pour voir le poste au contact des portes."}</p>`;
 }
@@ -1002,14 +1018,14 @@ const NQC={LC:"fermé",AS:"hors service",AU:"indisponible",CH:"modifié",CA:"act
 function ntDate(d){if(!d||/PERM/i.test(d))return "permanent";const t=new Date(d);return isNaN(t)?d:t.toLocaleString("fr-FR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit",timeZone:"UTC"})+" UTC"}
 function notamView(q){
   if(!NOTAM_URL)return `<div class="card"><b>NOTAM LFML — pas encore branchés</b><p class="sub">Il faut un petit relais (gratuit) qui garde les identifiants de la source des NOTAM. Les étapes sont prêtes : demande-les dans la conversation avec Claude.</p></div>`;
-  if(!NT.list)return `<div class="info">${NT.err?esc(NT.err):"Chargement des NOTAM…"}</div>`;
+  if(!NT.list)return NT.err?`<div class="info">${esc(NT.err)}</div>`:`<div class="card">${SKEL(5)}</div>`;
   const now=Date.now();
   let list=NT.list.filter(n=>!n.end||/PERM/i.test(n.end)||new Date(n.end).getTime()>now);
   if(q)list=list.filter(n=>norm(n.id+" "+n.text+" "+n.full).includes(q));
   const groups=NQG.map(([name,re])=>[name,[]]);
   list.forEach(n=>{const subj=(n.q||"").replace(/^Q/,"").slice(0,2);const i=NQG.findIndex(([,re])=>re.test(subj));groups[i<0?groups.length-1:i][1].push(n)});
   const age=Math.round((now-NT.at)/60e3);
-  return `<div class="info">${list.length} NOTAM en vigueur ou à venir pour LFML · mis à jour il y a ${age} min${NT.err?" · "+esc(NT.err):""} <button class="btn" id="ntRefresh" style="font-size:12px;padding:3px 8px">Actualiser</button></div>
+  return `<div class="info">${list.length} NOTAM en vigueur ou à venir pour LFML · mis à jour <span data-ago="${NT.at}">il y a ${age} min</span>${NT.err?" · "+esc(NT.err):""} <button class="btn" id="ntRefresh" style="font-size:12px;padding:3px 8px">Actualiser</button></div>
   ${groups.filter(g=>g[1].length).map(([name,ns])=>`<details class="agrp"${q||/^(Postes|Voies|Pistes)/.test(name)?" open":""}><summary>${esc(name)} <span class="cnt">${ns.length}</span></summary><div class="abody">${ns.map(n=>{const c=NQC[(n.q||"").replace(/^Q/,"").slice(2,4)];const started=n.start&&new Date(n.start).getTime()>now;
     return `<div class="u-row" style="display:block;padding:8px 0"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b>${hl(n.id,q)}</b>${c?`<span class="u-ext" style="margin:0">${esc(c)}</span>`:""}${started?'<span class="u-ext" style="margin:0;color:#b26a00">à venir</span>':""}<span class="sub">${!n.end||/PERM/i.test(n.end)?"depuis le "+esc(ntDate(n.start))+" · permanent":"du "+esc(ntDate(n.start))+" au "+esc(ntDate(n.end))}</span></div>
     <div style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px;margin-top:4px;white-space:pre-wrap">${hl(n.text,q)}</div></div>`}).join("")}</div></details>`).join("")||'<div class="info">Aucun NOTAM.</div>'}
@@ -1477,6 +1493,7 @@ function quickView(k){if(!QUICK_TABS.includes(k))return "";const r=recents(k),ch
 let recentT=0;
 function rememberSearch(){clearTimeout(recentT);recentT=setTimeout(()=>{const v=$("#q").value.trim();if(v.length<2||!QUICK_TABS.includes(tab))return;
   const k=tab,a=recents(k).filter(x=>norm(x)!==norm(v));a.unshift(v);store("coa-recent-"+k,JSON.stringify(a.slice(0,6)))},1800)}
+const SKEL=(n=3)=>`<div class="skel" aria-label="Chargement…">${Array.from({length:n},(_,i)=>`<i style="width:${[92,70,84,60,78][i%5]}%"></i>`).join("")}</div>`;
 function render(){
   document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.k===tab));
   $("#menuCur").textContent=tabName(tab);
@@ -1484,7 +1501,7 @@ function render(){
   const q=norm($("#q").value.trim());
   const out=$("#out");
   const needData=["all","ap","al","pl","fl"].includes(tab);
-  if(needData&&loaded!==true){out.innerHTML=`<div class="info">${loaded==="err"?"Impossible de charger les bases de codes.":"Chargement des bases…"}</div>`;if(tab!=="all")return}
+  if(needData&&loaded!==true){out.innerHTML=loaded==="err"?`<div class="info">Impossible de charger les bases de codes.</div>`:`<div class="card">${SKEL(4)}</div>`;bnavRender();if(tab!=="all")return}
   let h="";
   switch(tab){
     case "ap":h=apTable(q,200)+(q?'<div class="info">Temps de vol estimés (porte à porte, vent moyen d\'ouest) : vérifie toujours l\'horaire de la compagnie.</div>':"");break;
@@ -1526,6 +1543,7 @@ function render(){
   }
   out.innerHTML=(HELP[tab]&&!q?`<p class="tabhelp">${HELP[tab]}</p>`:"")+(q?"":quickView(tab))+h;
   bnavRender();
+  liveTick();
   if(tab!==lastTab){lastTab=tab;out.classList.remove("enter");void out.offsetWidth;out.classList.add("enter")}
   document.querySelectorAll("[data-qq]").forEach(b=>b.onclick=()=>{$("#q").value=b.dataset.qq;render();scrollTo(0,0)});
   if(tab==="ct")bindContacts();
