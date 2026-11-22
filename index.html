@@ -928,7 +928,7 @@ const volKey=v=>v.n+"|"+v.t;
 function volDelay(v){if(volDone(v)||v.cls==="annulee")return null;const m=String(v.st).match(/(\d{1,2}):(\d{2})/);if(!m)return null;
   const s0=parseHM(v.t.slice(11,16)),s1=+m[1]*60+ +m[2];let d=s1-s0;if(d<-720)d+=1440;if(d>720)d-=1440;return d>=5?d:null}
 function volsOf(day){const D=VL.data;if(!D)return {dep:[],arr:[]};return {dep:D.dep.filter(v=>v.t.slice(0,10)===day),arr:D.arr.filter(v=>v.t.slice(0,10)===day)}}
-const volMatch=(v,q)=>norm([v.n,v.n.replace(/\s/g,""),v.cie,v.ville,v.code,v.porte&&"porte "+v.porte,v.tapis&&"tapis "+v.tapis,MRS_HANDLER[v.al]||""].join(" ")).includes(q);
+const volMatch=(v,q)=>norm([v.n,v.n.replace(/\s/g,""),v.cie,v.ville,v.code,v.porte&&"porte "+v.porte,v.tapis&&"tapis "+v.tapis,MRS_HANDLER[v.al]||"",v.reg||"",v.reg?fmtReg(v.reg):""].join(" ")).includes(q);
 /* assistants cités dans MRS_HANDLER (« Passage Air France · coordo Aviapartner » → Air France, Aviapartner) */
 const handlerNames=h=>["Aviapartner","Alyzia","Air France","Onet"].filter(n=>String(h||"").includes(n));
 /* départs prévus par poste (porte au contact) : calculé une fois par liste de vols et annuaire */
@@ -946,6 +946,7 @@ function volDetail(v,arr){
     ${line(arr?"Provenance":"Destination",ap?`${esc(ap[2])} · ${esc(ap[3])}, ${esc(pfr(ap[4]))} <span class="u-ext" style="margin:0">${esc(ap[0])} · ${esc(ap[1])}</span>`:esc(v.ville))}
     ${line("Temps de vol estimé",f?`≈ ${hm(arr?f.back:f.go)} · ${f.d.toLocaleString("fr")} km`:"")}
     ${line("Horaire",`${esc(v.t.slice(11,16))} locale · ${esc(volZ(v.t))} Z${dl?` · <b style="color:#b26a00">retard ≈ ${dl} min</b>`:""}`)}
+    ${line("Avion",v.reg?esc(fmtReg(v.reg)+(v.type?" · "+v.type:"")):"")}
     ${line("Statut",esc([v.st,v.emb].filter(Boolean).join(" · ")))}
     ${arr?line("Tapis bagages",esc(v.tapis)):line("Porte",esc([v.porte,v.zone&&v.zone!==v.term?"zone "+v.zone:"",v.term].filter(Boolean).join(" · ")))}
     ${arr?"":line("Banques d'enregistrement",esc(v.banques))}
@@ -971,10 +972,18 @@ function volRow(v,arr,q,ico){const h=v.t.slice(11,16),z=volZ(v.t),hd=MRS_HANDLER
 /* nightstops : on rapproche aussi les arrivées de la veille à partir de 14 h (gardées par le relais) et on accepte 18 h d'escale */
 function volsRotations(day){const D=VL.data;const prev=new Date(Date.parse(day+"T12:00:00Z")-864e5).toISOString().slice(0,10)+"T14:00";
   const A=D.arr.filter(v=>v.t.slice(0,10)===day||(v.t>=prev&&v.t.slice(0,10)<day)),P=D.dep.filter(v=>v.t.slice(0,10)>=day);
-  const num=v=>+String(v.n.split(" ")[1]||"").replace(/\D/g,"");const used=new Set(),out=[];
-  A.forEach(a=>{let best=null;P.forEach(d=>{if(used.has(d)||d.al!==a.al||d.code!==a.code||Math.abs(num(d)-num(a))>1)return;
-    const g=(volMs(d.t)-volMs(a.t))/60e3;if(g<20||g>18*60)return;if(!best||g<best[1])best=[d,g]});
-    if(best){used.add(best[0]);if(a.t.slice(0,10)===day||best[0].t.slice(0,10)===day)out.push({a,d:best[0],g:Math.round(best[1])})}
+  const num=v=>+String(v.n.split(" ")[1]||"").replace(/\D/g,"");const used=new Set(),out=[],pair=new Map();
+  /* 1) même immatriculation (AeroDataBox via le relais) : départ suivant du même avion, avant sa prochaine arrivée.
+        Un avion qui reste plusieurs jours (RYR l'hiver) n'a pas de départ dans la liste : il reste seul, c'est voulu. */
+  A.forEach((a,i)=>{if(!a.reg)return;const ta=volMs(a.t);const nx=A.slice(i+1).find(x=>x.reg===a.reg);const lim=nx?volMs(nx.t):Infinity;
+    let best=null;P.forEach(d=>{if(used.has(d)||d.reg!==a.reg)return;const td=volMs(d.t);if(td-ta<15*60e3||td>lim)return;if(!best||td<volMs(best.t))best=d});
+    if(best){used.add(best);pair.set(a,[best,(volMs(best.t)-ta)/60e3,true])}});
+  /* 2) sinon (immatriculation inconnue d'un côté) : compagnie + escale + numéros voisins, escale 20 min à 18 h */
+  A.forEach(a=>{if(pair.has(a))return;let best=null;P.forEach(d=>{if(used.has(d)||d.al!==a.al||d.code!==a.code||Math.abs(num(d)-num(a))>1)return;
+    if(a.reg&&d.reg&&a.reg!==d.reg)return;const g=(volMs(d.t)-volMs(a.t))/60e3;if(g<20||g>18*60)return;if(!best||g<best[1])best=[d,g]});
+    if(best){used.add(best[0]);pair.set(a,[best[0],best[1],false])}});
+  A.forEach(a=>{const p=pair.get(a);
+    if(p){if(a.t.slice(0,10)===day||p[0].t.slice(0,10)===day)out.push({a,d:p[0],g:Math.round(p[1]),sure:p[2]})}
     else if(a.t.slice(0,10)===day)out.push({a})});
   D.dep.filter(d=>d.t.slice(0,10)===day&&!used.has(d)).forEach(d=>out.push({d}));
   /* tri sur l'heure du jour affiché : arrivée du jour, sinon départ (nightstop arrivé la veille) */
@@ -993,7 +1002,7 @@ function rotRow(r,q){const {a,d}=r,v0=a||d;const k=a&&d?volKey(a)+"#"+volKey(d):
       <div class="sub">${arr?(v.tapis?"Tapis "+esc(v.tapis):""):(v.porte?"Porte "+esc(v.porte):"")}</div></div>`};
   const ns=a&&d&&d.t.slice(0,10)!==a.t.slice(0,10);
   return `<div class="rcard vrow${open?" open":""}" data-vk="${esc(k)}" data-varr="2" role="button" tabindex="0">
-    <div class="rhead"><b>${hl(v0.cie,q)}</b>${hd?`<span class="sub">· ${hl(hd,q)}</span>`:""}${a&&d?`<span class="sub">· escale ${hm(r.g)}</span>`:""}${ns?`<span class="u-ext" style="margin:0;color:var(--acc);border-color:var(--acc)">Nightstop</span>`:""}<span class="sub" style="margin-left:auto">${open?"▴":"▾"}</span></div>
+    <div class="rhead"><b>${hl(v0.cie,q)}</b>${hd?`<span class="sub">· ${hl(hd,q)}</span>`:""}${a&&d?`<span class="sub">· escale ${hm(r.g)}</span>`:""}${(a||{}).reg||(d||{}).reg?`<span class="u-ext" style="margin:0">${esc(fmtReg((a&&a.reg)||d.reg))}${((a&&a.type)||(d&&d.type))?" · "+esc((a&&a.type)||d.type):""}</span>`:""}${a&&d&&!r.sure?`<span class="sub" title="Rapproché par les numéros de vol, sans immatriculation">· probable</span>`:""}${ns?`<span class="u-ext" style="margin:0;color:var(--acc);border-color:var(--acc)">Nightstop</span>`:""}<span class="sub" style="margin-left:auto">${open?"▴":"▾"}</span></div>
     <div class="rgrid">${half(a,true)}${half(d,false)}</div>
     ${open?(a?`<div class="rdh">↓ Arrivée ${esc(a.n)}</div>${volDetail(a,true)}`:"")+(d?`<div class="rdh">↑ Départ ${esc(d.n)}</div>${volDetail(d,false)}`:""):""}</div>`}
 function volsView(q){
@@ -1011,7 +1020,7 @@ function volsView(q){
   return `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><div class="seg" id="vlDir"><button data-v="dep" class="${!arr&&!rot?"on":""}">Départs</button><button data-v="arr" class="${arr?"on":""}">Arrivées</button><button data-v="rot" class="${rot?"on":""}">Arr. + Dép.</button></div>
     <div class="seg" id="vlDay">${dl.map((l,i)=>`<button data-v="${i}" class="${VL.day===i?"on":""}">${l}</button>`).join("")}</div>
     <label class="sub" style="display:flex;gap:4px;align-items:center"><input type="checkbox" id="vlDone"${VL.done?" checked":""}> ${rot?"rotations terminées":arr?"vols arrivés":"vols décollés"}${rot?"":` (${fini})`}</label></div>
-  ${rot?`<div class="info">${nRot} rotations le ${day.split("-").reverse().join("/")} : arrivée ↓ et départ ↑ du même avion, rapprochés par compagnie, escale et numéros de vol (rapprochement probable, le GANTT fait foi). Les vols sans rotation trouvée sont seuls. Site de l'aéroport mis à jour à ${esc(D.maj||"?")}, relu <span data-ago="${VL.at}">il y a ${age} min</span> <button class="btn" id="vlRefresh" style="font-size:12px;padding:3px 8px">Actualiser</button></div>
+  ${rot?`<div class="info">${nRot} rotations le ${day.split("-").reverse().join("/")} : arrivée ↓ et départ ↑ du même avion, reliés par l'immatriculation quand elle est connue${D.adb?` (${D.adb.n} vols renseignés${D.adb.err?" · "+esc(D.adb.err):""})`:" (pas encore branchée)"}, sinon par compagnie, escale et numéros de vol (« probable »). Les vols sans rotation trouvée sont seuls. Site de l'aéroport mis à jour à ${esc(D.maj||"?")}, relu <span data-ago="${VL.at}">il y a ${age} min</span> <button class="btn" id="vlRefresh" style="font-size:12px;padding:3px 8px">Actualiser</button></div>
   <div class="rlist">${rots.map(r=>rotRow(r,q)).join("")||'<div class="info">Aucun vol.</div>'}</div>`:`<div class="info">${all} ${arr?"arrivées":"départs"} le ${day.split("-").reverse().join("/")}${canc?` · <b style="color:#c62828">${canc} annulé${canc>1?"s":""}</b>`:""} · heures locales (Z à côté) · touche un vol pour sa fiche · site de l'aéroport mis à jour à ${esc(D.maj||"?")}, relu <span data-ago="${VL.at}">il y a ${age} min</span>${VL.err?" · "+esc(VL.err):""} <button class="btn" id="vlRefresh" style="font-size:12px;padding:3px 8px">Actualiser</button></div>
   <div class="card" style="padding:2px 12px">${list.map(v=>volRow(v,arr,q)).join("")||'<div class="info">Aucun vol.</div>'}</div>`}
   <p class="sub">Source : tableau public des vols de l'aéroport Marseille Provence. Consultation seulement : horaires indicatifs, le GANTT et les messages compagnie font foi.${MUA.annu?"":" Déverrouille le MUA pour voir le poste au contact des portes."}</p>`;

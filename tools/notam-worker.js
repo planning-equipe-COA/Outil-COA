@@ -149,7 +149,52 @@ async function fetchBoard(kind, stopDay) {
   }));
   return { maj: data.lastUpdate || '', rows: out };
 }
-async function vols(origin, ctx) {
+/* ---------- Immatriculations des vols : AeroDataBox (RapidAPI), facultatif ---------- */
+// Secret ADB_KEY (clé RapidAPI). Sans lui, les vols restent sans immatriculation.
+// Variable ADB_REFRESH_MIN : délai entre deux mises à jour de la tranche en cours (360 = offre gratuite, 30 = offre Pro).
+// Tranches de 12 h (heure de Marseille) : veille 12 h-24 h (nightstops), aujourd'hui 0 h-12 h et 12 h-24 h.
+// Chaque tranche est gardée en cache : une tranche passée n'est plus jamais redemandée (24 h), un échec bloque 30 min.
+async function adbWindow(env, from, to, current) {
+  const cache = caches.default, key = new Request(`https://notam-cache.local/adb/${from}`);
+  const hit = await cache.match(key);
+  if (hit) return hit.json();
+  let body;
+  try {
+    const url = `https://aerodatabox.p.rapidapi.com/flights/airports/icao/LFML/${from}/${to}?withLeg=false&direction=Both&withCancelled=true&withCodeshared=false&withCargo=false&withPrivate=false&withLocation=false`;
+    const r = await fetch(url, { headers: { 'X-RapidAPI-Key': env.ADB_KEY, 'X-RapidAPI-Host': 'aerodatabox.p.rapidapi.com' } });
+    if (r.status === 204) body = { regs: {}, at: Date.now() };
+    else {
+      if (!r.ok) throw new Error('AeroDataBox ' + r.status);
+      const j = await r.json(), regs = {};
+      for (const [dir, list] of [['D', j.departures || []], ['A', j.arrivals || []]]) for (const f of list) {
+        const reg = f.aircraft && f.aircraft.reg, t = f.movement && f.movement.scheduledTime && f.movement.scheduledTime.local;
+        if (!reg || !f.number || !t) continue;
+        regs[`${dir}|${f.number.replace(/\s/g, '').toUpperCase()}|${t.slice(0, 16).replace(' ', 'T')}`] = [reg.replace(/-/g, '').toUpperCase(), (f.aircraft.model || '')];
+      }
+      body = { regs, at: Date.now(), left: r.headers.get('x-ratelimit-requests-remaining') || '' };
+    }
+    const ttl = current ? 60 * Math.max(15, +(env.ADB_REFRESH_MIN || 360)) : 86400;
+    await cache.put(key, new Response(JSON.stringify(body), { headers: { 'Cache-Control': `max-age=${ttl}` } }));
+  } catch (e) {
+    body = { regs: {}, err: String(e.message || e) };
+    await cache.put(key, new Response(JSON.stringify(body), { headers: { 'Cache-Control': 'max-age=1800' } }));
+  }
+  return body;
+}
+async function addRegs(env, body, now) {
+  if (!env.ADB_KEY) return;
+  const today = body.today, hier = parisDay(new Date(now.getTime() - 86400000));
+  const h = Number(new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Paris', hour: '2-digit', hourCycle: 'h23' }).format(now));
+  const wins = [[hier + 'T12:00', hier + 'T23:59', false], [today + 'T00:00', today + 'T11:59', h < 12]];
+  if (h >= 12) wins.push([today + 'T12:00', today + 'T23:59', true]);
+  const res = await Promise.all(wins.map(([a, b, c]) => adbWindow(env, a, b, c)));
+  const regs = Object.assign({}, ...res.map(x => x.regs));
+  const put = (rows, dir) => rows.forEach(r => { const x = regs[`${dir}|${r.n.replace(/\s/g, '').toUpperCase()}|${r.t.slice(0, 16)}`]; if (x) { r.reg = x[0]; r.type = x[1]; } });
+  put(body.dep, 'D'); put(body.arr, 'A');
+  const err = res.find(x => x.err);
+  body.adb = { n: Object.keys(regs).length, err: err ? err.err : '', left: (res.find(x => x.left) || {}).left || '' };
+}
+async function vols(origin, ctx, env) {
   const cache = caches.default, key = new Request('https://notam-cache.local/vols');
   const hit = await cache.match(key);
   if (hit) return json(await hit.json(), 200, origin, { 'X-Cache': 'HIT' });
@@ -162,6 +207,7 @@ async function vols(origin, ctx) {
     const veille = parisDay(new Date(now.getTime() - 86400000)) + 'T14:00';
     const body = { at: now.toISOString(), today, source: 'marseille.aeroport.fr (tableau public des vols)',
       maj: dep.maj || arr.maj, dep: dep.rows.filter(keep), arr: arr.rows.filter(r => r.t >= veille) };
+    await addRegs(env, body, now).catch(() => {});
     ctx.waitUntil(cache.put(key, new Response(JSON.stringify(body), { headers: { 'Cache-Control': `max-age=${VOLS_CACHE_SECONDS}` } })));
     return json(body, 200, origin, { 'X-Cache': 'MISS' });
   } catch (e) {
@@ -173,7 +219,7 @@ export default {
   async fetch(request, env, ctx) {
     const origin = request.headers.get('Origin') || '';
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(origin) });
-    if (new URL(request.url).searchParams.has('vols')) return vols(origin, ctx);
+    if (new URL(request.url).searchParams.has('vols')) return vols(origin, ctx, env);
     const icao = (new URL(request.url).searchParams.get('icao') || 'LFML').toUpperCase();
     if (!ALLOWED.includes(icao)) return json({ error: 'code non autorisé' }, 400, origin);
     const useAr = env.AR_EMAIL && env.AR_PASSWORD, useFaa = env.FAA_CLIENT_ID && env.FAA_CLIENT_SECRET;

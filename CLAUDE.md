@@ -283,3 +283,11 @@ L'utilisateur échange en français.
   Nightstops : le relais garde aussi les arrivées de la VEILLE à partir de 14 h (heure de Paris) ; badge « Nightstop »,
   « la veille » / « le lendemain » devant l'heure. Les listes Départs / Arrivées, l'accueil et la recherche ignorent
   ces arrivées de la veille (`volsOf(day)` filtre la date).
+- Immatriculations des vols (Raph OK 22/11/2026) : AeroDataBox via RapidAPI, dans le même worker (`addRegs`, `adbWindow`).
+  Secret `ADB_KEY` (clé RapidAPI, jamais dans le dépôt), variable `ADB_REFRESH_MIN` (360 = offre gratuite Basic,
+  400 unités/mois, PAS d'usage commercial → essai seulement ; 30 = offre Pro 8 $/mois, usage pro autorisé).
+  Tranches de 12 h (veille 12-24 h, aujourd'hui 0-12 h, 12-24 h), chacune en cache (passée : 24 h ; échec : 30 min).
+  Champs ajoutés aux vols : `reg`, `type` ; `body.adb` = {n, err, left}. Appli : rotations d'abord par immatriculation
+  (départ suivant du même avion avant sa prochaine arrivée ; RYR qui reste plusieurs jours → seul, voulu), sinon par
+  numéros voisins (« probable »). Deviner par les horaires : REFUSÉ par Raph (avions RYR immobilisés plusieurs jours l'hiver).
+  Le GANTT « flight-planning » n'est pas utilisé en exploitation (Raph, 22/11/2026) : pas une source pour l'appli.
