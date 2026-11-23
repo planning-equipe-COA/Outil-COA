@@ -165,6 +165,13 @@ L'utilisateur échange en français.
   Sous l'heure (demandé le 23 nov. 2026) : saison aéronautique et décalage, « Hiver W26 · GMT+1 » / « Été S27 · GMT+2 »
   (`iataSeason(d)` : été IATA = heure d'été en France, du dernier dimanche de mars au dernier samedi d'octobre ; code W = année
   de début de l'hiver). Rappel aussi dans Calculs → « Heure Z ↔ heure de Marseille ».
+- **Rubrique « Procédures »** (`proc`, thème Escale MRS ; demandée le 23 nov. 2026, Raph les fournit au fur et à mesure) :
+  chiffrées avec la clé du MUA → `mua/procedures.enc` (liste) + `mua/p-<id>-<n>.enc` (pages JPEG). Construction :
+  `MUA_CODE="…" python3 tools/proc_build.py DOSSIER` (dossier HORS du dépôt ; un fichier par procédure, PDF / image / .md / .txt,
+  nommé « Catégorie - Titre.ext » ; « Titre.json » facultatif : date, ref, resume, etapes[]). Tout est refait à chaque fois (garder
+  toutes les sources). Appli : `procView` (liste par catégorie, recherche dans titre + texte, détail avec résumé, étapes numérotées,
+  boutons des pages, texte extrait), pages dans la visionneuse des fiches MUA (`procPage`, variable `PV` ; ‹ › = pages).
+  Verrouillée tant que le MUA n'est pas ouvert. Testée avec des procédures fictives ; **aucune procédure réelle encore**.
 - **Rubrique « Codes avion »** (`codes`, Référentiels après Avions ; demandée le 23 nov. 2026, confusion fréquente au PCE) :
   `codesView` — 1. lettre d'envergure OACI A–F (`SPAN`, nombreux exemples) + chiffre 1–4 (longueur de piste) ; 2. sillage OACI
   L/M/H/J ; 3. RECAT-EU CAT-A–F (exemples de la liste EASA) ; 4. catégorie d'approche A–E (Vat, exemples Airbus) ; 5. bruit

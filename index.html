@@ -527,9 +527,40 @@ function codesView(q){
   return h+`<p class="sub">Sources : OACI (Annexe 14, Doc 8168), EASA (liste RECAT-EU), documents de caractéristiques Airbus. Exemples d'envergure : valeurs constructeur, à confirmer avec la fiche MUA du poste.</p>`;
 }
 
+/* ---------- Procédures (rubrique « proc ») : mua/procedures.enc + pages mua/p-*.enc, même clé que le MUA (tools/proc_build.py) ---------- */
+const PROC={items:null,open:null};let PV=null;
+async function procPage(p,j){const pg=p.pages[j];if(!pg)return;PV={p,j};MUA.cur=-2;MUA.zoom=1;
+  $("#vtitle").textContent=p.title+(p.pages.length>1?` · page ${j+1}/${p.pages.length}`:"");
+  $("#viewer").classList.remove("hide");vLayout();vHint();
+  const img=$("#vimg");img.removeAttribute("src");img.alt="Chargement…";
+  try{if(!MUA.urls[pg.id]){const b=await muaDecrypt(await muaFetch(pg.id+".enc"));MUA.urls[pg.id]=URL.createObjectURL(new Blob([b],{type:"image/jpeg"}))}
+    if(!PV||PV.p!==p||PV.j!==j)return;img.src=MUA.urls[pg.id];img.alt=p.title}
+  catch(e){img.alt="Page indisponible hors connexion (ouvre-la une fois avec du réseau)."}
+  vFit()}
+function procView(q){
+  if(!MUA.sheets)return `<div class="card"><b>Procédures protégées</b><p class="sub">Les procédures sont chiffrées avec le code du MUA. Ouvre l'onglet MUA et saisis le code pour les voir.</p></div>`;
+  const items=PROC.items||[];
+  if(PROC.open&&!q){const p=items.find(x=>x.id===PROC.open);if(p)return `<p><button class="btn" id="procBack">‹ Toutes les procédures</button></p>
+    <div class="wx"><div class="wxh" style="display:block"><b style="white-space:normal;display:block;font-size:17px">${esc(p.title)}</b><span class="sub">${esc(p.cat)}${p.date?" · mise à jour "+esc(p.date):""}${p.ref?" · réf. "+esc(p.ref):""}</span></div>
+    ${p.resume?`<p>${esc(p.resume)}</p>`:""}
+    ${(p.etapes||[]).length?`<ol style="padding-left:20px;line-height:1.5">${p.etapes.map(e=>`<li style="margin-bottom:6px">${esc(e)}</li>`).join("")}</ol>`:""}
+    ${p.pages.length?`<div class="finder" style="margin-top:10px">${p.pages.map((g,j)=>`<button class="btn p" data-ppage="${j}">${p.pages.length>1?"Page "+(j+1):"Ouvrir le document"}</button>`).join("")}</div>`:""}
+    ${p.text&&!(p.etapes||[]).length?`<details${p.pages.length?"":" open"}><summary class="sub" style="cursor:pointer">Texte de la procédure</summary><div style="white-space:pre-wrap;font-size:14px;line-height:1.45;margin-top:6px">${esc(p.text)}</div></details>`:""}</div>`}
+  const list=q?items.filter(p=>p._n.includes(q)):items;
+  if(!items.length)return `<div class="info">Aucune procédure pour l'instant. Elles seront ajoutées au fur et à mesure.</div>`;
+  if(!list.length)return `<div class="info">Aucune procédure pour « ${esc(q)} ».</div>`;
+  const cats=[...new Set(list.map(p=>p.cat))];
+  return cats.map(c=>`<h2>${esc(c)}</h2>`+list.filter(p=>p.cat===c).map(p=>`<div class="mcard" role="button" tabindex="0" data-proc="${p.id}" style="margin-bottom:8px"><b>${hl(p.title,q)}</b><div class="sub">${p.date?"Mise à jour "+esc(p.date):""}${p.pages.length?(p.date?" · ":"")+p.pages.length+" page(s)":""}</div>${p.resume?`<div class="sub" style="margin-top:4px">${esc(p.resume)}</div>`:""}</div>`).join("")).join("");
+}
+function bindProc(){
+  document.querySelectorAll("[data-proc]").forEach(b=>b.onclick=()=>{PROC.open=b.dataset.proc;$("#q").value="";render();scrollTo(0,0)});
+  const bk=document.getElementById("procBack");if(bk)bk.onclick=()=>{PROC.open=null;render()};
+  document.querySelectorAll("[data-ppage]").forEach(b=>b.onclick=()=>{const p=(PROC.items||[]).find(x=>x.id===PROC.open);if(p)procPage(p,+b.dataset.ppage)});
+}
+
 /* ---------- État ---------- */
 let AP=[],AL=[],PL=[],loaded=false;
-const TABS=[["home","Accueil"],["mua","MUA"],["ap","Aéroports"],["al","Compagnies"],["pl","Avions"],["codes","Codes avion"],["immat","Immatriculations"],["vols","Vols du jour"],["wx","Météo"],["notam","NOTAM"],["ct","Contacts MRS"],["lfml","Aérodrome"],["fl","Temps de vol"],["calc","Calculs"],["dl","Codes retard"],["ab","Abréviations"],["nato","Alphabet"],["all","Tout"]];
+const TABS=[["home","Accueil"],["mua","MUA"],["ap","Aéroports"],["al","Compagnies"],["pl","Avions"],["codes","Codes avion"],["immat","Immatriculations"],["vols","Vols du jour"],["wx","Météo"],["notam","NOTAM"],["proc","Procédures"],["ct","Contacts MRS"],["lfml","Aérodrome"],["fl","Temps de vol"],["calc","Calculs"],["dl","Codes retard"],["ab","Abréviations"],["nato","Alphabet"],["all","Tout"]];
 let tab="home";let STRICT=false;
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -539,12 +570,13 @@ function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localSto
 
 $("#tabs").innerHTML=TABS.map(([k,l])=>`<button data-k="${k}">${l}</button>`).join("");
 const THEMES=[["Référentiels",[["mua","MUA · fiches de postes","Postes, avions autorisés, plans"],["ap","Aéroports","Codes IATA et OACI"],["al","Compagnies","Codes IATA, OACI et indicatifs"],["pl","Avions","Types, envergure, sillage"],["codes","Codes avion","Envergure, sillage, approche, bruit"],["immat","Immatriculations","Type, compagnie, sièges (code)"]]],
-  ["Escale MRS",[["vols","Vols du jour","Départs et arrivées MRS, statuts, portes"],["wx","Météo et fréquences","METAR, TAF, ATIS, tour, sol"],["notam","NOTAM LFML","Pistes, voies, postes, balisage"],["ct","Contacts MRS","Assistants et services, appeler ou SMS"],["lfml","Aérodrome LFML","AIP, pistes, consignes, AIRAC, SUP AIP"]]],
+  ["Escale MRS",[["vols","Vols du jour","Départs et arrivées MRS, statuts, portes"],["wx","Météo et fréquences","METAR, TAF, ATIS, tour, sol"],["notam","NOTAM LFML","Pistes, voies, postes, balisage"],["proc","Procédures","Procédures COA, pas à pas"],["ct","Contacts MRS","Assistants et services, appeler ou SMS"],["lfml","Aérodrome LFML","AIP, pistes, consignes, AIRAC, SUP AIP"]]],
   ["Outils",[["fl","Temps de vol","Depuis et vers Marseille"],["calc","Calculs","Calculatrice, heure Z ↔ locale, ETA Marseille, durées"]]],
   ["Codes et langage",[["dl","Codes retard","Codes IATA 00 à 99"],["ab","Abréviations","A-CDM, messages, PMR, météo"],["nato","Alphabet","Alphabet OTAN, épellation"]]],
   ["Recherche",[["home","Accueil","Toutes les rubriques en tuiles"],["all","Tout","Une seule recherche dans toutes les rubriques"]]]];
 /* explicatif affiché en haut de chaque rubrique (masqué pendant une recherche) */
 const HELP={
+ proc:"<b>Procédures COA.</b> Classées par thème, protégées par le code du MUA. Tape un mot (bagage, alerte, PMR) pour chercher dans le titre et le texte. Touche une procédure pour l'ouvrir ; les pages s'affichent en grand comme les fiches MUA.",
  codes:"<b>Codes avion : ne pas les confondre.</b> Plusieurs classements utilisent des lettres (envergure A à F, RECAT-EU A à F, catégorie d'approche A à E, sillage L/M/H/J). Cette page les met côte à côte. Pour les postes et les voies de circulation, c'est la <b>lettre d'envergure</b> qui compte. Tape un type (A321, B777) pour le retrouver.",
  mua:"<b>Fiches MUA des postes de stationnement.</b> Tape un poste (5B), un type d'avion (A321) ou utilise « Quel poste pour cet avion ? ». Chaque fiche donne les avions autorisés, les consignes et le plan. La fiche la plus récente est toujours celle affichée. Accès par code.",
  ap:"<b>Aéroports du monde.</b> Cherche par code IATA (ORY), OACI (LFPO), ville ou pays en français. Le temps de vol estimé depuis Marseille s'affiche avec le résultat.",
@@ -580,6 +612,7 @@ const TI={
  ct:'<path d="M5 3.5h3.5l1.8 4.6-2.3 1.4a11.5 11.5 0 0 0 5.5 5.5l1.4-2.3 4.6 1.8V18a2.5 2.5 0 0 1-2.5 2.5A15.5 15.5 0 0 1 2.5 6 2.5 2.5 0 0 1 5 3.5z"/>',
  ap:'<path d="M12 21s-6.5-6-6.5-11a6.5 6.5 0 0 1 13 0c0 5-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/>',
  al:'<path d="M3 14.5 21 8l-1.5-3L12 8 7 3.5 5 4l3 5.5-4 1.5-2-1.5L1 10z"/><path d="M4 20h16"/>',
+ proc:'<path d="M9 5h10M9 12h10M9 19h10"/><path d="M4 5l1 1 2-2M4 12l1 1 2-2M4 19l1 1 2-2"/>',
  codes:'<path d="M3 12h18M7 8l-4 4 4 4M17 8l4 4-4 4"/>',
  pl:'<path d="M21 12.5 13.5 9V4.5a1.5 1.5 0 0 0-3 0V9L3 12.5V15l7.5-2.2V18L8 19.8V21l4-1 4 1v-1.2L13.5 18v-5.2L21 15z"/>',
  dl:'<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/>',
@@ -1278,6 +1311,7 @@ async function muaOpenIndex(){
   MUA.sheets.forEach(s=>{const sy=muaPostes(s).map(p=>synthOf(p)).filter(Boolean).map(e=>e.etudies.map(x=>x.t).join(" ")+" "+(e.ok||[]).join(" ")).join(" ");
     s._n=norm(s.poste+" "+s.alias+" "+s.text+" "+sy)});
   MUA.annu=annuRename(await annuLoad());
+  try{const pr=JSON.parse(new TextDecoder().decode(await muaDecrypt(await muaFetch("procedures.enc"))));PROC.items=pr.items||[];PROC.items.forEach(p=>{p._n=norm(p.cat+" "+p.title+" "+p.ref+" "+p.resume+" "+(p.etapes||[]).join(" ")+" "+p.text)})}catch(e){PROC.items=[]}
   MUA.state="ok";
   setTimeout(muaPrefetch,1500);
 }
@@ -1523,7 +1557,7 @@ function bindMua(){
 }
 /* visionneuse plein écran : zoom par boutons, double-toucher ou pincement */
 async function muaShow(i){
-  const s=MUA.sheets[i];if(!s)return;
+  const s=MUA.sheets[i];if(!s)return;PV=null;
   MUA.cur=i;MUA.zoom=1;
   $("#vtitle").textContent=(muaPostes(s).length>1?"Postes ":"Poste ")+s.poste+(s.part?" · fiche "+s.part:"")+(s.date?" · "+s.date:"");
   $("#viewer").classList.remove("hide");vLayout();vHint();
@@ -1545,7 +1579,7 @@ function vLayout(){const v=$("#viewer"),W=innerWidth,H=innerHeight,rot=vRotOn()&
 function vLocal(x,y){const box=$("#vscroll");if(!vRotated()){const r=box.getBoundingClientRect();return [x-r.left,y-r.top]}
   const bar=$(".vbar").offsetHeight;return [y,(innerWidth-x)-bar];}
 let vHintT=0;function vHint(){const h=$("#vhint");if(!vRotated()){h.classList.add("off");return}h.classList.remove("off");clearTimeout(vHintT);vHintT=setTimeout(()=>h.classList.add("off"),2500)}
-function vFit(){const img=$("#vimg"),box=$("#vscroll");const W=box.clientWidth,H=box.clientHeight;const s=MUA.sheets&&MUA.sheets[MUA.cur];const r=s&&s.w?s.h/s.w:1754/2480;
+function vFit(){const img=$("#vimg"),box=$("#vscroll");const W=box.clientWidth,H=box.clientHeight;const s=PV?PV.p.pages[PV.j]:(MUA.sheets&&MUA.sheets[MUA.cur]);const r=s&&s.w?s.h/s.w:1754/2480;
   const base=Math.min(W,H/r);img.style.width=(base*MUA.zoom)+"px";}
 function vZoom(z,cx,cy){const box=$("#vscroll");const old=MUA.zoom;z=Math.max(1,Math.min(6,z));if(z===old)return;
   cx=cx??box.clientWidth/2;cy=cy??box.clientHeight/2;
@@ -1553,9 +1587,9 @@ function vZoom(z,cx,cy){const box=$("#vscroll");const old=MUA.zoom;z=Math.max(1,
   MUA.zoom=z;vFit();box.scrollLeft=fx*box.scrollWidth-cx;box.scrollTop=fy*box.scrollHeight-cy;}
 $("#vin").onclick=()=>vZoom(MUA.zoom*1.6);
 $("#vout").onclick=()=>vZoom(MUA.zoom/1.6);
-$("#vclose").onclick=()=>{$("#viewer").classList.add("hide");MUA.cur=-1};
-$("#vprev").onclick=()=>{if(MUA.cur>0)muaShow(MUA.cur-1)};
-$("#vnext").onclick=()=>{if(MUA.sheets&&MUA.cur<MUA.sheets.length-1)muaShow(MUA.cur+1)};
+$("#vclose").onclick=()=>{PV=null;$("#viewer").classList.add("hide");MUA.cur=-1};
+$("#vprev").onclick=()=>{if(PV){if(PV.j>0)procPage(PV.p,PV.j-1);return}if(MUA.cur>0)muaShow(MUA.cur-1)};
+$("#vnext").onclick=()=>{if(PV){if(PV.j<PV.p.pages.length-1)procPage(PV.p,PV.j+1);return}if(MUA.sheets&&MUA.cur<MUA.sheets.length-1)muaShow(MUA.cur+1)};
 window.addEventListener("resize",()=>{if(MUA.cur>=0){vLayout();vFit();vHint()}});
 $("#vrot").onclick=()=>{store("coa-rot",vRotOn()?"0":"1");vLayout();vFit();vHint()};
 document.addEventListener("keydown",e=>{if(MUA.cur<0)return;if(e.key==="Escape")$("#vclose").click();if(e.key==="ArrowRight")$("#vnext").click();if(e.key==="ArrowLeft")$("#vprev").click()});
@@ -1599,6 +1633,7 @@ function render(){
     case "al":h=alTable(q,200);break;
     case "pl":h=plTable(q,300);break;
     case "codes":h=codesView(q);break;
+    case "proc":h=procView(q);break;
     case "dl":h=`<div class="info">Codes retard IATA standard (AHM 730), traduction résumée. Ta compagnie peut utiliser des sous-codes propres.</div>`+grouped(DELAY,q,1,"60px");break;
     case "ab":h=grouped(ABBR,q,1,"150px");break;
     case "nato":h=natoTable(q);break;
@@ -1640,7 +1675,7 @@ function render(){
   document.querySelectorAll("[data-qq]").forEach(b=>b.onclick=()=>{$("#q").value=b.dataset.qq;render();scrollTo(0,0)});
   if(tab==="ct")bindContacts();
   if(tab==="calc")bindCalc();
-  bindMua();
+  bindMua();bindProc();
   document.querySelectorAll("[data-go]").forEach(b=>b.onclick=e=>{if(e.target.closest("a,button:not(.tile)"))return;tab=b.dataset.go;location.hash=tab;render();scrollTo(0,0)});
   const wr=$("#wxRefresh");if(wr)wr.onclick=()=>{wr.textContent="…";wxLoad(true)};
   const nr=$("#ntRefresh");if(nr)nr.onclick=()=>{nr.textContent="…";notamLoad(true)};
