@@ -543,6 +543,8 @@ function mdLite(t){
   const L=String(t||"").split("\n");let h="",i=0;
   while(i<L.length){const l=L[i];
     if(/^\s*$/.test(l)){i++;continue}
+    if(/^```/.test(l)){const b=[];i++;while(i<L.length&&!/^```/.test(L[i])){b.push(L[i]);i++}i++;
+      h+=`<div class="msgbox" style="position:relative;background:var(--bg);border:1px solid var(--line);border-radius:10px;margin:6px 0 10px"><pre style="margin:0;padding:10px 10px 44px;white-space:pre-wrap;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;line-height:1.45">${esc(b.join("\n"))}</pre><button class="btn p" data-copymsg style="position:absolute;right:8px;bottom:8px;font-size:13px;padding:5px 12px">Copier</button></div>`;continue}
     if(/^#{1,3}\s/.test(l)){h+=`<h3 style="margin:16px 0 6px;font-size:15px;color:var(--acc)">${inl(l.replace(/^#+\s*/,""))}</h3>`;i++;continue}
     if(/^\|/.test(l)){const rows=[];while(i<L.length&&/^\|/.test(L[i])){if(!/^\|\s*-/.test(L[i]))rows.push(L[i].replace(/^\||\|\s*$/g,"").split("|").map(c=>c.trim()));i++}
       h+=`<div style="overflow-x:auto"><table class="ftab">${rows.map((r,k)=>`<tr>${r.map(c=>k?`<td>${inl(c)}</td>`:`<th>${inl(c)}</th>`).join("")}</tr>`).join("")}</table></div>`;continue}
@@ -567,6 +569,9 @@ function procView(q){
 }
 function bindProc(){
   document.querySelectorAll("[data-proc]").forEach(b=>b.onclick=()=>{PROC.open=b.dataset.proc;$("#q").value="";render();scrollTo(0,0)});
+  document.querySelectorAll("[data-copymsg]").forEach(b=>b.onclick=async()=>{const t=b.parentElement.querySelector("pre").textContent;
+    try{await navigator.clipboard.writeText(t);b.textContent="Copié ✓"}catch(e){const r=document.createRange();r.selectNodeContents(b.parentElement.querySelector("pre"));const s=getSelection();s.removeAllRanges();s.addRange(r);b.textContent="Sélectionné"}
+    setTimeout(()=>{b.textContent="Copier"},2000)});
   const bk=document.getElementById("procBack");if(bk)bk.onclick=()=>{PROC.open=null;render()};
   document.querySelectorAll("[data-ppage]").forEach(b=>b.onclick=()=>{const p=(PROC.items||[]).find(x=>x.id===PROC.open);if(p)procPage(p,+b.dataset.ppage)});
 }

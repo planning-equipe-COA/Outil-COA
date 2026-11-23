@@ -175,7 +175,11 @@ L'utilisateur échange en français.
   Procédures en ligne : **Hiver – Dégivrage saison hiver 2026-2027** (23 nov. 2026, transcrite du CR AMP du 4/11/2026 sans la liste
   des participants ni aucun nom, à la demande de Raph ; source .md/.json gardée hors dépôt) et **Aviation générale – Postes de stationnement AG (guide opérationnel)** (23 nov. 2026,
   transcrit d'une vidéo du guide DOA de 22 pages : texte complet des règles, mémo et 17 fiches, + 18 pages en images redressées
-  avec libellés de boutons, clé `images` du .json). Visionneuse : rotation automatique seulement pour les pages en paysage
+  avec libellés de boutons, clé `images` du .json). Puis **Météo – LVP procédures par faible visibilité** (23 nov. 2026, page 8/12 du doc AMP « 3.3 Diffusion de l'information
+  opérationnelle » : schéma redessiné en image « Schéma LVP », tableau du déroulé, messages types 1 et 2 ; **messages 3 et 4 à
+  compléter** (page suivante non transmise) ; annotation manuscrite « Appel COP (pour follow me) » intégrée après le message 2).
+  `mdLite` gère aussi les blocs ``` (messages types) avec un bouton « Copier » (`data-copymsg`). Consigne de Raph : sur les documents
+  photographiés, refaire au propre (et améliorer) tableaux et schémas. Visionneuse : rotation automatique seulement pour les pages en paysage
   (`vLayout`, `wide`) — les pages portrait (guide AG) restent droites. Les sources de ces deux procédures sont restées dans la
   session cloud de Claude (pas sur le Mac) : pour refaire `procedures.enc`, déchiffrer l'existant (texte + p-*.enc) hors dépôt
   et le reconstituer. Pour en ajouter une, il faut aussi la
