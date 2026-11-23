@@ -171,7 +171,10 @@ L'utilisateur échange en français.
   nommé « Catégorie - Titre.ext » ; « Titre.json » facultatif : date, ref, resume, etapes[]). Tout est refait à chaque fois (garder
   toutes les sources). Appli : `procView` (liste par catégorie, recherche dans titre + texte, détail avec résumé, étapes numérotées,
   boutons des pages, texte extrait), pages dans la visionneuse des fiches MUA (`procPage`, variable `PV` ; ‹ › = pages).
-  Verrouillée tant que le MUA n'est pas ouvert. Testée avec des procédures fictives ; **aucune procédure réelle encore**.
+  Verrouillée tant que le MUA n'est pas ouvert. Texte .md mis en forme par `mdLite` (## titres, listes à 2 niveaux, **gras**, tableaux) ; `etapes` = encadré « À retenir pour le PCE ».
+  Procédures en ligne : **Hiver – Dégivrage saison hiver 2026-2027** (23 nov. 2026, transcrite du CR AMP du 4/11/2026 sans la liste
+  des participants ni aucun nom, à la demande de Raph ; source .md/.json gardée hors dépôt). Pour en ajouter une, il faut aussi la
+  source de celle-ci (sinon la retranscrire depuis `procedures.enc` déchiffré, hors dépôt) : l'outil refait tout le fichier.
 - **Rubrique « Codes avion »** (`codes`, Référentiels après Avions ; demandée le 23 nov. 2026, confusion fréquente au PCE) :
   `codesView` — 1. lettre d'envergure OACI A–F (`SPAN`, nombreux exemples) + chiffre 1–4 (longueur de piste) ; 2. sillage OACI
   L/M/H/J ; 3. RECAT-EU CAT-A–F (exemples de la liste EASA) ; 4. catégorie d'approche A–E (Vat, exemples Airbus) ; 5. bruit

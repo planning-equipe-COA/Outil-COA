@@ -54,7 +54,8 @@ def main(src):
         else:
             b, (w, h) = img_bytes(path); iid = f'p-{pid}-1'
             open(os.path.join(out, iid + '.enc'), 'wb').write(enc(b)); it['pages'].append({'id': iid, 'w': w, 'h': h})
-        it['text'] = re.sub(r'[ \t]+', ' ', it['text']).strip()
+        if ext not in ('.md', '.txt'): it['text'] = re.sub(r'[ \t]+', ' ', it['text'])
+        it['text'] = it['text'].strip()
         items.append(it)
     items.sort(key=lambda i: (i['cat'].lower(), i['title'].lower()))
     data = json.dumps({'v': 1, 'items': items}, ensure_ascii=False).encode()
