@@ -173,7 +173,12 @@ L'utilisateur échange en français.
   boutons des pages, texte extrait), pages dans la visionneuse des fiches MUA (`procPage`, variable `PV` ; ‹ › = pages).
   Verrouillée tant que le MUA n'est pas ouvert. Texte .md mis en forme par `mdLite` (## titres, listes à 2 niveaux, **gras**, tableaux) ; `etapes` = encadré « À retenir pour le PCE ».
   Procédures en ligne : **Hiver – Dégivrage saison hiver 2026-2027** (23 nov. 2026, transcrite du CR AMP du 4/11/2026 sans la liste
-  des participants ni aucun nom, à la demande de Raph ; source .md/.json gardée hors dépôt). Pour en ajouter une, il faut aussi la
+  des participants ni aucun nom, à la demande de Raph ; source .md/.json gardée hors dépôt) et **Aviation générale – Postes de stationnement AG (guide opérationnel)** (23 nov. 2026,
+  transcrit d'une vidéo du guide DOA de 22 pages : texte complet des règles, mémo et 17 fiches, + 18 pages en images redressées
+  avec libellés de boutons, clé `images` du .json). Visionneuse : rotation automatique seulement pour les pages en paysage
+  (`vLayout`, `wide`) — les pages portrait (guide AG) restent droites. Les sources de ces deux procédures sont restées dans la
+  session cloud de Claude (pas sur le Mac) : pour refaire `procedures.enc`, déchiffrer l'existant (texte + p-*.enc) hors dépôt
+  et le reconstituer. Pour en ajouter une, il faut aussi la
   source de celle-ci (sinon la retranscrire depuis `procedures.enc` déchiffré, hors dépôt) : l'outil refait tout le fichier.
 - **Rubrique « Codes avion »** (`codes`, Référentiels après Avions ; demandée le 23 nov. 2026, confusion fréquente au PCE) :
   `codesView` — 1. lettre d'envergure OACI A–F (`SPAN`, nombreux exemples) + chiffre 1–4 (longueur de piste) ; 2. sillage OACI

@@ -3,7 +3,8 @@
 Usage : MUA_CODE="…" python3 tools/proc_build.py DOSSIER_DES_PROCEDURES
 Chaque procédure = un fichier du dossier (PDF, image JPG/PNG, ou texte .md/.txt), nommé « Catégorie - Titre.ext »
 (ex. « Sûreté - Bagage abandonné.pdf »). Sans « - », la catégorie est « Général ».
-Un fichier « Titre.json » de même nom (facultatif) peut préciser : {"date":"JJ/MM/AAAA","ref":"…","resume":"…","etapes":["…"]}.
+Un fichier « Titre.json » de même nom (facultatif) peut préciser : {"date":"JJ/MM/AAAA","ref":"…","resume":"…","etapes":["…"],
+"images":[["dossier/page.jpg","libellé du bouton"], …]} (images jointes à un texte .md, ex. plans).
 Écrit mua/procedures.enc (liste + texte) et mua/p-<id>.enc (pages en JPEG). Les anciens p-*.enc sont supprimés (tout est refait).
 Les documents sources ne doivent JAMAIS être ajoutés au dépôt (public).
 """
@@ -42,6 +43,9 @@ def main(src):
               'resume': meta.get('resume', ''), 'etapes': meta.get('etapes', []), 'text': '', 'pages': []}
         if ext in ('.md', '.txt'):
             it['text'] = open(path, encoding='utf-8').read()
+            for n, (img, label) in enumerate(meta.get('images', [])):  # pages en images jointes au texte (plans)
+                b, (w, h) = img_bytes(os.path.join(src, img)); iid = f'p-{pid}-{n+1}'
+                open(os.path.join(out, iid + '.enc'), 'wb').write(enc(b)); it['pages'].append({'id': iid, 'w': w, 'h': h, 'label': label})
         elif ext == '.pdf':
             it['text'] = subprocess.run(['pdftotext', '-layout', path, '-'], capture_output=True, text=True).stdout
             if not it['date']:

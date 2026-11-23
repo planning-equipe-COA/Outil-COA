@@ -530,11 +530,11 @@ function codesView(q){
 /* ---------- Procédures (rubrique « proc ») : mua/procedures.enc + pages mua/p-*.enc, même clé que le MUA (tools/proc_build.py) ---------- */
 const PROC={items:null,open:null};let PV=null;
 async function procPage(p,j){const pg=p.pages[j];if(!pg)return;PV={p,j};MUA.cur=-2;MUA.zoom=1;
-  $("#vtitle").textContent=p.title+(p.pages.length>1?` · page ${j+1}/${p.pages.length}`:"");
+  $("#vtitle").textContent=(pg.label?pg.label+" · ":"")+p.title+(p.pages.length>1?` · ${j+1}/${p.pages.length}`:"");
   $("#viewer").classList.remove("hide");vLayout();vHint();
   const img=$("#vimg");img.removeAttribute("src");img.alt="Chargement…";
   try{if(!MUA.urls[pg.id]){const b=await muaDecrypt(await muaFetch(pg.id+".enc"));MUA.urls[pg.id]=URL.createObjectURL(new Blob([b],{type:"image/jpeg"}))}
-    if(!PV||PV.p!==p||PV.j!==j)return;img.src=MUA.urls[pg.id];img.alt=p.title}
+    if(!PV||PV.p!==p||PV.j!==j)return;img.src=MUA.urls[pg.id];img.alt=p.title;vLayout()}
   catch(e){img.alt="Page indisponible hors connexion (ouvre-la une fois avec du réseau)."}
   vFit()}
 /* mise en forme simple du texte des procédures : ## titres, - listes (2 niveaux), **gras**, tableaux | a | b | */
@@ -557,8 +557,8 @@ function procView(q){
     <div class="wx"><div class="wxh" style="display:block"><b style="white-space:normal;display:block;font-size:17px">${esc(p.title)}</b><span class="sub">${esc(p.cat)}${p.date?" · mise à jour "+esc(p.date):""}${p.ref?" · réf. "+esc(p.ref):""}</span></div>
     ${p.resume?`<p>${esc(p.resume)}</p>`:""}
     ${(p.etapes||[]).length?`<div style="background:var(--acc2);border-radius:12px;padding:10px 12px;margin:10px 0"><b style="color:var(--acc)">À retenir pour le PCE</b><ul style="padding-left:20px;margin:6px 0 0;line-height:1.45">${p.etapes.map(e=>`<li style="margin-bottom:5px">${esc(e)}</li>`).join("")}</ul></div>`:""}
-    ${p.pages.length?`<div class="finder" style="margin-top:10px">${p.pages.map((g,j)=>`<button class="btn p" data-ppage="${j}">${p.pages.length>1?"Page "+(j+1):"Ouvrir le document"}</button>`).join("")}</div>`:""}
-    ${p.text?(p.pages.length?`<details><summary class="sub" style="cursor:pointer">Texte extrait du document</summary><div style="white-space:pre-wrap;font-size:14px;line-height:1.45;margin-top:6px">${esc(p.text)}</div></details>`:`<div style="font-size:14.5px">${mdLite(p.text)}</div>`):""}</div>`}
+    ${p.pages.length?`<div class="sub" style="margin-top:10px">${p.pages.some(g=>g.label)?"Plans et fiches en grand :":""}</div><div class="finder" style="margin-top:4px;flex-wrap:wrap">${p.pages.map((g,j)=>`<button class="btn p" data-ppage="${j}">${g.label?esc(g.label):p.pages.length>1?"Page "+(j+1):"Ouvrir le document"}</button>`).join("")}</div>`:""}
+    ${p.text?(p.pages.length&&!p.pages.some(g=>g.label)?`<details><summary class="sub" style="cursor:pointer">Texte extrait du document</summary><div style="white-space:pre-wrap;font-size:14px;line-height:1.45;margin-top:6px">${esc(p.text)}</div></details>`:`<div style="font-size:14.5px">${mdLite(p.text)}</div>`):""}</div>`}
   const list=q?items.filter(p=>p._n.includes(q)):items;
   if(!items.length)return `<div class="info">Aucune procédure pour l'instant. Elles seront ajoutées au fur et à mesure.</div>`;
   if(!list.length)return `<div class="info">Aucune procédure pour « ${esc(q)} ».</div>`;
@@ -1585,7 +1585,7 @@ async function muaShow(i){
 /* paysage automatique (réglage gardé : coa-rot, activé par défaut) */
 const vRotOn=()=>store("coa-rot")!=="0";
 const vRotated=()=>$("#viewer").classList.contains("rot");
-function vLayout(){const v=$("#viewer"),W=innerWidth,H=innerHeight,rot=vRotOn()&&H>W;
+function vLayout(){const v=$("#viewer"),W=innerWidth,H=innerHeight,cur=PV?PV.p.pages[PV.j]:(MUA.sheets&&MUA.sheets[MUA.cur]),wide=!cur||!cur.w||cur.w>=cur.h,rot=vRotOn()&&H>W&&wide;
   v.classList.toggle("rot",rot);v.style.width=rot?H+"px":"";v.style.height=rot?W+"px":"";
   $("#vrot").classList.toggle("on",vRotOn());}
 /* coordonnées d'un toucher dans le repère de la visionneuse (pivotée ou non) */
