@@ -69,6 +69,11 @@ L'utilisateur échange en français.
 - « Sources » déplacé du pied de page vers Réglages. Entrée douce du contenu au changement de rubrique seulement (`lastTab`,
   `#out.enter`). Tout est immobile avec « réduire les animations ».
 
+## Navigation (23 nov. 2026, demandé)
+- **En-tête** : hors accueil, le titre devient « ‹ THÈME / Rubrique » (d'après `THEMES`) ; le toucher ramène à l'accueil.
+- **Calculs** : cartes repliables (`.ccard`, `CALC.open`, ouverte par défaut : Heure Z ↔ Marseille, avec « Maintenant … » mis à jour
+  toutes les 20 s) puis ETA, Durée, Heure + durée, Calculatrice (en dernier, repliée).
+
 ## Fichiers
 - `index.html` — toute l'appli (HTML + CSS + JS). **Page d'accueil** (onglet « Accueil », ouverte au lancement, bouton maison en
   haut à droite ; demandée le 20 nov. 2026) : thèmes de haut en bas (`THEMES` sauf Recherche), tuiles encadrées 2 par ligne en
