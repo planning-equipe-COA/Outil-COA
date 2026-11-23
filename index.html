@@ -491,9 +491,45 @@ const ACX={A318:["C","M",34.1],A319:["C","M",35.8],A320:["C","M",35.8],A321:["C"
 
 const HANDLERS=["Aviapartner","Alyzia","Air France Handling","Onet","WFS","Jetex","GH Team","France Handling","Marignane Assistance"];
 
+/* ---------- Codes avion (rubrique « codes ») ----------
+   1. Code de référence d'aérodrome OACI (Annexe 14) : lettre = envergure (postes, voies de circulation), chiffre = longueur de piste.
+   2. Sillage OACI L/M/H/J (masse) ; 3. RECAT-EU CAT-A à F (EASA) ; 4. catégorie d'approche A à E (vitesse au seuil, Doc 8168) ;
+   5. bruit : chapitres OACI (Annexe 16) et groupes acoustiques, en chiffres. Exemples d'approche/RECAT : documents Airbus et EASA. */
+const SPAN=[["A","moins de 15 m","Cessna 172, Piper PA-28, TBM 900, Citation Mustang, Learjet 45, hélicoptères"],
+ ["B","15 à moins de 24 m","Pilatus PC-12, Beech 1900, Saab 340, Dornier 328, Embraer ERJ 135 / 145, CRJ 200, Falcon 2000, Citation XLS"],
+ ["C","24 à moins de 36 m","A318, A319, A320, A321 (et neo), A220, B737 (toutes versions, MAX), ATR 42, ATR 72, Dash 8 Q400, CRJ 700 / 900 / 1000, Embraer E170 à E195 et E2, Global 6000 / 7500"],
+ ["D","36 à moins de 52 m","B757, B767, A300, A310, MD-11, DC-10, Il-76"],
+ ["E","52 à moins de 65 m","A330, A340, A350, B777-200 / 300, B787, B747-400, B777-9 ailes repliées au sol"],
+ ["F","65 à moins de 80 m","A380, B747-8, An-124, B777-9 ailes dépliées"]];
+function codesView(q){
+  const m=t=>!q||norm(t).includes(q);
+  const card=(t,body)=>`<div class="wx" style="margin-bottom:10px;overflow:hidden"><div class="wxh" style="display:block"><b style="white-space:normal;display:block;line-height:1.3">${t}</b></div>${body}</div>`;
+  const tr=(cells,hlIdx)=>`<tr>${cells.map((c,i)=>`<td${i===0?' class="code"':""}>${i===hlIdx?hl(c,q):esc(c)}</td>`).join("")}</tr>`;
+  const spanRows=SPAN.filter(r=>m(r.join(" "))).map(r=>`<tr><td class="code" style="font-size:18px">${r[0]}</td><td style="white-space:nowrap">${r[1]}</td><td>${hl(r[2],q)}</td></tr>`).join("");
+  let h=card("1. Lettre d'envergure (code de référence d'aérodrome OACI)",
+    `<p class="sub">C'est celle qui sert pour les <b>postes de stationnement et les voies de circulation</b> (fiches MUA). « Code C » = envergure de 24 à moins de 36 m. Elle est souvent écrite avec un chiffre devant (ex. <b>3C</b>, <b>4E</b>) : le chiffre (1 à 4) dépend de la longueur de piste de référence de l'avion, la lettre de l'envergure.</p>
+    ${spanRows?`<table class="ftab"><tr><th>Lettre</th><th>Envergure</th><th>Exemples</th></tr>${spanRows}</table>`:'<div class="info">Aucun exemple pour cette recherche.</div>'}
+    <p class="sub">Chiffre de code : 1 = piste de référence de moins de 800 m · 2 = 800 à moins de 1 200 m · 3 = 1 200 à moins de 1 800 m · 4 = 1 800 m et plus. Exemples (Airbus) : A220, A319, A320 = 3C ; A330-900, A350 = 4E ; A380 = 4F.</p>`);
+  h+=card("2. Catégorie de turbulence de sillage OACI (L · M · H · J)",
+    `<p class="sub">Classement par <b>masse maximale au décollage</b>, utilisé par le contrôle pour espacer les avions. C'est la lettre affichée à côté du code dans la rubrique Avions.</p>
+    <table class="ftab"><tr><th>Lettre</th><th>Catégorie</th><th>Exemples</th></tr>
+    ${[["L","Léger : 7 t ou moins","avions légers, petits jets d'affaires"],["M","Moyen : plus de 7 t et moins de 136 t","A320, B737, ATR, Embraer, CRJ"],["H","Lourd : 136 t et plus","A330, A350, B777, B787"],["J","Super : A380 et An-225","A380"]].filter(r=>m(r.join(" "))).map(r=>tr(r,2)).join("")}</table>`);
+  h+=card("3. RECAT-EU (CAT-A à CAT-F) — attention, aussi des lettres A à F",
+    `<p class="sub">Découpage européen plus fin de la turbulence de sillage (EASA), appliqué par le contrôle sur certains aéroports. <b>Ce n'est pas l'envergure</b> : un A320 est code C en envergure mais <b>CAT-D</b> en RECAT-EU.</p>
+    <table class="ftab"><tr><th>Cat.</th><th>Nom</th><th>Exemples (liste EASA)</th></tr>
+    ${[["A","Super lourd","A380, An-124"],["B","Lourd supérieur","A330, A340, A350"],["C","Lourd inférieur","A300, A310, Beluga (A300ST)"],["D","Moyen supérieur","A318, A319, A320, A321 et neo"],["E","Moyen inférieur","ATR"],["F","Léger","avions légers"]].filter(r=>m(r.join(" "))).map(r=>tr(r,2)).join("")}</table>`);
+  h+=card("4. Catégorie d'approche (A à E) — encore des lettres",
+    `<p class="sub">Classement par <b>vitesse au seuil de piste</b> (Vat), utilisé par les pilotes pour les minima des approches aux instruments. Sans rapport avec le poste ou l'envergure.</p>
+    <table class="ftab"><tr><th>Cat.</th><th>Vitesse au seuil</th><th>Exemples (Airbus)</th></tr>
+    ${[["A","moins de 91 kt","avions légers"],["B","91 à 120 kt","bimoteurs légers"],["C","121 à 140 kt","A220, A318, A319, A320, A340-200/300, A350-900, A380"],["D","141 à 165 kt","A330-900, A340-500/600, A350-1000"],["E","166 à 210 kt","quelques avions militaires"]].filter(r=>m(r.join(" "))).map(r=>tr(r,2)).join("")}</table>`);
+  h+=card("5. Bruit — des chiffres, pas des lettres",
+    `<p class="sub"><b>Chapitres acoustiques OACI</b> (Annexe 16) : chapitre 2, 3, 4, puis 14 pour les avions récents ; plus le numéro est élevé, plus l'avion est silencieux. En France, les <b>groupes acoustiques</b> (numérotés 1 à 5) servent aux restrictions et redevances liées au bruit.</p>`);
+  return h+`<p class="sub">Sources : OACI (Annexe 14, Doc 8168), EASA (liste RECAT-EU), documents de caractéristiques Airbus. Exemples d'envergure : valeurs constructeur, à confirmer avec la fiche MUA du poste.</p>`;
+}
+
 /* ---------- État ---------- */
 let AP=[],AL=[],PL=[],loaded=false;
-const TABS=[["home","Accueil"],["mua","MUA"],["ap","Aéroports"],["al","Compagnies"],["pl","Avions"],["immat","Immatriculations"],["vols","Vols du jour"],["wx","Météo"],["notam","NOTAM"],["ct","Contacts MRS"],["lfml","Aérodrome"],["fl","Temps de vol"],["calc","Calculs"],["dl","Codes retard"],["ab","Abréviations"],["nato","Alphabet"],["all","Tout"]];
+const TABS=[["home","Accueil"],["mua","MUA"],["ap","Aéroports"],["al","Compagnies"],["pl","Avions"],["codes","Codes avion"],["immat","Immatriculations"],["vols","Vols du jour"],["wx","Météo"],["notam","NOTAM"],["ct","Contacts MRS"],["lfml","Aérodrome"],["fl","Temps de vol"],["calc","Calculs"],["dl","Codes retard"],["ab","Abréviations"],["nato","Alphabet"],["all","Tout"]];
 let tab="home";let STRICT=false;
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -502,13 +538,14 @@ function hl(text,q){const t=esc(text);if(!q)return t;const n=norm(text);const i=
 function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localStorage.setItem(k,v)}catch(e){return null}}
 
 $("#tabs").innerHTML=TABS.map(([k,l])=>`<button data-k="${k}">${l}</button>`).join("");
-const THEMES=[["Référentiels",[["mua","MUA · fiches de postes","Postes, avions autorisés, plans"],["ap","Aéroports","Codes IATA et OACI"],["al","Compagnies","Codes IATA, OACI et indicatifs"],["pl","Avions","Types, envergure, sillage"],["immat","Immatriculations","Type, compagnie, sièges (code)"]]],
+const THEMES=[["Référentiels",[["mua","MUA · fiches de postes","Postes, avions autorisés, plans"],["ap","Aéroports","Codes IATA et OACI"],["al","Compagnies","Codes IATA, OACI et indicatifs"],["pl","Avions","Types, envergure, sillage"],["codes","Codes avion","Envergure, sillage, approche, bruit"],["immat","Immatriculations","Type, compagnie, sièges (code)"]]],
   ["Escale MRS",[["vols","Vols du jour","Départs et arrivées MRS, statuts, portes"],["wx","Météo et fréquences","METAR, TAF, ATIS, tour, sol"],["notam","NOTAM LFML","Pistes, voies, postes, balisage"],["ct","Contacts MRS","Assistants et services, appeler ou SMS"],["lfml","Aérodrome LFML","AIP, pistes, consignes, AIRAC, SUP AIP"]]],
   ["Outils",[["fl","Temps de vol","Depuis et vers Marseille"],["calc","Calculs","Calculatrice, heure Z ↔ locale, ETA Marseille, durées"]]],
   ["Codes et langage",[["dl","Codes retard","Codes IATA 00 à 99"],["ab","Abréviations","A-CDM, messages, PMR, météo"],["nato","Alphabet","Alphabet OTAN, épellation"]]],
   ["Recherche",[["home","Accueil","Toutes les rubriques en tuiles"],["all","Tout","Une seule recherche dans toutes les rubriques"]]]];
 /* explicatif affiché en haut de chaque rubrique (masqué pendant une recherche) */
 const HELP={
+ codes:"<b>Codes avion : ne pas les confondre.</b> Plusieurs classements utilisent des lettres (envergure A à F, RECAT-EU A à F, catégorie d'approche A à E, sillage L/M/H/J). Cette page les met côte à côte. Pour les postes et les voies de circulation, c'est la <b>lettre d'envergure</b> qui compte. Tape un type (A321, B777) pour le retrouver.",
  mua:"<b>Fiches MUA des postes de stationnement.</b> Tape un poste (5B), un type d'avion (A321) ou utilise « Quel poste pour cet avion ? ». Chaque fiche donne les avions autorisés, les consignes et le plan. La fiche la plus récente est toujours celle affichée. Accès par code.",
  ap:"<b>Aéroports du monde.</b> Cherche par code IATA (ORY), OACI (LFPO), ville ou pays en français. Le temps de vol estimé depuis Marseille s'affiche avec le résultat.",
  al:"<b>Compagnies aériennes.</b> Code IATA (AF), OACI (AFR), indicatif radio (AIRFRANS) ou nom. En tête : les compagnies de Marseille avec leur assistant (passage et coordination).",
@@ -543,6 +580,7 @@ const TI={
  ct:'<path d="M5 3.5h3.5l1.8 4.6-2.3 1.4a11.5 11.5 0 0 0 5.5 5.5l1.4-2.3 4.6 1.8V18a2.5 2.5 0 0 1-2.5 2.5A15.5 15.5 0 0 1 2.5 6 2.5 2.5 0 0 1 5 3.5z"/>',
  ap:'<path d="M12 21s-6.5-6-6.5-11a6.5 6.5 0 0 1 13 0c0 5-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/>',
  al:'<path d="M3 14.5 21 8l-1.5-3L12 8 7 3.5 5 4l3 5.5-4 1.5-2-1.5L1 10z"/><path d="M4 20h16"/>',
+ codes:'<path d="M3 12h18M7 8l-4 4 4 4M17 8l4 4-4 4"/>',
  pl:'<path d="M21 12.5 13.5 9V4.5a1.5 1.5 0 0 0-3 0V9L3 12.5V15l7.5-2.2V18L8 19.8V21l4-1 4 1v-1.2L13.5 18v-5.2L21 15z"/>',
  dl:'<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/>',
  ab:'<path d="M4 6h16M4 12h10M4 18h13"/>',
@@ -756,7 +794,7 @@ function alTable(q,limit){
 function plTable(q,limit){
   const {total,rows}=q?search(PL,r=>[r[0],r[1]],r=>[r[2]],q,limit):{total:PL.length,rows:PL.slice(0,limit)};
   if(!total)return `<div class="info">Aucun type d'avion.</div>`;
-  return `<table><tr><th>IATA</th><th>OACI</th><th>Type</th><th>Code / Sillage</th></tr>${rows.map(r=>{const x=ACX[r[1]];return `<tr><td class="code">${hl(r[0]||"—",q)}</td><td class="code">${hl(r[1]||"—",q)}</td><td>${hl(r[2],q)}</td><td>${x?`<span class="tag">Code ${x[0]}</span><span class="tag">${x[1]}</span><div class="sub">${x[2]} m</div>`:'<span class="sub">—</span>'}</td></tr>`}).join("")}</table>${more(total,rows.length)}`;
+  return `<table><tr><th>IATA</th><th>OACI</th><th>Type</th><th>Envergure · sillage</th></tr>${rows.map(r=>{const x=ACX[r[1]];return `<tr><td class="code">${hl(r[0]||"—",q)}</td><td class="code">${hl(r[1]||"—",q)}</td><td>${hl(r[2],q)}</td><td>${x?`<span class="tag" title="Lettre de code OACI : envergure">Env. ${x[0]}</span><span class="tag" title="Catégorie de turbulence de sillage OACI">Sillage ${x[1]}</span><div class="sub">${x[2]} m</div>`:'<span class="sub">—</span>'}</td></tr>`}).join("")}</table>${more(total,rows.length)}`;
 }
 function grouped(list,q,codeIdx,label){
   const rows=q?list.filter(r=>norm(r.join(" ")).includes(q)):list;
@@ -1560,6 +1598,7 @@ function render(){
     case "ap":h=apTable(q,200)+(q?'<div class="info">Temps de vol estimés (porte à porte, vent moyen d\'ouest) : vérifie toujours l\'horaire de la compagnie.</div>':"");break;
     case "al":h=alTable(q,200);break;
     case "pl":h=plTable(q,300);break;
+    case "codes":h=codesView(q);break;
     case "dl":h=`<div class="info">Codes retard IATA standard (AHM 730), traduction résumée. Ta compagnie peut utiliser des sous-codes propres.</div>`+grouped(DELAY,q,1,"60px");break;
     case "ab":h=grouped(ABBR,q,1,"150px");break;
     case "nato":h=natoTable(q);break;

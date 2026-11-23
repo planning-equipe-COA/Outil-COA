@@ -165,6 +165,11 @@ L'utilisateur échange en français.
   Sous l'heure (demandé le 23 nov. 2026) : saison aéronautique et décalage, « Hiver W26 · GMT+1 » / « Été S27 · GMT+2 »
   (`iataSeason(d)` : été IATA = heure d'été en France, du dernier dimanche de mars au dernier samedi d'octobre ; code W = année
   de début de l'hiver). Rappel aussi dans Calculs → « Heure Z ↔ heure de Marseille ».
+- **Rubrique « Codes avion »** (`codes`, Référentiels après Avions ; demandée le 23 nov. 2026, confusion fréquente au PCE) :
+  `codesView` — 1. lettre d'envergure OACI A–F (`SPAN`, nombreux exemples) + chiffre 1–4 (longueur de piste) ; 2. sillage OACI
+  L/M/H/J ; 3. RECAT-EU CAT-A–F (exemples de la liste EASA) ; 4. catégorie d'approche A–E (Vat, exemples Airbus) ; 5. bruit
+  (chapitres OACI, groupes acoustiques, en chiffres). Filtrée par la recherche. Rubrique Avions : étiquettes « Env. C » et
+  « Sillage M » (au lieu de « Code C » / « M »).
 - Calculs → « Heure d'arrivée à Marseille » : le résultat (ETA depuis l'ED) s'affiche dans un encadré **vert** (`#cEta.ok`,
   clair et sombre ; demandé le 23 nov. 2026), seulement quand le calcul aboutit.
 - **Soleil à LFML** (`sunTimes`, équation NOAA, ~1 min ; vérifié 21/11 : lever 06:40, coucher 16:10 UTC) et **nuit aéronautique**
