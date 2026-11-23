@@ -24,6 +24,7 @@ header{position:sticky;top:0;z-index:5;background:var(--card);border-bottom:1px 
 h1{font-size:17px;margin:0 0 8px;display:flex;align-items:center;gap:8px}
 h1 span{font-weight:400;color:var(--mute);font-size:13px}
 #q{width:100%;padding:11px 12px;font-size:16px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}
+#q{text-transform:uppercase}#q::placeholder{text-transform:none}
 #q:focus{outline:2px solid var(--acc);border-color:transparent}
 nav{display:flex;gap:4px;overflow-x:auto;padding:8px 0;scrollbar-width:none}
 nav button{flex:none;border:0;background:transparent;color:var(--mute);padding:7px 11px;border-radius:999px;font-size:14px;cursor:pointer;white-space:nowrap}
@@ -328,7 +329,7 @@ html[data-theme=dark] .wxa.danger{background:#3d1a1d;color:#ffb3b3}
 <body>
 <header>
   <h1><span class="ttl">Boîte à outils COA</span> <span id="clk">MRS · LFML</span><button id="homeBtn" class="btn" title="Accueil" aria-label="Accueil"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3.5 11 12 4l8.5 7M6 9.5V20h4.5v-5.5h3V20H18V9.5"/></svg></button><button id="gear" class="btn" style="margin-left:6px;padding:4px 8px;display:flex" title="Réglages" aria-label="Réglages"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></h1>
-  <input id="q" type="search" placeholder="Rechercher : 5B, A321, MRS, LFML, AFR, 93, WCHR…" autocomplete="off">
+  <input id="q" type="search" placeholder="Rechercher : 5B, A321, MRS, LFML, AFR, 93, WCHR…" autocomplete="off" autocapitalize="characters" autocorrect="off" spellcheck="false">
   <button id="menuBtn" type="button" aria-haspopup="true"><span aria-hidden="true">☰</span><b id="menuCur"></b><span aria-hidden="true">▾</span></button>
   <nav id="tabs"></nav>
 </header>
@@ -619,7 +620,7 @@ function bindProc(){
 /* ---------- Petit « i » après les abréviations (demandé le 23 nov. 2026) ----------
    Sens tiré de ABBR (rubrique Abréviations) + quelques sigles de la plateforme. Première occurrence par carte seulement,
    jamais dans les champs, boutons, liens, textes bruts (METAR, NOTAM, messages) ni dans les rubriques de codes. */
-const ABX={LVP:"Procédures par faible visibilité (Low Visibility Procedures)",PCE:"Poste de Coordination de l'Exploitation",COP:"Cellule Opérations Piste",
+const ABX={COA:"Coordinateur des opérations aériennes",LVP:"Procédures par faible visibilité (Low Visibility Procedures)",PCE:"Poste de Coordination de l'Exploitation",COP:"Cellule Opérations Piste",
   CdQ:"Chef de quart",GTA:"Gendarmerie des transports aériens",FLYCO:"Follow-me de la COP : véhicule qui guide l'avion au sol",
   "SNA-SSE":"Service de la navigation aérienne Sud-Sud-Est (contrôle aérien)",AMP:"Aéroport Marseille Provence",QFU:"Sens de la piste en service (13 ou 31)",
   AIP:"Publication d'information aéronautique (manuel officiel des aérodromes)",AIRAC:"Cycle commun de mise à jour de l'information aéronautique (tous les 28 jours)",
@@ -1775,6 +1776,7 @@ function render(){
       const am=ABBR.filter(r=>norm(r.join(" ")).includes(q));if(am.length)parts.push(["Abréviations","ab",grouped(ABBR,q,1,"150px"),am.some(r=>r[1].toUpperCase().split(/[ \/]+/).includes(Q))?3:1]);
       if(MUA.annu){const r=annuView(q);if(r.total)parts.push(["Annuaire COA","ct",r.html,1])}
       if(getContacts().some(u=>ctMatch(u,q)))parts.push(["Mes numéros","ct",ctMine(q).split("<p><button class=\"btn p\" id=\"ctEdit\"")[0],1]);
+      if(!IM.rows&&MUA.key)immatLoad();
       if(IM.rows){const r=immatFind(q);if(r.length)parts.push(["Immatriculations","immat",immatView(q,5),r[0][0]===q.toUpperCase().replace(/[\s-]/g,"")?5:1])}
       if(MUA.sheets){const m=muaMatch(q);if(m.length)parts.push(["MUA · fiches de postes","mua",muaView(q,4),m.some(x=>muaPostes(x).includes(q.toUpperCase().replace(/\s+/g,"")))?4:2])}
       STRICT=false;

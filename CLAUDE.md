@@ -77,7 +77,9 @@ L'utilisateur échange en français.
 - **Petit « i » après les abréviations** (`abbrTips`, demandé le 23 nov. 2026) : sens pris dans `ABBR` + `ABX` (sigles de la
   plateforme : LVP, PCE, COP, GTA, QFU, AIP, AIRAC…). Première occurrence par carte, rubriques `ABTABS` seulement (pas dans les
   rubriques de codes : aéroports, compagnies, avions, immat., retards), jamais dans champs, boutons, liens, `pre`, aide en tête,
-  ni dans les textes bruts majoritairement en majuscules (METAR, NOTAM). Toucher = bulle `#abTip`. Ajouter un sigle : `ABX`.
+  ni dans les textes bruts majoritairement en majuscules (METAR, NOTAM). Toucher = bulle `#abTip`. Ajouter un sigle : `ABX` (COA = coordinateur des opérations aériennes, donné par Raph).
+- **Recherche** : saisie affichée en majuscules, clavier en majuscules (`autocapitalize=characters`). « Tout » ouvre la base
+  des immatriculations si elle n'est pas encore chargée (avant : rien tant que la rubrique Immatriculations n'avait pas été ouverte).
 
 ## Fichiers
 - `index.html` — toute l'appli (HTML + CSS + JS). **Page d'accueil** (onglet « Accueil », ouverte au lancement, bouton maison en
