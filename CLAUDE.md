@@ -102,7 +102,7 @@ L'utilisateur échange en français.
   sur « Tout ». Thèmes (`THEMES`, même ordre pour l'accueil, le menu et les onglets ; demandé le 20 nov.) : **Référentiels** (MUA, Aéroports,
   Compagnies, Avions) en premier, Temps de vol, Escale MRS (Météo et fréquences, NOTAM, Contacts MRS), Codes et langage (Codes retard, Abréviations, Alphabet), Recherche
   (Accueil, Tout ; absente de l'accueil). Onglets : Accueil, MUA, Aéroports, Compagnies, Avions, Temps de vol, Météo, NOTAM, Contacts MRS, Codes retard,
-  Abréviations, Alphabet, Tout. Une barre de recherche ; codes exacts (IATA/OACI) en premier. Onglet dans le `#hash`.
+  ASM / SSM, Abréviations, Alphabet, Tout. Une barre de recherche ; codes exacts (IATA/OACI) en premier. Onglet dans le `#hash`.
   Codes retard IATA (AHM 730), abréviations, alphabet OTAN, `ACX` (code OACI d'envergure, sillage, envergure indicative)
   écrits dans le fichier. **Contacts MRS = numéros utiles comme dans le Planning** (demandé) : services triés par ordre
   alphabétique, plusieurs numéros par service avec précision, boutons Appeler (tel:) / SMS ; « Ajouter ou modifier des numéros »
@@ -230,6 +230,14 @@ L'utilisateur échange en français.
   L/M/H/J ; 3. RECAT-EU CAT-A–F (exemples de la liste EASA) ; 4. catégorie d'approche A–E (Vat, exemples Airbus) ; 5. bruit
   (chapitres OACI, groupes acoustiques, en chiffres). Filtrée par la recherche. Rubrique Avions : étiquettes « Env. C » et
   « Sillage M » (au lieu de « Code C » / « M »).
+- **Rubrique « ASM / SSM »** (`asm`, thème Codes et langage après Codes retard ; demandée le 23 nov. 2026 après un ASM Air
+  Corsica CON WEAT) : `asmView` — décodeur (`#asmIn`, `asmDecode`, texte gardé dans `ASMTXT` le temps de la session, boutons
+  Coller / Exemple / Effacer, `bindAsm`) : « En clair » par sous-message (vol, date, changement, motif, avion, sièges, DEI 3/4/5
+  identiques ≠ compagnie du vol → « affrètement avec équipage (wet lease) ») puis tableau ligne par ligne ; lignes avec des
+  minuscules (bonjour, signature) ignorées ; heures Z + heure de Marseille. Référence filtrée par la recherche : codes d'action
+  `ASM_ACT` (CON = configuration, même type ; EQT = type d'avion), motifs `ASM_WHY`, DEI `ASM_DEI`, types de service `ASM_SVC`,
+  structure. Aussi dans « Tout ». Compagnies : `MRS_AL`, puis `ASM_AL_FIX` (CE = Chalair Aviation, OpenFlights périmé), puis
+  airlines.json ; types : `TYPE_EXTRA` puis aircraft.json. Sources : extraits publics SSIM (wiki Avinor, OAG).
 - Calculs → « Heure d'arrivée à Marseille » : le résultat (ETA depuis l'ED) s'affiche dans un encadré **vert** (`#cEta.ok`,
   clair et sombre ; demandé le 23 nov. 2026), seulement quand le calcul aboutit.
 - **Soleil à LFML** (`sunTimes`, équation NOAA, ~1 min ; vérifié 21/11 : lever 06:40, coucher 16:10 UTC) et **nuit aéronautique**

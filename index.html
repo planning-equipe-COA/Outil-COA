@@ -182,6 +182,7 @@ body.noscroll{overflow:hidden}
 .mgate{font-size:12px;color:var(--acc);margin-top:4px}
 .finder{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 12px}
 .finder select{font:inherit;font-size:16px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);max-width:100%}
+.asmsum{background:var(--card);border:1px solid var(--line);border-left:4px solid #5b3fa8;border-radius:10px;padding:9px 11px;margin-bottom:8px;line-height:1.45}.asmt td.code{font-family:ui-monospace,monospace;font-size:12.5px;white-space:normal;overflow-wrap:anywhere;width:37%}
 .ftab{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;margin-bottom:12px}
 .ftab td,.ftab th{padding:8px;border-bottom:1px solid var(--line);font-size:14px;text-align:left;vertical-align:top}
 .fld tr[data-flq]{cursor:pointer}.fld td:nth-child(n+2),.fld th:nth-child(n+2){text-align:right;white-space:nowrap}
@@ -628,6 +629,165 @@ function codesView(q){
   return h+`<p class="sub">Sources : OACI (Annexe 14, Doc 8168), EASA (liste RECAT-EU), documents de caractéristiques Airbus. Exemples d'envergure : valeurs constructeur, à confirmer avec la fiche MUA du poste.</p>`;
 }
 
+/* ---------- Messages ASM / SSM (rubrique « asm », demandée le 23 nov. 2026) : référence + décodeur ligne par ligne.
+   Sources publiques : IATA SSIM chap. 4 (SSM) et 5 (ASM) via le wiki Avinor « IATA messages and explanations » et la doc OAG.
+   Codes compagnies : MRS_AL d'abord, puis ASM_AL_FIX (base OpenFlights périmée : CE = Chalair), puis airlines.json. ---------- */
+const ASM_ACT=[["NEW",1,1,"Nouveau vol, ou nouvelles dates pour un vol existant"],
+ ["CNL",1,1,"Annulation. En ASM : le vol ne part pas ces jours-là mais reste dans le programme de base"],
+ ["RIN",1,0,"Rétablissement d'un vol annulé par un ASM CNL"],
+ ["RPL",1,1,"Remplacement de toutes les informations du vol (horaires, avion, trajet…)"],
+ ["TIM",1,1,"Changement d'horaire seulement"],
+ ["EQT",1,1,"Changement d'équipement : type d'avion (avec sa configuration)"],
+ ["CON",1,1,"Changement de configuration cabine (sièges par classe), même type d'avion"],
+ ["RRT",1,0,"Changement de trajet (routing) : escale ajoutée, supprimée ou changée"],
+ ["FLT",1,1,"Changement de numéro de vol"],
+ ["ADM",1,1,"Changement administratif : seulement les éléments donnés par leur numéro (DEI)"],
+ ["SKD",0,1,"Mise à jour du programme : tout est effacé sur la période, le nouveau programme suit en NEW"],
+ ["REV",0,1,"Changement de la période ou des jours d'opération"]];
+const ASM_SEC="Code secondaire possible (pour information) : RPL + ADM/CON/EQT/RRT/TIM · CON + ADM · EQT + ADM/CON · RRT + ADM/CON/EQT/TIM · TIM + ADM.";
+const ASM_WHY=[["WEAT","Météo"],["TECH","Technique, maintenance"],["OPER","Raisons opérationnelles"],["COMM","Raisons commerciales (demande trop forte ou trop faible)"],
+ ["CREW","Manque d'équipage"],["EQUI","Manque d'avion"],["ROTA","Rotation de l'avion"],["POSI","Mise en place de l'avion"],["REPO","Remise en place de l'avion"],
+ ["DAMA","Avion endommagé"],["PERF","Performances de l'avion"],["FUEL","Manque de carburant"],["HDLG","Assistance en escale"],["ARPT","Restrictions de l'aérodrome"],
+ ["RUNW","Restrictions de piste"],["AIRS","Restrictions d'espace aérien"],["INDU","Mouvement social, grève"],["POLI","Situation politique"],["HOLI","Jour férié, vacances"],
+ ["RTNS","Retour au programme normal (situation d'avant les ASM)"]];
+const ASM_DEI=[["1","Exploitation conjointe : compagnies associées","1/KL/LH"],["2","Compagnie qui opère réellement (partage de code)","2/DL"],["3","Propriétaire de l'avion","3/CE"],
+ ["4","Employeur des pilotes","4/CE"],["5","Employeur des PNC (équipage commercial)","5/CE"],["6","Vol suivant du même avion (onward flight)","6/XK457/23"],
+ ["7","Service repas","7/…"],["8","Restriction de trafic","8/…"],["10","Partage de code : numéros de vol associés","10/DY132/UF4621"],
+ ["98","Terminal d'arrivée des passagers","98/1"],["99","Terminal de départ des passagers","99/1"]];
+const ASM_SVC=[["J","Régulier passagers"],["S","Régulier navette (shuttle)"],["U","Service de surface (bus, train)"],["F","Régulier cargo / poste (vrac)"],["V","Régulier cargo / poste (ULD)"],
+ ["M","Poste seulement"],["Q","Passagers + cargo en cabine (combi)"],["G","Supplémentaire passagers"],["B","Supplémentaire navette"],["A","Supplémentaire cargo / poste"],
+ ["R","Supplémentaire passagers + cargo"],["C","Charter passagers"],["O","Charter traitement spécial"],["H","Charter cargo / poste"],["L","Charter passagers + cargo / poste"],
+ ["P","Vol sans recette : mise en place, convoyage, livraison, démo"],["T","Essai technique"],["K","Entraînement (vol école)"],["D","Aviation générale"],["E","Vol spécial (autorités)"],
+ ["W","Militaire"],["X","Escale technique"],["I","État, diplomatique"],["N","Aviation d'affaires, taxi aérien"]];
+const ASM_AL_FIX={CE:"Chalair Aviation"};
+const ASM_EX="ASM\nUTC\nCON WEAT\nXK456/23NOV26\nJ AT7 Y68 3/CE 4/CE 5/CE\n//\nCON WEAT\nXK457/23NOV26\nJ AT7 Y68 3/CE 4/CE 5/CE";
+let ASMTXT="";
+const ASM_MON={JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11};
+const ASM_MOIS=["janv.","févr.","mars","avr.","mai","juin","juil.","août","sept.","oct.","nov.","déc."];
+const ASM_JOURS=["","lundi","mardi","mercredi","jeudi","vendredi","samedi","dimanche"];
+function asmDate(s){const m=/^(\d{2})([A-Z]{3})(\d{2})?$/.exec(s);if(!m||!(m[2] in ASM_MON)||+m[1]<1||+m[1]>31)return null;
+  const y=m[3]?2000+ +m[3]:new Date().getUTCFullYear();return {d:new Date(Date.UTC(y,ASM_MON[m[2]],+m[1])),txt:`${+m[1]} ${ASM_MOIS[ASM_MON[m[2]]]}${m[3]?" "+y:""}`}}
+function asmAl(c){const s=MRS_AL.find(x=>x[1]===c);if(s)return s[0];if(ASM_AL_FIX[c])return ASM_AL_FIX[c];
+  const r=AL.find(x=>x[0]===c&&x[5])||AL.find(x=>x[0]===c);return r?r[2]:""}
+const asmAlTxt=c=>{const n=asmAl(c);return n?`${esc(n)} (${esc(c)})`:esc(c)};
+function asmAp(c){if(c==="MRS")return "Marseille";const r=AP.find(x=>x[0]===c);return r?(r[3]||r[2]):""}
+function asmPl(c){if(TYPE_EXTRA[c])return TYPE_EXTRA[c];const r=PL.find(x=>x[0]===c);return r?r[2].replace(/^Aerospatiale\/Alenia /,""):""}
+const asmFlightRe=/^((?=[A-Z0-9]{0,2}[A-Z])[A-Z0-9]{2}[A-Z]?)(\d{1,4})([A-Z]?)$/;
+function asmCabin(s){const pairs=[...s.matchAll(/([A-Z])(\d{1,3})/g)];if(!pairs.length||pairs.map(p=>p[0]).join("")!==s)return null;
+  const fam=l=>"FAP".includes(l)?"première":"JCDIZR".includes(l)?"affaires":"WE".includes(l)?"éco premium":"éco";
+  return pairs.map(p=>`${+p[2]} sièges en ${p[1]} (${fam(p[1])})`).join(", ")}
+function asmCfg(s){const [main,ver]=s.split("VV");const parts=main.split(".").map(x=>asmCabin(x)||esc(x));
+  return {txt:parts.join(" · ")+(ver?` · version cabine : ${esc(ver)}`:""),seats:[...main.split(".")[0].matchAll(/[A-Z](\d{1,3})/g)].reduce((a,p)=>a+ +p[1],0)}}
+function asmDeiTxt(n,v){const name=(ASM_DEI.find(d=>d[0]===String(+n))||[])[1];
+  let val=esc(v);
+  if(["2","3","4","5"].includes(String(+n))&&/^[A-Z0-9]{2,3}$/.test(v))val=asmAlTxt(v);
+  else if(+n===1)val=v.split("/").map(asmAlTxt).join(", ");
+  else if(+n===6){const m=/^([A-Z0-9]{2}[A-Z]?\d{1,4}[A-Z]?)(?:\/(\d{1,2}))?/.exec(v);if(m)val=`vol ${esc(m[1])}${m[2]?` le ${+m[2]} du mois`:""}`}
+  return `<b>DEI ${+n}</b> · ${name?esc(name):"élément n° "+(+n)+" (voir SSIM)"} : ${val}`}
+function asmTokens(toks,S){return toks.map(t=>{const d=/^(\d{1,3})\/(.+)$/.exec(t);
+  if(d){S.dei[+d[1]]=d[2];return asmDeiTxt(d[1],d[2])}
+  if(/^[A-Z0-9]{4,7}$/.test(t)&&/\d/.test(t)===false||/^[A-Z]{1,2}-?[A-Z0-9]{3,5}$/.test(t))return `Immatriculation de l'avion (probable) : <b>${esc(t)}</b>`;
+  return `${esc(t)} : élément non décodé`}).join("<br>")}
+function asmHM(t,S){const min=+t.slice(0,2)*60+ +t.slice(2);let s=`${t.slice(0,2)}:${t.slice(2)}`;
+  if(S.mode==="UTC"){s+=" Z";const d0=S.dates[0];if(d0){const off=parisOffset(new Date(d0.d.getTime()+min*60000));s+=` (${fmtHM((min+off+1440)%1440)} à Marseille)`}}
+  else if(S.mode==="LT")s+=" heure locale";return s}
+function asmDecode(src){
+  const raw=String(src||"").split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+  if(!raw.length)return "";
+  let skipped=0;const lines=[];
+  for(const l of raw){if(/[a-zà-ÿ]/.test(l)&&!/^SI\b/i.test(l)){skipped++;continue}lines.push(l.toUpperCase().replace(/\s+/g," "))}
+  if(!lines.length)return `<div class="info">Aucune ligne de message reconnue. Colle le texte du télex (en majuscules), à partir de la ligne « ASM » ou « SSM ».</div>`;
+  const subs=[];let S=null,type="",mode="";
+  const newSub=()=>{S={rows:[],acts:[],why:[],flights:[],dates:[],eq:null,dei:{},legs:[],period:null,mode,xasm:false};subs.push(S)};
+  newSub();
+  for(const l of lines){let m,ex;
+    if(/^(ASM|SSM)\b/.test(l)){type=l.slice(0,3);ex=type==="ASM"?"<b>ASM</b> : message de modification ponctuelle du programme (Ad hoc Schedule Message), pour certains jours":"<b>SSM</b> : message de programme saisonnier (Standard Schedule Message), pour une période"}
+    else if(l==="UTC"||l==="LT"){mode=l;S.mode=l;ex=l==="UTC"?"Heures en <b>UTC</b> (temps universel, « Z »)":"Heures <b>locales</b> de chaque escale"}
+    else if(/^\d{2}[A-Z]{3}\d{5}[EC]\d{3}/.test(l))ex="Référence du message (date et numéro d'ordre de l'émetteur)";
+    else if(l==="//"||l==="/"){newSub();ex="Séparateur : un autre changement suit";}
+    else if(/^SI\b/.test(l))ex=`Information complémentaire (texte libre) : ${esc(l.slice(2).trim())}`;
+    else if(ASM_ACT.some(a=>a[0]===l.split(/[ \/]/)[0])){
+      const toks=l.split(/[ \/]+/);const out=[];
+      toks.forEach(t=>{const a=ASM_ACT.find(x=>x[0]===t),w=ASM_WHY.find(x=>x[0]===t);
+        if(a){S.acts.push(t);out.push(`<b>${t}</b> : ${esc(a[3])}`)}
+        else if(w){S.why.push(t);out.push(`<b>${t}</b> : motif — ${esc(w[1])}`)}
+        else if(t==="XASM"){S.xasm=true;out.push("<b>XASM</b> : efface les ASM déjà envoyés sur cette période")}
+        else out.push(`${esc(t)} : code non reconnu`)});
+      ex=out.join("<br>")}
+    else if((m=/^(\d{2}[A-Z]{3}\d{2})\s+(\d{2}[A-Z]{3}\d{2})\s+([0-7.]{1,7})(?:\/W(\d))?/.exec(l))&&asmDate(m[1])){
+      const a=asmDate(m[1]),b=asmDate(m[2]),days=[...m[3]].filter(c=>c>="1"&&c<="7").map(c=>ASM_JOURS[+c]);
+      S.period={a,b,days};if(!S.dates.length)S.dates.push(a);
+      ex=`Période du <b>${a.txt}</b> au <b>${b.txt}</b>, ${days.length===7?"tous les jours":"les "+days.join(", ")}${m[4]?` (une semaine sur ${m[4]})`:""}`}
+    else if(m=/^([A-Z]{3})(\d{4})(\S*)\s+([A-Z]{3})(\d{4})(\S*)\s*(.*)$/.exec(l)){
+      S.legs.push([m[1],m[2],m[4],m[5]]);
+      const ap=c=>{const n=asmAp(c);return `<b>${c}</b>${n?" "+esc(n):""}`};
+      ex=`Départ ${ap(m[1])} à ${asmHM(m[2],S)}${m[3]?` <span class="sub">(${esc(m[3])})</span>`:""}<br>Arrivée ${ap(m[4])} à ${asmHM(m[5],S)}${m[6]?` <span class="sub">(${esc(m[6])} : décalage de date)</span>`:""}`;
+      if(m[7])ex+="<br>"+asmTokens(m[7].split(" "),S)}
+    else if(m=/^([A-Z]{3})([A-Z]{3})\s+(\d{1,3})\/(.*)$/.exec(l))ex=`Tronçon <b>${m[1]} → ${m[2]}</b> · `+asmDeiTxt(m[3],m[4]);
+    else if((m=/^([A-Z])\s+([A-Z0-9]{3})(?:\s+(\S+))?\s*(.*)$/.exec(l))&&ASM_SVC.some(x=>x[0]===m[1])){
+      const svc=ASM_SVC.find(x=>x[0]===m[1])[1],pl=asmPl(m[2]),cfg=m[3]&&!/^\d{1,3}\//.test(m[3])?asmCfg(m[3]):null;
+      S.eq={svc,type:m[2],pl,cfg};
+      ex=`<b>${m[1]}</b> : type de service — ${esc(svc)}<br><b>${m[2]}</b> : type d'avion${pl?" — "+esc(pl):""}`+(cfg?`<br><b>${esc(m[3])}</b> : configuration — ${cfg.txt}`:"");
+      const rest=((m[3]&&!cfg?m[3]+" ":"")+(m[4]||"")).trim();if(rest)ex+="<br>"+asmTokens(rest.split(" "),S)}
+    else{const toks=l.split(" "),[fl,...slash]=toks[0].split("/");const f=asmFlightRe.exec(fl);
+      if(f){const out=[`Vol <b>${esc(fl)}</b>${asmAl(f[1])?" — "+esc(asmAl(f[1])):""}${f[3]?` (suffixe ${f[3]})`:""}`];S.flights.push(fl);
+        [...slash,...toks.slice(1)].forEach(p=>{const d=asmDate(p);
+          if(d){S.dates.push(d);out.push(`date : <b>${d.txt}</b>`)}
+          else if(/^\d$/.test(p))out.push(`tronçon n° ${p}`);
+          else if(/^[A-Z]{6}$/.test(p))out.push(`tronçon ${p.slice(0,3)} → ${p.slice(3)}`);
+          else if(asmFlightRe.test(p)){out.push(`nouveau numéro de vol : <b>${esc(p)}</b>`);S.newFlight=p}
+          else out.push(`${esc(p)} : non décodé`)});
+        ex=out.join(" · ")}
+      else ex=`<span class="sub">Ligne non reconnue (vérifie la saisie).</span>`}
+    S.rows.push([l,ex])}
+  const real=subs.filter(s=>s.rows.length);
+  const summary=s=>{if(!s.acts.length&&!s.flights.length)return "";
+    const a=s.acts.map(c=>{const t=(ASM_ACT.find(x=>x[0]===c)||[])[3]||c;return t.split(/[.:(]/)[0].trim()}).join(" + ")||"Changement";
+    const w=s.why.map(c=>ASM_WHY.find(x=>x[0]===c)[1].toLowerCase()).join(", ");
+    const head=`${s.flights.map(esc).join(" / ")||"Vol"}${s.dates.length&&!s.period?" · "+s.dates.map(d=>d.txt).join(", "):""}${s.period?` · du ${s.period.a.txt} au ${s.period.b.txt}`:""}`;
+    const bits=[];
+    if(s.eq){bits.push((s.eq.pl||s.eq.type)+(s.eq.cfg&&s.eq.cfg.seats?` · ${s.eq.cfg.seats} sièges`:""))}
+    if(s.legs.length)bits.push(s.legs.map(g=>`${g[0]} ${g[1].slice(0,2)}:${g[1].slice(2)} → ${g[2]} ${g[3].slice(0,2)}:${g[3].slice(2)}${s.mode==="UTC"?" Z":""}`).join(" · "));
+    const own=s.dei[3],ck=s.dei[4],cb=s.dei[5],fa=(s.flights[0]&&asmFlightRe.exec(s.flights[0].split("/")[0])||[])[1];
+    if(own&&own===ck&&own===cb&&own!==fa)bits.push(`avion et équipages ${asmAl(own)||own} : affrètement avec équipage (wet lease)`);
+    else{if(own)bits.push("avion : "+(asmAl(own)||own));if(ck)bits.push("pilotes : "+(asmAl(ck)||ck));if(cb)bits.push("PNC : "+(asmAl(cb)||cb))}
+    if(s.newFlight)bits.push("devient "+s.newFlight);
+    return `<div class="asmsum"><b>${head}</b><br>${esc(a)}${w?` (${esc(w)})`:""}${bits.length?"<br>"+bits.map(esc).join(" · "):""}</div>`};
+  const sums=real.map(summary).filter(Boolean).join("");
+  return (sums?`<h2 style="margin-top:12px">En clair</h2>${sums}`:"")+
+    `<h2>Ligne par ligne</h2><table class="ftab asmt">${real.map(s=>s.rows.map(([l,e])=>`<tr><td class="code">${esc(l)}</td><td>${e}</td></tr>`).join("")).join("")}</table>`+
+    (skipped?`<p class="sub">${skipped} ligne(s) de texte (bonjour, signature…) ignorée(s).</p>`:"")+
+    `<p class="sub">Aide à la lecture d'après le format IATA (SSIM). En cas de doute, le message d'origine fait foi.</p>`}
+function asmView(q,only){
+  const m=t=>!q||norm(t).includes(q);
+  const card=(t,body)=>`<div class="wx" style="margin-bottom:10px;overflow:hidden"><div class="wxh" style="display:block"><b style="white-space:normal;display:block;line-height:1.3">${t}</b></div>${body}</div>`;
+  const tab=(head,rows)=>rows.length?`<table class="ftab"><tr>${head.map(x=>`<th>${x}</th>`).join("")}</tr>${rows.join("")}</table>`:"";
+  const acts=ASM_ACT.filter(r=>m(r[0]+" "+r[3])).map(r=>`<tr><td class="code">${r[0]}</td><td style="white-space:nowrap">${[r[1]?"ASM":"",r[2]?"SSM":""].filter(Boolean).join(" · ")}</td><td>${hl(r[3],q)}</td></tr>`);
+  const why=ASM_WHY.filter(r=>m(r.join(" "))).map(r=>`<tr><td class="code">${r[0]}</td><td>${hl(r[1],q)}</td></tr>`);
+  const dei=ASM_DEI.filter(r=>m("dei "+r.join(" "))).map(r=>`<tr><td class="code">${r[0]}</td><td>${hl(r[1],q)}</td><td style="white-space:nowrap">${esc(r[2])}</td></tr>`);
+  const svc=ASM_SVC.filter(r=>m(r.join(" "))).map(r=>`<tr><td class="code">${r[0]}</td><td>${hl(r[1],q)}</td></tr>`);
+  let h="";
+  if(!q&&!only)h+=card("Décoder un message",`<p class="sub">Colle le télex (ASM ou SSM) : la traduction s'affiche en dessous. Le texte autour (bonjour, signature) est ignoré.</p>
+    <textarea id="asmIn" rows="7" autocapitalize="characters" autocomplete="off" spellcheck="false" style="font-size:16px;min-height:150px" placeholder="ASM&#10;UTC&#10;CON WEAT&#10;XK456/23NOV26&#10;J AT7 Y68 3/CE 4/CE 5/CE">${esc(ASMTXT)}</textarea>
+    <div class="finder" style="margin-top:8px"><button class="btn p" id="asmPaste">Coller</button><button class="btn" id="asmEx">Exemple</button><button class="btn" id="asmClr">Effacer</button></div>
+    <div id="asmOut">${asmDecode(ASMTXT)}</div>`);
+  if(acts.length)h+=card("1. Code d'action (3e ligne) : quel changement ?",tab(["Code","Message","Signification"],acts)+(q?"":`<p class="sub">${ASM_SEC}</p>`));
+  if(why.length)h+=card("2. Motif du changement (après le code d'action)",tab(["Code","Motif"],why));
+  if(dei.length)h+=card("3. DEI : éléments numérotés « n/valeur »",`<p class="sub">Un DEI (Data Element Identifier) est un champ numéroté qui donne une précision. Ex. <b>3/CE</b> = l'avion appartient à la compagnie CE.</p>`+tab(["N°","Élément","Exemple"],dei));
+  if(svc.length)h+=card("4. Type de service (1re lettre de la ligne avion)",tab(["Code","Type de vol"],svc));
+  if(!q&&!only)h+=card("5. Structure d'un message",`<table class="ftab asmt">${[["ASM","Type : ASM = changement ponctuel, certains jours · SSM = programme sur une période"],["UTC","Heures en UTC (ou LT = heures locales)"],["CON WEAT","Code d'action + motif"],["XK456/23NOV26","Vol / date (SSM : vol seul, puis une ligne « période + jours », ex. 01DEC26 28MAR27 1357)"],
+      ["J AT7 Y68 3/CE","Type de service, type d'avion, configuration (sièges par classe), puis DEI"],["MRS0600 BIA0705","Tronçon : escale + heure de départ, escale + heure d'arrivée"],["SI …","Information en texte libre"],["//","Séparateur : un autre changement suit"]].map(r=>`<tr><td class="code">${esc(r[0])}</td><td>${esc(r[1])}</td></tr>`).join("")}</table>
+      <p class="sub">Configuration : une lettre de classe + un nombre de sièges (Y68 = 68 sièges en Y ; C12Y150 = 12 en affaires, 150 en éco). Réponses des systèmes : ACK = message bien reçu, NAC = message refusé (avec la raison).</p>`);
+  if(!h)return only?"":`<div class="info">Aucun code pour « ${esc(q)} ».</div>`;
+  return h+(only?"":`<p class="sub">Sources : IATA SSIM, chapitres 4 (SSM) et 5 (ASM), d'après des extraits publics (Avinor, OAG). Les compagnies peuvent avoir leurs propres usages.</p>`);
+}
+function bindAsm(){const t=document.getElementById("asmIn");if(!t)return;const o=document.getElementById("asmOut");
+  t.oninput=()=>{ASMTXT=t.value;o.innerHTML=asmDecode(ASMTXT)};
+  document.getElementById("asmEx").onclick=()=>{t.value=ASM_EX;t.oninput()};
+  document.getElementById("asmClr").onclick=()=>{t.value="";t.oninput();t.focus()};
+  document.getElementById("asmPaste").onclick=async()=>{try{const s=await navigator.clipboard.readText();if(s){t.value=s;t.oninput()}}
+    catch(e){t.focus();o.innerHTML='<div class="info">Collage automatique refusé : touche longuement la case puis « Coller ».</div>'}}}
+
 /* ---------- Procédures (rubrique « proc ») : mua/procedures.enc + pages mua/p-*.enc, même clé que le MUA (tools/proc_build.py) ---------- */
 const PROC={items:null,open:null};let PV=null;
 async function procPage(p,j){const pg=p.pages[j];if(!pg)return;PV={p,j};MUA.cur=-2;MUA.zoom=1;
@@ -754,7 +914,7 @@ document.getElementById("perso").addEventListener("change",e=>{const t=e.target,
   if(t.dataset.bn){const b=myBnav().slice(1,4).map(x=>x[0]);const i=+t.dataset.bn,v=t.value,o=b.indexOf(v);if(o>=0&&o!==i)b[o]=b[i];b[i]=v;store("coa-bnav",JSON.stringify(b));persoApply()}});
 /* ---------- État ---------- */
 let AP=[],AL=[],PL=[],loaded=false;
-const TABS=[["home","Accueil"],["mua","MUA"],["ap","Aéroports"],["al","Compagnies"],["pl","Avions"],["codes","Codes avion"],["immat","Immatriculations"],["vols","Vols du jour"],["wx","Météo"],["notam","NOTAM"],["proc","Procédures"],["lfml","Aérodrome"],["ct","Contacts MRS"],["fl","Temps de vol"],["calc","Calculs"],["dl","Codes retard"],["ab","Abréviations"],["nato","Alphabet"],["all","Tout"]];
+const TABS=[["home","Accueil"],["mua","MUA"],["ap","Aéroports"],["al","Compagnies"],["pl","Avions"],["codes","Codes avion"],["immat","Immatriculations"],["vols","Vols du jour"],["wx","Météo"],["notam","NOTAM"],["proc","Procédures"],["lfml","Aérodrome"],["ct","Contacts MRS"],["fl","Temps de vol"],["calc","Calculs"],["dl","Codes retard"],["asm","ASM / SSM"],["ab","Abréviations"],["nato","Alphabet"],["all","Tout"]];
 let tab="home";let STRICT=false;
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -767,7 +927,7 @@ const THEMES=[["Référentiels",[["mua","MUA · fiches de postes","Postes, avion
   ["En direct",[["vols","Vols du jour","Départs et arrivées MRS, statuts, portes"],["wx","Météo et fréquences","METAR, TAF, ATIS, tour, sol"],["notam","NOTAM LFML","Pistes, voies, postes, balisage"]]],
   ["Plateforme MRS",[["proc","Procédures et plans","LVP, dégivrage, APU, essais moteurs, plans"],["lfml","Aérodrome LFML","AIP, pistes, consignes, AIRAC, SUP AIP"],["ct","Contacts MRS","Assistants et services, appeler ou SMS"]]],
   ["Outils",[["fl","Temps de vol","Depuis et vers Marseille"],["calc","Calculs","Calculatrice, heure Z ↔ locale, ETA Marseille, durées"]]],
-  ["Codes et langage",[["dl","Codes retard","Codes IATA 00 à 99"],["ab","Abréviations","A-CDM, messages, PMR, météo"],["nato","Alphabet","Alphabet OTAN, épellation"]]],
+  ["Codes et langage",[["dl","Codes retard","Codes IATA 00 à 99"],["asm","ASM / SSM","Décoder les messages de programme"],["ab","Abréviations","A-CDM, messages, PMR, météo"],["nato","Alphabet","Alphabet OTAN, épellation"]]],
   ["Recherche globale",[["home","Accueil","Toutes les rubriques en tuiles"],["all","Tout","Une seule recherche dans toutes les rubriques"]]]];
 /* explicatif affiché en haut de chaque rubrique (masqué pendant une recherche) */
 const HELP={
@@ -785,6 +945,7 @@ const HELP={
  lfml:"<b>Aérodrome de Marseille.</b> Pistes et distances, consignes d'exploitation, services, cycle AIRAC en cours et SUP AIP, avec les liens vers le SIA.",
  fl:"<b>Temps de vol depuis et vers Marseille.</b> Touche une destination de la liste ou tape une ville ou un pays. Estimation porte à porte : l'horaire de la compagnie fait foi.",
  calc:"<b>Calculs rapides.</b> Calculatrice, conversion heure Z ↔ heure de Marseille (été / hiver automatique), heure d'arrivée à Marseille depuis l'ED d'une escale, durée entre deux heures et heure + durée. Passe minuit tout seul.",
+ asm:"<b>Messages ASM / SSM.</b> Colle un télex de changement de programme (ASM, SSM) pour le lire en clair, ligne par ligne. En dessous : codes d'action (CON, EQT, TIM…), motifs (WEAT, TECH…), DEI et types de service. Tape un code (EQT, WEAT) pour le retrouver.",
  dl:"<b>Codes retard IATA</b> (00 à 99) avec leur signification. Tape un numéro (93) ou un mot (météo).",
  ab:"<b>Abréviations</b> de l'exploitation : A-CDM, messages, PMR, météo, masses, urgences… Tape le sigle ou un mot.",
  nato:"<b>Alphabet OTAN.</b> Tape un mot ou une immatriculation pour l'avoir épelée (FHBXA → Foxtrot Hotel Bravo X-ray Alfa).",
@@ -824,6 +985,7 @@ const TI={
  al:'<path d="M3 14.5 21 8l-1.5-3L12 8 7 3.5 5 4l3 5.5-4 1.5-2-1.5L1 10z"/><path d="M4 20h16"/>',
  proc:'<path d="M9 5h10M9 12h10M9 19h10"/><path d="M4 5l1 1 2-2M4 12l1 1 2-2M4 19l1 1 2-2"/>',
  codes:'<path d="M3 12h18M7 8l-4 4 4 4M17 8l4 4-4 4"/>',
+ asm:'<path d="M3.5 6h17v12h-17z"/><path d="M3.5 6 12 12.5 20.5 6"/>',
  pl:'<path d="M21 12.5 13.5 9V4.5a1.5 1.5 0 0 0-3 0V9L3 12.5V15l7.5-2.2V18L8 19.8V21l4-1 4 1v-1.2L13.5 18v-5.2L21 15z"/>',
  dl:'<circle cx="12" cy="13" r="8"/><path d="M12 9v4l2.5 2M9.5 2.5h5"/>',
  ab:'<path d="M4 6h16M4 12h10M4 18h13"/>',
@@ -2002,6 +2164,7 @@ function render(){
     case "al":h=alTable(q,200);break;
     case "pl":h=plTable(q,300);break;
     case "codes":h=codesView(q);break;
+    case "asm":h=asmView(q);break;
     case "proc":h=procView(q);break;
     case "dl":h=`<div class="info">Codes retard IATA standard (AHM 730), traduction résumée. Ta compagnie peut utiliser des sous-codes propres.</div>`+grouped(DELAY,q,1,"60px");break;
     case "ab":h=grouped(ABBR,q,1,"150px");break;
@@ -2027,6 +2190,7 @@ function render(){
         const c=search(PL,r=>[r[0],r[1]],r=>[r[2]],q,8);if(c.total)parts.push(["Avions","pl",plTable(q,8),c.best]);
       }
       const dm=DELAY.filter(r=>norm(r.join(" ")).includes(q));if(dm.length)parts.push(["Codes retard","dl",grouped(DELAY,q,1,"60px"),dm.some(r=>r[1]===Q)?3:1]);
+      {const x=asmView(q,true);if(x)parts.push(["Messages ASM / SSM","asm",x,[...ASM_ACT,...ASM_WHY].some(r=>norm(r[0])===q)?3:1])}
       const am=ABBR.filter(r=>norm(r.join(" ")).includes(q));if(am.length)parts.push(["Abréviations","ab",grouped(ABBR,q,1,"150px"),am.some(r=>r[1].toUpperCase().split(/[ \/]+/).includes(Q))?3:1]);
       if(MUA.annu){const r=annuView(q);if(r.total)parts.push(["Annuaire COA","ct",r.html,1])}
       if(getContacts().some(u=>ctMatch(u,q)))parts.push(["Mes numéros","ct",ctMine(q).split("<p><button class=\"btn p\" id=\"ctEdit\"")[0],1]);
@@ -2045,7 +2209,7 @@ function render(){
   document.querySelectorAll("[data-qq]").forEach(b=>b.onclick=()=>{$("#q").value=b.dataset.qq;render();scrollTo(0,0)});
   if(tab==="ct")bindContacts();
   if(tab==="calc")bindCalc();
-  bindMua();bindProc();
+  bindMua();bindProc();if(tab==="asm")bindAsm();
   abbrTips(out);const ot=$("#abTip");if(ot)ot.remove();
   document.querySelectorAll("[data-go]").forEach(b=>b.onclick=e=>{if(EDIT||e.target.closest("a,button:not(.tile)"))return;tab=b.dataset.go;location.hash=tab;render();scrollTo(0,0)});
   const wr=$("#wxRefresh");if(wr)wr.onclick=()=>{wr.textContent="…";wxLoad(true)};
