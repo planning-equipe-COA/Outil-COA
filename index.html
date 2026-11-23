@@ -284,6 +284,15 @@ html[data-theme=dark] .wxa.danger{background:#3d1a1d;color:#ffb3b3}
 .skel i{display:block;height:14px;border-radius:7px;background:linear-gradient(90deg,var(--line) 25%,color-mix(in srgb,var(--line) 40%,var(--card)) 50%,var(--line) 75%);background-size:300% 100%;animation:skel 1.4s ease-in-out infinite}
 @keyframes skel{from{background-position:100% 0}to{background-position:0 0}}
 @media (prefers-reduced-motion:reduce){.vcd.soon,.skel i{animation:none}}
+.home h2 .live{display:inline-block;width:8px;height:8px;border-radius:50%;background:#2e9b5b;margin-left:8px;vertical-align:middle;animation:livePulse 1.8s ease-out infinite}
+@keyframes livePulse{0%{box-shadow:0 0 0 0 rgba(46,155,91,.6)}80%,100%{box-shadow:0 0 0 7px rgba(46,155,91,0)}}
+#viewer:not(.hide) #vimg{animation:vIn .28s cubic-bezier(.2,.8,.2,1)}
+@keyframes vIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:none}}
+.mcard[data-proc]{transition:transform .15s ease,box-shadow .15s ease}.mcard[data-proc]:active{transform:scale(.98)}
+.glink[data-openproc]{transition:transform .12s ease}.glink[data-openproc]:active{transform:scale(.95)}
+@media (prefers-reduced-motion:reduce){.home h2 .live,#viewer:not(.hide) #vimg{animation:none}.mcard[data-proc],.glink[data-openproc]{transition:none}}
+@media print{.home h2 .live{animation:none}}
+
 </style>
 </head>
 <body>
@@ -657,7 +666,7 @@ function homeView(){
   volsLoad();
   const extra=Object.assign({mua:MUA.sheets?`${MUA.sheets.length} fiches de postes`:"Fiches de postes (code)",ct:MUA.annu?"Annuaire COA et mes numéros":"Assistants, services, portes"},liveTiles());
   return '<div class="home">'+homeAlerts()+`<div data-go="wx" style="cursor:pointer">${wxCard(false)}</div>`+favsView()+THEMES.map(([t,it])=>{const items=it.filter(([k])=>k!=="home"&&k!=="all");if(!items.length)return "";
-    return `<h2>${t}</h2><div class="tiles">`+items.map(([k,l,d])=>`<button class="tile" data-go="${k}"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TI[k]||""}</svg></span><b>${l}</b><small>${extra[k]||d}</small></button>`).join("")+"</div>"}).join("")+"</div>";
+    return `<h2>${t}${t==="En direct"?'<i class="live" title="Mis à jour en continu"></i>':""}</h2><div class="tiles">`+items.map(([k,l,d])=>`<button class="tile" data-go="${k}"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TI[k]||""}</svg></span><b>${l}</b><small>${extra[k]||d}</small></button>`).join("")+"</div>"}).join("")+"</div>";
 }
 $("#menu").onclick=e=>{const b=e.target.closest(".mitem");if(b){tab=b.dataset.k;location.hash=tab;render()}if(b||e.target.id==="menu")$("#menu").classList.add("hide")};
 function setSeg(id,v){document.querySelectorAll(`#${id} button`).forEach(b=>b.classList.toggle("on",b.dataset.v===v))}
@@ -1516,7 +1525,9 @@ function airacCycles(n=3){const ref=Date.UTC(2026,2,19),day=864e5,now=Date.now()
 function lfmlView(){
   const c=airacCycles(3),fd=d=>d.toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric",timeZone:"UTC"}),days=Math.ceil((c[1].date-Date.now())/864e5);
   const sec=(t,b)=>`<div class="card"><h2>${t}</h2>${b}</div>`,li=a=>`<ul style="margin:0;padding-left:18px">${a.map(x=>`<li style="margin:4px 0">${x}</li>`).join("")}</ul>`;
-  return procLinks("Au sol : plans et restrictions",[["Plateforme MRS","Plans des postes et des voies"],["APU","Restrictions APU"],["Essais moteurs","Essais moteurs"]])+sec("Cycles AIRAC",`<p style="margin:0">En vigueur : <b>${c[0].id}</b> depuis le ${fd(c[0].date)}</p><p style="margin:4px 0 0">Prochain : <b>${c[1].id}</b> le ${fd(c[1].date)} (dans ${days} jour${days>1?"s":""}) · puis ${c[2].id} le ${fd(c[2].date)}</p><p class="sub">Les changements de l'AIP (pistes, postes, fréquences, procédures) entrent en vigueur à ces dates.</p>`)+
+  const M=["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"],d0=c[0].date,dd=String(d0.getUTCDate()).padStart(2,"0"),yy=d0.getUTCFullYear(),mm=String(d0.getUTCMonth()+1).padStart(2,"0");
+  const aipUrl=`https://www.sia.aviation-civile.gouv.fr/media/dvd/eAIP_${dd}_${M[d0.getUTCMonth()]}_${yy}/FRANCE/AIRAC-${yy}-${mm}-${dd}/html/eAIP/Cartes/LFML/AD_2_LFML_APDC_01.pdf`;
+  return procLinks("Au sol : plans et restrictions",[["Plateforme MRS","Plans des postes et des voies"],["APU","Restrictions APU"],["Essais moteurs","Essais moteurs"]]).replace("</div></div>",`<a class="glink" href="${aipUrl}" target="_blank" rel="noopener">Plan officiel des postes (AIP ${c[0].id}) ↗</a></div></div>`)+sec("Cycles AIRAC",`<p style="margin:0">En vigueur : <b>${c[0].id}</b> depuis le ${fd(c[0].date)}</p><p style="margin:4px 0 0">Prochain : <b>${c[1].id}</b> le ${fd(c[1].date)} (dans ${days} jour${days>1?"s":""}) · puis ${c[2].id} le ${fd(c[2].date)}</p><p class="sub">Les changements de l'AIP (pistes, postes, fréquences, procédures) entrent en vigueur à ces dates.</p>`)+
   sec("Pistes",`<table class="ftab"><tr><th>Piste</th><th>Dimensions</th><th>TODA · LDA</th></tr>
     <tr><td><b>13L / 31R</b></td><td>3 500 × 45 m</td><td>13L : 3 500 · 3 160 m<br>31R : 3 440 · 2 780 m</td></tr>
     <tr><td><b>13R / 31L</b></td><td>2 370 × 45 m</td><td>13R : 2 370 · 2 370 m<br>31L : 2 370 · 2 265 m</td></tr></table>

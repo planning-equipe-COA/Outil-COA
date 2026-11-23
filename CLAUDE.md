@@ -192,7 +192,8 @@ L'utilisateur échange en français.
   Codes et langage, Recherche globale. Catégories de procédures : APU et essais moteurs, Aviation générale, Exploitation hiver,
   Faible visibilité, Plans de la plateforme (= préfixe des noms de fichiers sources). Raccourcis `data-openproc="mot du titre"`
   (gestionnaire global, `procLinks`) : Météo → LVP, Dégivrage ; Aérodrome → Plans, APU, Essais moteurs. LVP : messages 3 et 4
-  laissés « à compléter » (Raph : OK pour l'instant). Plan AIP APDC 01 : à revérifier à chaque AIRAC (SIA eAIP, URL
+  laissés « à compléter » (Raph : OK pour l'instant). Aérodrome : lien « Plan officiel des postes (AIP xxxx) » calculé depuis `airacCycles` (toujours le cycle en vigueur). Animations
+  ajoutées : point vert pulsé « En direct » sur l'accueil, visionneuse en fondu, appui sur les cartes (repli reduced-motion). Plan AIP APDC 01 : à revérifier à chaque AIRAC (SIA eAIP, URL
   media/dvd/eAIP_JJ_MMM_AAAA/FRANCE/AIRAC-AAAA-MM-JJ/html/eAIP/Cartes/LFML/AD_2_LFML_APDC_01.pdf). Visionneuse : rotation automatique seulement pour les pages en paysage
   (`vLayout`, `wide`) — les pages portrait (guide AG) restent droites. Les sources de ces deux procédures sont restées dans la
   session cloud de Claude (pas sur le Mac) : pour refaire `procedures.enc`, déchiffrer l'existant (texte + p-*.enc) hors dépôt
