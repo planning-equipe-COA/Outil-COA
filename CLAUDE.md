@@ -184,7 +184,8 @@ L'utilisateur échange en français.
   du 03/12/2024 : CdQ PCE autorise, 22 h–6 h interdit sauf départ avant 7 h, ralenti postes 50 à 53, puissance C1 / E2 / piste
   entre E2 et E3, FLYCO COP sur l'aire de manœuvre ; page 1/3 non transmise). Demande de Raph : fiches les plus concises possible,
   la réponse rapide en tête. Puis **Plans – Plateforme MRS (postes et codes des voies)** (23 nov. 2026 : photos redressées + ombre retirée, img_plans/
-  stationnement.jpg = AIP APDC 01 du 13/06/2024, codes.jpg = AMP codes de références des infrastructures 05/03/2020 ; tableau
+  stationnement.jpg = AIP APDC 01 officiel du 29/10/2026 (PDF SIA eAIP, postes 21-23 nouveaux) avec zones colorées, voies.png = codes
+  des voies redessinés, codes.jpg = AMP codes de références des infrastructures 05/03/2020 ; tableau
   postes 50–57 / accès G1-G2-G3 / IDLE 47-48, listes des voies par code lues sur les couleurs, marquées « à vérifier »).
   Propositions de rangement faites à Raph (couper Escale MRS en « En direct » + « Plateforme MRS », renommer catégories de
   procédures, raccourcis, menu par thème par défaut) : **en attente de sa réponse, ne rien changer sans accord**. Visionneuse : rotation automatique seulement pour les pages en paysage
