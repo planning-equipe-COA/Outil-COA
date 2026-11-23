@@ -187,8 +187,13 @@ L'utilisateur échange en français.
   stationnement.jpg = AIP APDC 01 officiel du 29/10/2026 (PDF SIA eAIP, postes 21-23 nouveaux) avec zones colorées, voies.png = codes
   des voies redessinés, codes.jpg = AMP codes de références des infrastructures 05/03/2020 ; tableau
   postes 50–57 / accès G1-G2-G3 / IDLE 47-48, listes des voies par code lues sur les couleurs, marquées « à vérifier »).
-  Propositions de rangement faites à Raph (couper Escale MRS en « En direct » + « Plateforme MRS », renommer catégories de
-  procédures, raccourcis, menu par thème par défaut) : **en attente de sa réponse, ne rien changer sans accord**. Visionneuse : rotation automatique seulement pour les pages en paysage
+  **Rangement du 23 nov. 2026 (Raph : « je te laisse le choix, rapide d'accès et clair »)** : THEMES = Référentiels, **En direct**
+  (Vols du jour, Météo et fréquences, NOTAM), **Plateforme MRS** (Procédures et plans, Aérodrome LFML, Contacts MRS), Outils,
+  Codes et langage, Recherche globale. Catégories de procédures : APU et essais moteurs, Aviation générale, Exploitation hiver,
+  Faible visibilité, Plans de la plateforme (= préfixe des noms de fichiers sources). Raccourcis `data-openproc="mot du titre"`
+  (gestionnaire global, `procLinks`) : Météo → LVP, Dégivrage ; Aérodrome → Plans, APU, Essais moteurs. LVP : messages 3 et 4
+  laissés « à compléter » (Raph : OK pour l'instant). Plan AIP APDC 01 : à revérifier à chaque AIRAC (SIA eAIP, URL
+  media/dvd/eAIP_JJ_MMM_AAAA/FRANCE/AIRAC-AAAA-MM-JJ/html/eAIP/Cartes/LFML/AD_2_LFML_APDC_01.pdf). Visionneuse : rotation automatique seulement pour les pages en paysage
   (`vLayout`, `wide`) — les pages portrait (guide AG) restent droites. Les sources de ces deux procédures sont restées dans la
   session cloud de Claude (pas sur le Mac) : pour refaire `procedures.enc`, déchiffrer l'existant (texte + p-*.enc) hors dépôt
   et le reconstituer. Pour en ajouter une, il faut aussi la

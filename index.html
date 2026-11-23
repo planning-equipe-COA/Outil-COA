@@ -578,7 +578,7 @@ function bindProc(){
 
 /* ---------- État ---------- */
 let AP=[],AL=[],PL=[],loaded=false;
-const TABS=[["home","Accueil"],["mua","MUA"],["ap","Aéroports"],["al","Compagnies"],["pl","Avions"],["codes","Codes avion"],["immat","Immatriculations"],["vols","Vols du jour"],["wx","Météo"],["notam","NOTAM"],["proc","Procédures"],["ct","Contacts MRS"],["lfml","Aérodrome"],["fl","Temps de vol"],["calc","Calculs"],["dl","Codes retard"],["ab","Abréviations"],["nato","Alphabet"],["all","Tout"]];
+const TABS=[["home","Accueil"],["mua","MUA"],["ap","Aéroports"],["al","Compagnies"],["pl","Avions"],["codes","Codes avion"],["immat","Immatriculations"],["vols","Vols du jour"],["wx","Météo"],["notam","NOTAM"],["proc","Procédures"],["lfml","Aérodrome"],["ct","Contacts MRS"],["fl","Temps de vol"],["calc","Calculs"],["dl","Codes retard"],["ab","Abréviations"],["nato","Alphabet"],["all","Tout"]];
 let tab="home";let STRICT=false;
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -588,13 +588,14 @@ function store(k,v){try{if(v===undefined)return localStorage.getItem(k);localSto
 
 $("#tabs").innerHTML=TABS.map(([k,l])=>`<button data-k="${k}">${l}</button>`).join("");
 const THEMES=[["Référentiels",[["mua","MUA · fiches de postes","Postes, avions autorisés, plans"],["ap","Aéroports","Codes IATA et OACI"],["al","Compagnies","Codes IATA, OACI et indicatifs"],["pl","Avions","Types, envergure, sillage"],["codes","Codes avion","Envergure, sillage, approche, bruit"],["immat","Immatriculations","Type, compagnie, sièges (code)"]]],
-  ["Escale MRS",[["vols","Vols du jour","Départs et arrivées MRS, statuts, portes"],["wx","Météo et fréquences","METAR, TAF, ATIS, tour, sol"],["notam","NOTAM LFML","Pistes, voies, postes, balisage"],["proc","Procédures","Procédures COA, pas à pas"],["ct","Contacts MRS","Assistants et services, appeler ou SMS"],["lfml","Aérodrome LFML","AIP, pistes, consignes, AIRAC, SUP AIP"]]],
+  ["En direct",[["vols","Vols du jour","Départs et arrivées MRS, statuts, portes"],["wx","Météo et fréquences","METAR, TAF, ATIS, tour, sol"],["notam","NOTAM LFML","Pistes, voies, postes, balisage"]]],
+  ["Plateforme MRS",[["proc","Procédures et plans","LVP, dégivrage, APU, essais moteurs, plans"],["lfml","Aérodrome LFML","AIP, pistes, consignes, AIRAC, SUP AIP"],["ct","Contacts MRS","Assistants et services, appeler ou SMS"]]],
   ["Outils",[["fl","Temps de vol","Depuis et vers Marseille"],["calc","Calculs","Calculatrice, heure Z ↔ locale, ETA Marseille, durées"]]],
   ["Codes et langage",[["dl","Codes retard","Codes IATA 00 à 99"],["ab","Abréviations","A-CDM, messages, PMR, météo"],["nato","Alphabet","Alphabet OTAN, épellation"]]],
-  ["Recherche",[["home","Accueil","Toutes les rubriques en tuiles"],["all","Tout","Une seule recherche dans toutes les rubriques"]]]];
+  ["Recherche globale",[["home","Accueil","Toutes les rubriques en tuiles"],["all","Tout","Une seule recherche dans toutes les rubriques"]]]];
 /* explicatif affiché en haut de chaque rubrique (masqué pendant une recherche) */
 const HELP={
- proc:"<b>Procédures COA.</b> Classées par thème, protégées par le code du MUA. Tape un mot (bagage, alerte, PMR) pour chercher dans le titre et le texte. Touche une procédure pour l'ouvrir ; les pages s'affichent en grand comme les fiches MUA.",
+ proc:"<b>Procédures et plans.</b> Rangés par thème, protégés par le code du MUA. Tape un mot (LVP, APU, 21, flyco) pour chercher dans le titre et le texte. Touche une fiche : l'essentiel « À retenir » en haut, les plans s'ouvrent en grand comme les fiches MUA.",
  codes:"<b>Codes avion : ne pas les confondre.</b> Plusieurs classements utilisent des lettres (envergure A à F, RECAT-EU A à F, catégorie d'approche A à E, sillage L/M/H/J). Cette page les met côte à côte. Pour les postes et les voies de circulation, c'est la <b>lettre d'envergure</b> qui compte. Tape un type (A321, B777) pour le retrouver.",
  mua:"<b>Fiches MUA des postes de stationnement.</b> Tape un poste (5B), un type d'avion (A321) ou utilise « Quel poste pour cet avion ? ». Chaque fiche donne les avions autorisés, les consignes et le plan. La fiche la plus récente est toujours celle affichée. Accès par code.",
  ap:"<b>Aéroports du monde.</b> Cherche par code IATA (ORY), OACI (LFPO), ville ou pays en français. Le temps de vol estimé depuis Marseille s'affiche avec le résultat.",
@@ -1180,6 +1181,8 @@ function isFav(k){return getFavs().includes(k)}
 function toggleFav(k){const f=getFavs();const i=f.indexOf(k);if(i<0)f.push(k);else f.splice(i,1);store("coa-favs",JSON.stringify(f));render()}
 const favBtn=k=>`<button class="fav${isFav(k)?" on":""}" data-fav="${esc(k)}" aria-label="${isFav(k)?"Retirer des favoris":"Ajouter aux favoris"}">${isFav(k)?"★":"☆"}</button>`;
 document.addEventListener("click",e=>{const b=e.target.closest("[data-fav]");if(b){e.stopPropagation();e.preventDefault();toggleFav(b.dataset.fav)}},true);
+document.addEventListener("click",e=>{const b=e.target.closest("[data-openproc]");if(!b)return;e.preventDefault();const k=norm(b.dataset.openproc),p=(PROC.items||[]).find(x=>norm(x.title).includes(k));PROC.open=p?p.id:null;tab="proc";$("#q").value="";location.hash="proc";render();scrollTo(0,0)});
+const procLinks=(t,a)=>`<div class="card"><h2>${t}</h2><div class="vbtns">${a.map(([k,l])=>`<button class="glink" data-openproc="${esc(k)}">${esc(l)}</button>`).join("")}</div></div>`;
 document.addEventListener("click",e=>{const b=e.target.closest("[data-openposte]");if(b&&MUA.sheets){e.preventDefault();const i=MUA.sheets.findIndex(s=>s.poste===b.dataset.openposte||muaPostes(s).includes(b.dataset.openposte));if(i>=0)muaShow(i)}});
 
 /* Numéros utiles (Contacts MRS) — même présentation que le Planning : services, plusieurs numéros, Appeler / SMS.
@@ -1513,7 +1516,7 @@ function airacCycles(n=3){const ref=Date.UTC(2026,2,19),day=864e5,now=Date.now()
 function lfmlView(){
   const c=airacCycles(3),fd=d=>d.toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric",timeZone:"UTC"}),days=Math.ceil((c[1].date-Date.now())/864e5);
   const sec=(t,b)=>`<div class="card"><h2>${t}</h2>${b}</div>`,li=a=>`<ul style="margin:0;padding-left:18px">${a.map(x=>`<li style="margin:4px 0">${x}</li>`).join("")}</ul>`;
-  return sec("Cycles AIRAC",`<p style="margin:0">En vigueur : <b>${c[0].id}</b> depuis le ${fd(c[0].date)}</p><p style="margin:4px 0 0">Prochain : <b>${c[1].id}</b> le ${fd(c[1].date)} (dans ${days} jour${days>1?"s":""}) · puis ${c[2].id} le ${fd(c[2].date)}</p><p class="sub">Les changements de l'AIP (pistes, postes, fréquences, procédures) entrent en vigueur à ces dates.</p>`)+
+  return procLinks("Au sol : plans et restrictions",[["Plateforme MRS","Plans des postes et des voies"],["APU","Restrictions APU"],["Essais moteurs","Essais moteurs"]])+sec("Cycles AIRAC",`<p style="margin:0">En vigueur : <b>${c[0].id}</b> depuis le ${fd(c[0].date)}</p><p style="margin:4px 0 0">Prochain : <b>${c[1].id}</b> le ${fd(c[1].date)} (dans ${days} jour${days>1?"s":""}) · puis ${c[2].id} le ${fd(c[2].date)}</p><p class="sub">Les changements de l'AIP (pistes, postes, fréquences, procédures) entrent en vigueur à ces dates.</p>`)+
   sec("Pistes",`<table class="ftab"><tr><th>Piste</th><th>Dimensions</th><th>TODA · LDA</th></tr>
     <tr><td><b>13L / 31R</b></td><td>3 500 × 45 m</td><td>13L : 3 500 · 3 160 m<br>31R : 3 440 · 2 780 m</td></tr>
     <tr><td><b>13R / 31L</b></td><td>2 370 × 45 m</td><td>13R : 2 370 · 2 370 m<br>31L : 2 370 · 2 265 m</td></tr></table>
@@ -1657,7 +1660,7 @@ function render(){
     case "nato":h=natoTable(q);break;
     case "ct":h=ctView(q);break;
     case "home":if(q){tab="all";return render()}h=homeView();break;
-    case "wx":h=wxCard(true)+freqView();wxLoad();break;
+    case "wx":h=wxCard(true)+procLinks("Procédures liées",[["LVP","Procédure LVP (faible visibilité)"],["Dégivrage","Dégivrage hiver"]])+freqView();wxLoad();break;
     case "notam":h=notamView(q);notamLoad();break;
     case "vols":h=volsView(q);volsLoad();break;
     case "fl":h=flView(q);break;
