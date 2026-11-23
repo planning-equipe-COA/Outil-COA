@@ -74,6 +74,11 @@ L'utilisateur échange en français.
 - **Calculs** : cartes repliables (`.ccard`, `CALC.open`, ouverte par défaut : Heure Z ↔ Marseille, avec « Maintenant … » mis à jour
   toutes les 20 s) puis ETA, Durée, Heure + durée, Calculatrice (en dernier, repliée).
 
+- **Petit « i » après les abréviations** (`abbrTips`, demandé le 23 nov. 2026) : sens pris dans `ABBR` + `ABX` (sigles de la
+  plateforme : LVP, PCE, COP, GTA, QFU, AIP, AIRAC…). Première occurrence par carte, rubriques `ABTABS` seulement (pas dans les
+  rubriques de codes : aéroports, compagnies, avions, immat., retards), jamais dans champs, boutons, liens, `pre`, aide en tête,
+  ni dans les textes bruts majoritairement en majuscules (METAR, NOTAM). Toucher = bulle `#abTip`. Ajouter un sigle : `ABX`.
+
 ## Fichiers
 - `index.html` — toute l'appli (HTML + CSS + JS). **Page d'accueil** (onglet « Accueil », ouverte au lancement, bouton maison en
   haut à droite ; demandée le 20 nov. 2026) : thèmes de haut en bas (`THEMES` sauf Recherche), tuiles encadrées 2 par ligne en
