@@ -179,7 +179,11 @@ L'utilisateur échange en français.
   opérationnelle » : schéma redessiné en image « Schéma LVP », tableau du déroulé, messages types 1 et 2 ; **messages 3 et 4 à
   compléter** (page suivante non transmise) ; annotation manuscrite « Appel COP (pour follow me) » intégrée après le message 2).
   `mdLite` gère aussi les blocs ``` (messages types) avec un bouton « Copier » (`data-copymsg`). Consigne de Raph : sur les documents
-  photographiés, refaire au propre (et améliorer) tableaux et schémas. Visionneuse : rotation automatique seulement pour les pages en paysage
+  photographiés, refaire au propre (et améliorer) tableaux et schémas. Puis **Restrictions – APU durées maximales** (arrêté du 28/07/2023, consignes 21.4 ; tableau réponse rapide,
+  repères de masse < / ≥ 140 t indicatifs, image « Durées APU » img_apu/apu.png) et **Restrictions – Essais moteurs** (AMP PROC-007 v3
+  du 03/12/2024 : CdQ PCE autorise, 22 h–6 h interdit sauf départ avant 7 h, ralenti postes 50 à 53, puissance C1 / E2 / piste
+  entre E2 et E3, FLYCO COP sur l'aire de manœuvre ; page 1/3 non transmise). Demande de Raph : fiches les plus concises possible,
+  la réponse rapide en tête. Visionneuse : rotation automatique seulement pour les pages en paysage
   (`vLayout`, `wide`) — les pages portrait (guide AG) restent droites. Les sources de ces deux procédures sont restées dans la
   session cloud de Claude (pas sur le Mac) : pour refaire `procedures.enc`, déchiffrer l'existant (texte + p-*.enc) hors dépôt
   et le reconstituer. Pour en ajouter une, il faut aussi la
