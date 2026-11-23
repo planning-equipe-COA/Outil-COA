@@ -54,6 +54,8 @@ def parse_name(name):
             return [], ''
     return postes, part
 
+RETRAITS = {}
+
 def old_dates(aes):
     """Dates des fiches déjà en ligne (pour ne jamais remplacer une fiche par une plus ancienne)."""
     path = os.path.join(out, 'index.enc')
@@ -64,6 +66,8 @@ def old_dates(aes):
         idx = json.loads(aes.decrypt(raw[:12], raw[12:], None))
     except Exception:
         sys.exit('Code incorrect : il ne déchiffre pas les fiches déjà en ligne. Rien n\'a été modifié.')
+    global RETRAITS
+    RETRAITS = idx.get('retraits', {})  # types retirés à la main (tools/mua_retrait.py), réappliqués plus bas
     return {(x['poste'], x['part']): x.get('date', '') for x in idx['sheets']}
 
 def ddmmyyyy(d):
@@ -141,9 +145,10 @@ def main(src):
         for k in gone: print('Fiche en ligne absente du dossier ->', k[0], k[1])
         sys.exit('Arrêt sans rien publier. Vérifier, puis relancer avec MUA_FORCE=1 si c\'est voulu.')
     # écriture seulement maintenant (rien n'est touché si une vérification a arrêté le script)
-    keep = {'index.enc', 'annuaire.enc'}
+    # n'efface QUE les images de fiches (12 caractères hexadécimaux) : jamais l'annuaire, les procédures (procedures.enc,
+    # p-*.enc) ni les immatriculations (immat.enc), qui vivent dans le même dossier
     for f in os.listdir(out):
-        if f.endswith('.enc') and f not in keep:
+        if re.fullmatch(r'[0-9a-f]{12}\.enc', f):
             os.remove(os.path.join(out, f))
     for sid, img in images.items():
         open(os.path.join(out, sid + '.enc'), 'wb').write(enc(img))
@@ -157,7 +162,12 @@ def main(src):
     dpath2 = os.path.join(src, 'dims.json')
     dims = json.load(open(dpath2, encoding='utf-8')) if os.path.exists(dpath2) else None
     if dims: print('dimensions :', len(dims), 'postes')
-    idx = json.dumps({'v': 1, 'sheets': sheets, 'synth': synth, 'dims': dims}, ensure_ascii=False).encode()
+    data = {'v': 1, 'sheets': sheets, 'synth': synth, 'dims': dims}
+    if RETRAITS:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from mua_retrait import apply_retraits
+        data['retraits'] = RETRAITS; print('retraits réappliqués :', apply_retraits(data), 'ligne(s)')
+    idx = json.dumps(data, ensure_ascii=False).encode()
     open(os.path.join(out, 'index.enc'), 'wb').write(enc(idx))
     json.dump({'v': 1, 'iter': ITER, 'salt': base64.b64encode(salt).decode(), 'count': len(sheets)}, open(meta_path, 'w'))
     print(len(sheets), 'fiches chiffrées dans', os.path.normpath(out))

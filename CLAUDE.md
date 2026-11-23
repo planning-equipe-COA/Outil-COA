@@ -262,6 +262,12 @@ L'utilisateur échange en français.
   (refus de clé, mauvais code, publication, lecture par un autre téléphone).
 
 ## MUA (fiches de postes) — chiffré
+- **Retirer un type d'une fiche** (23 nov. 2026, demandé par Raph pour éviter une confusion de types) : `tools/mua_retrait.py POSTE "type"`
+  (`--liste POSTE` pour voir). Retire la ligne de la liste d'avions, du texte cherché et de la synthèse (types étudiés + liste
+  « Quel poste »). Le retrait est gardé **dans l'index chiffré** (`retraits`) et `mua_build.py` le réapplique à chaque reconstruction :
+  rien en clair dans le dépôt. L'image de la fiche n'est pas modifiée (document officiel).
+- **`mua_build.py` n'efface plus que les images de fiches** (`[0-9a-f]{12}.enc`) : avant, il supprimait aussi procedures.enc, p-*.enc
+  et immat.enc (même dossier `mua/`).
 - Source : fiches PDF « Annexe au manuel des aires de stationnement » (iTarmac / aéroport), **document interne** : dépôt
   public → **jamais de PDF, d'image ou de texte en clair dans le dépôt**. Choix de l'utilisateur (20 nov. 2026) : chiffré
   avec un code d'accès donné de vive voix (jamais écrit dans le dépôt ni dans le code).
