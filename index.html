@@ -190,6 +190,16 @@ html[data-nav=menu] nav#tabs{display:none}
 .ckeys{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .ckeys .btn{font-size:20px;padding:12px 0}
 .cout{margin-top:10px;font-size:18px}
+/* ETA depuis une ED : résultat en vert (demandé le 23 nov. 2026) */
+#cEta.ok{background:#e6f6ec;border:1.5px solid #2e9e5b;border-radius:12px;padding:10px 12px;color:#14532d}
+#cEta.ok b{color:#1b7a43;font-size:1.15em}
+#cEta.ok .sub{color:#2f6b45}
+#cEta.ok .tag{background:#2e9e5b;color:#fff}
+html[data-theme=dark] #cEta.ok{background:#0f2e1c;border-color:#3fbf74;color:#c9f2d9}
+html[data-theme=dark] #cEta.ok b{color:#5ee08f}
+html[data-theme=dark] #cEta.ok .sub{color:#9fd8b4}
+@media (prefers-color-scheme:dark){html:not([data-theme=light]) #cEta.ok{background:#0f2e1c;border-color:#3fbf74;color:#c9f2d9}
+ html:not([data-theme=light]) #cEta.ok b{color:#5ee08f}html:not([data-theme=light]) #cEta.ok .sub{color:#9fd8b4}}
 .wxal{margin:8px 0}
 .wxa{border-radius:8px;padding:6px 9px;margin-bottom:5px;font-size:14px}
 .wxa.warn{background:#fff3cd;color:#664d03}
@@ -704,7 +714,7 @@ function bindCalc(){
   const tz=(src,dst,sign)=>{const v=$(src).value;CALC.utc="";CALC.loc="";CALC[src==="#cUtc"?"utc":"loc"]=v;const m=parseHM(v);$(dst).value=m==null?"":fmtHM((m+sign*off+1440)%1440);tzOut()};
   $("#cUtc").oninput=()=>tz("#cUtc","#cLoc",1);$("#cLoc").oninput=()=>tz("#cLoc","#cUtc",-1);
   if(CALC.utc)tz("#cUtc","#cLoc",1);else if(CALC.loc)tz("#cLoc","#cUtc",-1);
-  const eta=()=>{CALC.eap=$("#cEap").value;CALC.eed=$("#cEed").value;CALC.eft=$("#cEft").value;const out=$("#cEta");
+  const eta=()=>{CALC.eap=$("#cEap").value;CALC.eed=$("#cEed").value;CALC.eft=$("#cEft").value;const out=$("#cEta");out.classList.remove("ok");
     const c=CALC.eap.trim().toUpperCase(),ed=parseHM(CALC.eed),ftv=String(CALC.eft).trim();
     if(!c||ed==null){out.textContent="";return}
     const ap=loaded===true?AP.find(r=>r[0]===c||r[1]===c):null;const fi=ap&&flightInfo(ap[7],ap[8]);
@@ -713,7 +723,7 @@ function bindCalc(){
     const ft=own!=null?own:fi?fi.back:null;if(ft==null){out.innerHTML='<span class="sub">Escale trop proche pour estimer : indique le temps de vol.</span>';return}
     const z=ed+ft,d=new Date();d.setUTCHours(0,0,0,0);const tz=parisOffset(new Date(d.getTime()+z*60e3)),l=z+tz;
     const tag=m=>m>=1440?' <span class="tag">lendemain</span>':"";
-    out.innerHTML=`ETA Marseille <b>${fmtHM(((z%1440)+1440)%1440)} Z</b>${tag(z)} · <b>${fmtHM(((l%1440)+1440)%1440)}</b> heure de Marseille${tag(l)}
+    out.classList.add("ok");out.innerHTML=`ETA Marseille <b>${fmtHM(((z%1440)+1440)%1440)} Z</b>${tag(z)} · <b>${fmtHM(((l%1440)+1440)%1440)}</b> heure de Marseille${tag(l)}
       <div class="sub">${ap?esc(ap[3]||ap[2])+" ("+esc(ap[0]||ap[1])+") → MRS · ":""}temps de vol ${own!=null?"indiqué":"estimé porte à porte"} ${hm(ft)}${own==null&&fi?" · "+fi.d.toLocaleString("fr")+" km":""}</div>`};
   ["#cEap","#cEed","#cEft"].forEach(id=>$(id).oninput=eta);eta();
   const dur=()=>{CALC.dur1=$("#cD1").value;CALC.dur2=$("#cD2").value;const a=parseHM(CALC.dur1),b=parseHM(CALC.dur2);
