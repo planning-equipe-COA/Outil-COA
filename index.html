@@ -217,6 +217,8 @@ h1{margin-bottom:10px}
 h1 .ttl{font-weight:700;color:var(--ink);font-size:17px;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #clk{flex:none;font-variant-numeric:tabular-nums;font-weight:700;color:var(--acc);background:var(--acc2);border-radius:999px;padding:4px 10px;font-size:14px;white-space:nowrap}
 #clk .l{font-weight:500;color:var(--mute);font-size:13px}
+#clk{display:inline-flex;flex-direction:column;align-items:center;line-height:1.15;padding:3px 10px}
+#clk .ssn{font-size:10.5px;font-weight:600;color:var(--mute);letter-spacing:.02em}
 #homeBtn,nav#tabs,#menuBtn,html[data-nav=menu] #menuBtn{display:none!important}
 #gear{margin-left:0!important;border-radius:999px!important}
 #q:focus{outline:2px solid var(--acc);outline-offset:-1px;border-color:transparent}
@@ -681,7 +683,7 @@ function calcView(){
   const inp=(id,ph,mode="decimal",v="")=>`<input id="${id}" class="u-input" inputmode="${mode}" autocomplete="off" placeholder="${ph}" value="${esc(v)}">`;
   return box("Calculatrice",`<div class="cdisp"><div id="cExpr" class="sub">${esc(CALC.expr)||"&nbsp;"}</div><div id="cRes">${esc(CALC.res||"0")}</div></div>
     <div class="ckeys">${kb.map(k=>`<button class="btn${k==="="?" p":""}" data-ck="${k}">${k}</button>`).join("")}<button class="btn" data-ck="⌫" style="grid-column:span 4">⌫ effacer le dernier</button></div>`)+
-  box("Heure Z ↔ heure de Marseille",`<p class="sub">Aujourd'hui Marseille = Z ${off>=0?"+":"−"} ${Math.abs(off/60)} h (${off===120?"heure d'été":"heure d'hiver"}). Tape l'heure dans une case, l'autre se remplit.</p>
+  box("Heure Z ↔ heure de Marseille",`<p class="sub">Aujourd'hui Marseille = Z ${off>=0?"+":"−"} ${Math.abs(off/60)} h (${off===120?"heure d'été":"heure d'hiver"}, saison IATA ${iataSeason(new Date()).code}). Été : GMT+2, du dernier dimanche de mars au dernier samedi d'octobre ; hiver : GMT+1. Tape l'heure dans une case, l'autre se remplit.</p>
     <div class="cgrid"><label>Heure Z (UTC)${inp("cUtc","ex. 14:30","numeric",CALC.utc)}</label><label>Heure de Marseille${inp("cLoc","ex. 15:30","numeric",CALC.loc)}</label></div><div id="cTz" class="cout"></div>`)+
   box("Heure d'arrivée à Marseille",`<p class="sub">À partir de l'ED (heure de départ estimée, en Z) d'une escale : ETA à Marseille avec le temps de vol estimé porte à porte, ou celui de la compagnie si tu le connais.</p>
     <div class="cgrid"><label>Escale de départ${inp("cEap","ex. ORY ou LFPO","text",CALC.eap)}</label><label>ED (Z)${inp("cEed","ex. 14:20","numeric",CALC.eed)}</label></div>
@@ -811,7 +813,14 @@ function freqView(){return `<div class="wx"><div class="wxh"><b>Fréquences LFML
 /* ---------- Heure UTC / Marseille dans l'en-tête, soleil à LFML ---------- */
 function clockTick(){if(document.hidden)return;const d=new Date(),p=n=>String(n).padStart(2,"0");
   const loc=new Intl.DateTimeFormat("fr-FR",{timeZone:"Europe/Paris",hour:"2-digit",minute:"2-digit"}).format(d);
-  const el=$("#clk");if(el){el.innerHTML=`${p(d.getUTCHours())}:${p(d.getUTCMinutes())} Z <span class="l">· ${loc} L</span>`;el.title="Heure UTC (Z) et heure locale de Marseille (L)"}}
+  const s=iataSeason(d);
+  const el=$("#clk");if(el){el.innerHTML=`<span>${p(d.getUTCHours())}:${p(d.getUTCMinutes())} Z <span class="l">· ${loc} L</span></span><span class="ssn">${s.name} ${s.code} · GMT+${s.off}</span>`;
+    el.title=`Heure UTC (Z) et heure locale de Marseille (L). Saison aéronautique IATA ${s.name.toLowerCase()} ${s.code} : Marseille = GMT+${s.off} (été : GMT+2 de fin mars à fin octobre ; hiver : GMT+1).`}}
+/* saison IATA : été (S) du dernier dimanche de mars au dernier samedi d'octobre = heure d'été en France (GMT+2) ;
+   hiver (W) le reste de l'année (GMT+1). Code : S26 = été 2026 ; W26 = hiver commencé fin octobre 2026 (jusqu'à fin mars 2027). */
+function iataSeason(d){const off=parisOffset(d)/60,y=+new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Paris",year:"numeric"}).format(d),
+  m=+new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Paris",month:"numeric"}).format(d);
+  return off===2?{name:"Été",code:"S"+String(y).slice(2),off}:{name:"Hiver",code:"W"+String(m<=4?y-1:y).slice(2),off}}
 setInterval(clockTick,15e3);setTimeout(clockTick,0);document.addEventListener("visibilitychange",clockTick);
 /* lever / coucher du soleil (algorithme NOAA simplifié, précision ~1 min) ; nuit aéronautique en France :
    du coucher + 30 min au lever − 30 min */

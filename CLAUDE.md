@@ -162,6 +162,9 @@ L'utilisateur échange en français.
 
 ## Ajouts du 21 nov. 2026 (demandés)
 - **Horloge** dans l'en-tête (`#clk`, `clockTick` toutes les 15 s, arrêt si page cachée) : « 20:22 Z · 21:22 L ».
+  Sous l'heure (demandé le 23 nov. 2026) : saison aéronautique et décalage, « Hiver W26 · GMT+1 » / « Été S27 · GMT+2 »
+  (`iataSeason(d)` : été IATA = heure d'été en France, du dernier dimanche de mars au dernier samedi d'octobre ; code W = année
+  de début de l'hiver). Rappel aussi dans Calculs → « Heure Z ↔ heure de Marseille ».
 - **Soleil à LFML** (`sunTimes`, équation NOAA, ~1 min ; vérifié 21/11 : lever 06:40, coucher 16:10 UTC) et **nuit aéronautique**
   (coucher + 30 min → lever − 30 min), dans la carte Météo complète.
 - **Alertes METAR / TAF** (`wxPhen`, `wxAlerts`, `wxAlertBox`, en tête des cartes météo, accueil compris) : orage, grêle, givrant,
