@@ -81,6 +81,17 @@ L'utilisateur échange en français.
 - **Recherche** : saisie affichée en majuscules, clavier en majuscules (`autocapitalize=characters`). « Tout » ouvre la base
   des immatriculations si elle n'est pas encore chargée (avant : rien tant que la rubrique Immatriculations n'avait pas été ouverte).
 
+## Personnalisation par téléphone (24 nov. 2026, demandée)
+- **Rangement « à froid » comme les icônes d'un iPhone** : appui long (550 ms) sur une tuile de l'accueil, ou bouton « Ranger
+  l'accueil » → `EDIT` : tuiles qui tremblent, glisser (pointer events, fantôme `.ghost`, défilement auto près des bords, d'un thème à
+  l'autre), « − » masque, section « Rubriques masquées » avec « + », flèches ↑↓ sur les thèmes, bandeau « Terminé ».
+  `homeLayoutFromDom` → localStorage `coa-layout` {th:[[thème,[clés]]], hide:[clés], wx:bool}. `myThemes()` (accueil, menu Rubriques,
+  titre d'en-tête) ; rubriques ajoutées plus tard = fin de leur thème d'origine. Masquer = accueil + menu (recherche toujours OK).
+- **Réglages → Personnaliser** (`#perso`) : couleur (`coa-acc` → `html[data-acc]`, 6 couleurs, clair + sombre, appliquée dans le
+  `<head>`), 3 boutons du milieu de la barre du bas (`coa-bnav`, `myBnav`, libellés courts `BSHORT`), carte météo de l'accueil,
+  « Ranger les tuiles », « Rétablir l'agencement d'origine » (efface coa-layout et coa-bnav, pas la couleur).
+- Piège corrigé : `closest("[data-acc]")` remontait jusqu'à `<html data-acc>` → toujours `.pacc [data-acc]`.
+
 ## Fichiers
 - `index.html` — toute l'appli (HTML + CSS + JS). **Page d'accueil** (onglet « Accueil », ouverte au lancement, bouton maison en
   haut à droite ; demandée le 20 nov. 2026) : thèmes de haut en bas (`THEMES` sauf Recherche), tuiles encadrées 2 par ligne en

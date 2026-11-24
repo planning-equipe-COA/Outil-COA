@@ -12,11 +12,26 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Outils COA">
 <meta name="theme-color" content="#5b3fa8">
-<script>try{var t=localStorage.getItem("coa-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t;if(localStorage.getItem("coa-nav")==="menu")document.documentElement.dataset.nav="menu"}catch(e){}</script>
+<script>try{var t=localStorage.getItem("coa-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t;if(localStorage.getItem("coa-nav")==="menu")document.documentElement.dataset.nav="menu";var a=localStorage.getItem("coa-acc");if(a)document.documentElement.dataset.acc=a}catch(e){}</script>
 <style>
 :root{--bg:#f4f3f8;--card:#fff;--ink:#1d1b2e;--mute:#6b6880;--line:#e2e0ec;--acc:#5b3fa8;--acc2:#ece6fb;--ok:#1f8a4c;--warn:#b26a00}
 @media (prefers-color-scheme:dark){html:not([data-theme=light]){--bg:#121019;--card:#1c1a27;--ink:#ecebf3;--mute:#9a97ad;--line:#2d2a3d;--acc:#a58cf0;--acc2:#2a2442;color-scheme:dark}}
 html[data-theme=dark]{--bg:#121019;--card:#1c1a27;--ink:#ecebf3;--mute:#9a97ad;--line:#2d2a3d;--acc:#a58cf0;--acc2:#2a2442;color-scheme:dark}
+html[data-acc=bleu]{--acc:#1f5fbf;--acc2:#e3edfb}
+@media (prefers-color-scheme:dark){html[data-acc=bleu]:not([data-theme=light]){--acc:#7fb0ff;--acc2:#1d2a44}}
+html[data-acc=bleu][data-theme=dark]{--acc:#7fb0ff;--acc2:#1d2a44}
+html[data-acc=vert]{--acc:#1f7a4c;--acc2:#e2f3e9}
+@media (prefers-color-scheme:dark){html[data-acc=vert]:not([data-theme=light]){--acc:#6fd39b;--acc2:#1b3328}}
+html[data-acc=vert][data-theme=dark]{--acc:#6fd39b;--acc2:#1b3328}
+html[data-acc=orange]{--acc:#b55a12;--acc2:#fbeadb}
+@media (prefers-color-scheme:dark){html[data-acc=orange]:not([data-theme=light]){--acc:#ffad66;--acc2:#3a2a1c}}
+html[data-acc=orange][data-theme=dark]{--acc:#ffad66;--acc2:#3a2a1c}
+html[data-acc=rouge]{--acc:#b3262e;--acc2:#fbe3e4}
+@media (prefers-color-scheme:dark){html[data-acc=rouge]:not([data-theme=light]){--acc:#ff8a8f;--acc2:#3d1f22}}
+html[data-acc=rouge][data-theme=dark]{--acc:#ff8a8f;--acc2:#3d1f22}
+html[data-acc=ardoise]{--acc:#3d4b5c;--acc2:#e6eaef}
+@media (prefers-color-scheme:dark){html[data-acc=ardoise]:not([data-theme=light]){--acc:#a9b8cc;--acc2:#262d37}}
+html[data-acc=ardoise][data-theme=dark]{--acc:#a9b8cc;--acc2:#262d37}
 html[data-theme=light]{color-scheme:light}
 *{box-sizing:border-box}
 body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);font-size:15px}
@@ -65,6 +80,43 @@ textarea{width:100%;min-height:90px;font-family:ui-monospace,monospace;font-size
 .hide{display:none}
 mark{background:#ffe58a;color:#000;border-radius:2px}
 @media (max-width:640px){.hm{display:none}th,td{padding:7px 8px}}
+.home.editing{padding-top:4px}
+.editbar{position:sticky;top:calc(var(--hdr,0px) + 6px);z-index:6;display:flex;align-items:center;gap:10px;background:var(--ink);color:var(--card);border-radius:14px;padding:9px 10px 9px 14px;margin:6px 0 10px;font-size:13.5px;box-shadow:0 6px 20px rgba(0,0,0,.18)}
+.editbar span{flex:1}.editbar b{font-size:16px}
+.home.editing .tile{position:relative;animation:wiggle .32s ease-in-out infinite alternate;touch-action:none;user-select:none;-webkit-user-select:none}
+.home.editing .tile:nth-child(2n){animation-delay:-.16s}
+@keyframes wiggle{from{transform:rotate(-1.1deg)}to{transform:rotate(1.1deg)}}
+.home .tile{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}
+.tdel,.tadd{position:absolute;top:-7px;left:-7px;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-weight:800;font-size:18px;line-height:1;color:#fff;background:#8a8798;box-shadow:0 1px 4px rgba(0,0,0,.25);cursor:pointer}
+.tadd{background:var(--ok)}
+.tdel::after,.tadd::after{content:"";position:absolute;inset:-8px}
+.tile.off{opacity:.6;animation:none!important}
+.tile.ph{opacity:.25;outline:2px dashed var(--acc);outline-offset:-2px;animation:none!important}
+.tile.ghost{position:fixed;left:0;top:0;z-index:50;pointer-events:none;margin:0;animation:none!important;box-shadow:0 14px 34px rgba(0,0,0,.28);opacity:.95}
+.tempty{grid-column:1/-1;border:2px dashed var(--line);border-radius:14px;padding:18px;text-align:center;color:var(--mute);font-size:13.5px}
+.home h2 .thmv{float:right;display:flex;gap:6px;margin-top:-4px}
+.home h2 .thmv button{width:32px;height:28px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:15px;cursor:pointer}
+.home h2 .thmv button:disabled{opacity:.3}
+@media (prefers-reduced-motion:reduce){.home.editing .tile{animation:none}}
+#perso{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:22;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
+#perso .setcard{animation:riseIn .22s ease-out}
+.pacc{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 4px}
+.pacc button{width:40px;height:40px;border-radius:50%;border:3px solid transparent;cursor:pointer;box-shadow:0 0 0 1px var(--line) inset}
+.pacc button.on{border-color:var(--ink)}
+.pbn{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.pbn label{font-size:12px;color:var(--mute)}.pbn select{width:100%;margin-top:3px}
+.pth{border:1.5px solid var(--line);border-radius:12px;margin:10px 0;overflow:hidden}
+.pth>.ph{display:flex;align-items:center;gap:6px;padding:8px 10px;background:var(--acc2);font-weight:800;color:var(--acc);font-size:14px}
+.pth>.ph span{flex:1}
+.prow{display:flex;align-items:center;gap:8px;padding:7px 10px;border-top:1px solid var(--line);font-size:14.5px}
+.prow.off{opacity:.45}
+.prow label{flex:1;display:flex;align-items:center;gap:9px;min-width:0}
+.prow input{width:20px;height:20px;accent-color:var(--acc);flex:none}
+.pmv{flex:none;width:34px;height:34px;border-radius:9px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:16px;cursor:pointer}
+.pmv:disabled{opacity:.25}
+.pmv:active{background:var(--acc2)}
+.perso-open{display:block;margin:18px auto 6px}
+@media (prefers-reduced-motion:reduce){#perso .setcard{animation:none}}
 #set{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;
   padding:calc(24px + env(safe-area-inset-top)) 12px calc(24px + env(safe-area-inset-bottom))}
 #set .setcard{max-width:420px;width:100%;margin:0 auto}
@@ -219,7 +271,7 @@ html[data-theme=dark] #cEta.ok .sub{color:#9fd8b4}
 .vhint.off{opacity:0}
 /* téléphone tenu droit : la fiche est pivotée d'un quart de tour pour s'afficher en paysage */
 #viewer.rot{inset:auto;top:0;left:0;transform-origin:top left;transform:rotate(90deg) translateY(-100%)}
-#vrot.on{background:#5b3fa8}
+#vrot.on{background:var(--acc)}
 #viewer.rot .vbar{padding:6px calc(8px + env(safe-area-inset-bottom)) 6px calc(8px + env(safe-area-inset-top))}
 #viewer:not(.rot) .vbar{padding-left:calc(8px + env(safe-area-inset-left));padding-right:calc(8px + env(safe-area-inset-right))}
 /* ══ Passe design du 22 nov. 2026 (validée par l'utilisateur) ══ */
@@ -341,12 +393,16 @@ html[data-theme=dark] .wxa.danger{background:#3d1a1d;color:#ffb3b3}
  <div id="vscroll"><img id="vimg" alt=""></div>
  <div class="vhint off" id="vhint">Tourne le téléphone ↻ pour lire la fiche</div>
 </div>
+<div id="perso" class="hide"><div class="card setcard" id="persoBody"></div></div>
 <div id="set" class="hide">
  <div class="card setcard">
   <div style="display:flex;align-items:center"><b style="font-size:16px">Réglages</b><button class="btn" id="setX" style="margin-left:auto">✕</button></div>
   <h2>Affichage</h2>
   <div class="seg" id="themeSeg"><button data-v="auto">Auto</button><button data-v="light">Clair</button><button data-v="dark">Sombre</button></div>
   <p class="sub">Auto suit le réglage du téléphone.</p>
+  <h2>Personnaliser</h2>
+  <p class="sub">Couleur, boutons de la barre du bas, ordre des thèmes et des rubriques de l'accueil. Réglé sur ce téléphone seulement.</p>
+  <button class="btn p" data-perso style="width:100%">Personnaliser l'appli</button>
   <div class="hide"><h2>Navigation</h2>
   <div class="seg" id="navSeg"><button data-v="tabs">Onglets</button><button data-v="menu">Menu par thème</button></div>
   <p class="sub">Menu par thème : un bouton en haut ouvre les rubriques rangées par thème.</p></div>
@@ -658,6 +714,39 @@ document.addEventListener("click",e=>{const b=e.target.closest(".abi"),tip=$("#a
   d.style.left=Math.max(12,Math.min(innerWidth-W-12,r.left+r.width/2-W/2))+"px";
   const below=r.bottom+8+d.offsetHeight<innerHeight-90;d.style.top=(below?r.bottom+8:r.top-8-d.offsetHeight)+"px"},true);
 addEventListener("scroll",()=>{const t=$("#abTip");if(t)t.remove()},{passive:true});
+
+/* ---------- Panneau « Personnaliser » ---------- */
+const ACCS=[["","#5b3fa8","Violet (d'origine)"],["bleu","#1f5fbf","Bleu"],["vert","#1f7a4c","Vert"],["orange","#b55a12","Orange"],["rouge","#b3262e","Rouge"],["ardoise","#3d4b5c","Ardoise"]];
+function persoRender(){const hid=myHidden(),bn=myBnav().slice(1,4).map(x=>x[0]),acc=store("coa-acc")||"",L=layGet();
+  const all=THEMES.flatMap(([,it])=>it).filter(([k])=>k!=="home");
+  $("#persoBody").innerHTML=`<div style="display:flex;align-items:center"><b style="font-size:16px">Personnaliser</b><button class="btn" id="persoX" style="margin-left:auto">Terminé</button></div>
+  <h2>Couleur de l'appli</h2><div class="pacc">${ACCS.map(([k,c,n])=>`<button data-acc="${k}" class="${k===acc?"on":""}" style="background:${c}" title="${n}" aria-label="${n}"></button>`).join("")}</div>
+  <h2>Barre du bas</h2><p class="sub">Accueil et Rubriques restent aux deux bouts ; choisis les 3 du milieu.</p>
+  <div class="pbn">${[0,1,2].map(i=>`<label>Bouton ${i+2}<select data-bn="${i}">${all.map(([k,l])=>`<option value="${k}"${bn[i]===k?" selected":""}>${esc(BSHORT[k]||l)}</option>`).join("")}</select></label>`).join("")}</div>
+  <h2>Accueil</h2>
+  <div class="prow" style="border:1.5px solid var(--line);border-radius:12px"><label><input type="checkbox" id="pWx"${L.wx===false?"":" checked"}>Carte météo en haut de l'accueil</label></div>
+  <button class="btn p" id="pEdit" style="width:100%;margin-top:12px">Ranger les tuiles de l'accueil</button>
+  <p class="sub">Comme les icônes du téléphone : glisser pour ranger, − pour masquer. Aussi par un appui long sur une tuile.</p>
+  <button class="btn" id="pReset" style="width:100%;margin-top:6px">Rétablir l'agencement d'origine</button>`;
+}
+function persoSave(th){const L=layGet();L.th=th.map(([t,it])=>[t,it.map(r=>r[0])]);laySet(L)}
+function persoApply(){persoRender();bnavRender();if(tab==="home")render()}
+document.addEventListener("click",e=>{if(e.target.closest("[data-perso]")){e.preventDefault();closeSet&&closeSet();persoRender();$("#perso").classList.remove("hide");$("#perso").scrollTop=0;document.body.classList.add("noscroll")}});
+document.getElementById("perso").addEventListener("click",e=>{const P=$("#perso"),t=e.target;
+  if(t.id==="perso"||t.id==="persoX"){P.classList.add("hide");document.body.classList.remove("noscroll");return}
+  const a=t.closest(".pacc [data-acc]");if(a){const v=a.dataset.acc;if(v){store("coa-acc",v);document.documentElement.dataset.acc=v}else{try{localStorage.removeItem("coa-acc")}catch(_){}delete document.documentElement.dataset.acc}
+    const m=document.querySelector('meta[name=theme-color]');if(m)m.content=getComputedStyle(document.documentElement).getPropertyValue("--acc").trim();persoRender();return}
+  const tm=t.closest("[data-tmv]");if(tm){const th=myThemes(),i=+tm.dataset.tmv,j=i+(+tm.dataset.d);if(j<0||j>=th.length)return;[th[i],th[j]]=[th[j],th[i]];persoSave(th);persoApply();return}
+  const rm=t.closest("[data-rmv]");if(rm){const th=myThemes(),k=rm.dataset.rmv,d=+rm.dataset.d,ti=th.findIndex(([,it])=>it.some(r=>r[0]===k)),it=th[ti][1],ri=it.findIndex(r=>r[0]===k);
+    const nr=ri+d;if(nr>=0&&nr<it.length){[it[ri],it[nr]]=[it[nr],it[ri]]}
+    else{const nt=ti+d;if(nt<0||nt>=th.length)return;const [r]=it.splice(ri,1);d<0?th[nt][1].push(r):th[nt][1].unshift(r)}
+    persoSave(th);persoApply();return}
+  if(t.id==="pEdit"){P.classList.add("hide");document.body.classList.remove("noscroll");tab="home";$("#q").value="";location.hash="home";scrollTo(0,0);editSet(true);return}
+  if(t.id==="pReset"){try{localStorage.removeItem(LAY_KEY);localStorage.removeItem("coa-bnav")}catch(_){}persoApply();return}});
+document.getElementById("perso").addEventListener("change",e=>{const t=e.target,L=layGet();
+  if(t.dataset.show){const h=new Set(L.hide||[]);t.checked?h.delete(t.dataset.show):h.add(t.dataset.show);L.hide=[...h];laySet(L);persoApply();return}
+  if(t.id==="pWx"){L.wx=t.checked;laySet(L);if(tab==="home")render();return}
+  if(t.dataset.bn){const b=myBnav().slice(1,4).map(x=>x[0]);const i=+t.dataset.bn,v=t.value,o=b.indexOf(v);if(o>=0&&o!==i)b[o]=b[i];b[i]=v;store("coa-bnav",JSON.stringify(b));persoApply()}});
 /* ---------- État ---------- */
 let AP=[],AL=[],PL=[],loaded=false;
 const TABS=[["home","Accueil"],["mua","MUA"],["ap","Aéroports"],["al","Compagnies"],["pl","Avions"],["codes","Codes avion"],["immat","Immatriculations"],["vols","Vols du jour"],["wx","Météo"],["notam","NOTAM"],["proc","Procédures"],["lfml","Aérodrome"],["ct","Contacts MRS"],["fl","Temps de vol"],["calc","Calculs"],["dl","Codes retard"],["ab","Abréviations"],["nato","Alphabet"],["all","Tout"]];
@@ -695,13 +784,27 @@ const HELP={
  ab:"<b>Abréviations</b> de l'exploitation : A-CDM, messages, PMR, météo, masses, urgences… Tape le sigle ou un mot.",
  nato:"<b>Alphabet OTAN.</b> Tape un mot ou une immatriculation pour l'avoir épelée (FHBXA → Foxtrot Hotel Bravo X-ray Alfa).",
  all:"<b>Recherche dans toute la boîte à outils</b> : poste, code, compagnie, avion, immatriculation, contact… Les meilleurs résultats de chaque rubrique s'affichent ensemble."};
+/* ---------- Personnalisation (24 nov. 2026, demandée) : chaque téléphone range son appli ----------
+   coa-layout = {th:[[nom,[clés]]…], hide:[clés], wx:bool} ; coa-bnav = [3 clés] ; coa-acc = couleur. Rien n'est envoyé. */
+const LAY_KEY="coa-layout",BDEF=["vols","wx","mua"];
+const BSHORT={vols:"Vols",wx:"Météo",mua:"MUA",ap:"Aéroports",al:"Compagnies",pl:"Avions",codes:"Codes av.",immat:"Immat.",notam:"NOTAM",proc:"Procédures",lfml:"Aérodrome",ct:"Contacts",fl:"Tps de vol",calc:"Calculs",dl:"Retards",ab:"Abrév.",nato:"Alphabet",all:"Tout"};
+function layGet(){try{return JSON.parse(store(LAY_KEY)||"null")||{}}catch(e){return {}}}
+function laySet(o){store(LAY_KEY,JSON.stringify(o))}
+const RUB=Object.fromEntries(THEMES.flatMap(([t,it])=>it.map(r=>[r[0],{r,t}])));
+function myThemes(){const L=layGet(),base=THEMES.filter(([t])=>t!=="Recherche globale");if(!L.th)return base;
+  const used=new Set(),out=L.th.map(([t,ks])=>[t,ks.filter(k=>RUB[k]&&k!=="home"&&k!=="all"&&!used.has(k)&&used.add(k)).map(k=>RUB[k].r)]);
+  base.forEach(([t,it])=>it.forEach(r=>{if(!used.has(r[0])){let th=out.find(([n])=>n===t);if(!th)out.push(th=[t,[]]);th[1].push(r)}})); // rubriques ajoutées depuis
+  return out}
+const myHidden=()=>new Set(layGet().hide||[]);
+function myBnav(){let b;try{b=JSON.parse(store("coa-bnav")||"null")}catch(e){}b=(Array.isArray(b)&&b.length===3&&b.every(k=>RUB[k]))?b:BDEF;
+  const ic=Object.fromEntries(BNAV.map(x=>[x[0],x[2]]));return [BNAV[0],...b.map(k=>[k,BSHORT[k]||tabName(k),ic[k]||null]),BNAV[BNAV.length-1]]}
 const tabName=k=>{for(const [,it] of THEMES)for(const [kk,l] of it)if(kk===k)return l;return ""};
-function openMenu(){$("#menuList").innerHTML=THEMES.map(([t,it])=>`<div class="mtheme">${t}</div>`+it.map(([k,l,d])=>`<button class="mitem${k===tab?" on":""}" data-k="${k}">${l}<small>${d}</small></button>`).join("")).join("");$("#menu").classList.remove("hide")}
+function openMenu(){const hid=myHidden();$("#menuList").innerHTML=[...myThemes().map(([t,it])=>[t,it.filter(([k])=>!hid.has(k))]).filter(([,it])=>it.length),THEMES.find(([t])=>t==="Recherche globale")].map(([t,it])=>`<div class="mtheme">${t}</div>`+it.map(([k,l,d])=>`<button class="mitem${k===tab?" on":""}" data-k="${k}">${l}<small>${d}</small></button>`).join("")).join("");$("#menu").classList.remove("hide")}
 $("#menuBtn").onclick=openMenu;
 /* barre d'onglets en bas (passe design du 22 nov. 2026) : 4 rubriques les plus utilisées + « Rubriques » (menu par thème) */
 const BNAV=[["home","Accueil",'<path d="M3.5 11 12 4l8.5 7M6 9.5V20h4.5v-5.5h3V20H18V9.5"/>'],["vols","Vols",null],["wx","Météo",null],["mua","MUA",null],["more","Rubriques",'<rect x="3.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.8"/>']];
-function bnavRender(){const main=BNAV.some(([k])=>k===tab);
-  $("#bnav").innerHTML=BNAV.map(([k,l,ic])=>`<button type="button" data-b="${k}" class="${k===tab||(k==="more"&&!main)?"on":""}"${k===tab?' aria-current="page"':""}>${'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'}${ic||TI[k]}</svg><span>${k==="more"&&!main?esc(tabName(tab)||l):l}</span><i class="bdot${(k==="vols"&&volsFresh()&&homeAlerts())||(k==="wx"&&WX.metar&&wxAlerts().length)?" show":""}"></i></button>`).join("")}
+function bnavRender(){if(EDIT&&tab!=="home")EDIT=false;const BN=myBnav(),main=BN.some(([k])=>k===tab);
+  $("#bnav").innerHTML=BN.map(([k,l,ic])=>`<button type="button" data-b="${k}" class="${k===tab||(k==="more"&&!main)?"on":""}"${k===tab?' aria-current="page"':""}>${'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'}${ic||TI[k]}</svg><span>${k==="more"&&!main?esc(tabName(tab)||l):l}</span><i class="bdot${(k==="vols"&&volsFresh()&&homeAlerts())||(k==="wx"&&WX.metar&&wxAlerts().length)?" show":""}"></i></button>`).join("")}
 $("#bnav").onclick=e=>{const b=e.target.closest("button");if(!b)return;const k=b.dataset.b;
   if(k==="more"){openMenu();return}
   if(k===tab&&!$("#q").value){scrollTo({top:0,behavior:"smooth"});return}
@@ -736,12 +839,61 @@ function favsView(){
   ${annF.length?`<div class="card favlist" style="padding:4px 12px">${annF.map(([G,[label,nums,extra],k])=>{const title=G.gates?"Porte "+label:label;const parts=numParts(nums,G.gates?"":G.ext);
     return `<div class="u-row"><span class="u-label">${esc(title)} ${favBtn(k).replace('class="fav','style="font-size:16px;margin:0;padding:0 2px" class="fav')}<small>${esc(G.name)}${G.gates&&extra?" · "+esc(extra):""}</small></span><div class="u-nums">${parts.map(p=>numLine(p,title,"","")).join("")||'<div class="u-none">pas de numéro</div>'}</div></div>`}).join("")}</div>`:""}`;
 }
+let EDIT=false;
 function homeView(){
   volsLoad();
   const extra=Object.assign({mua:MUA.sheets?`${MUA.sheets.length} fiches de postes`:"Fiches de postes (code)",ct:MUA.annu?"Annuaire COA et mes numéros":"Assistants, services, portes"},liveTiles());
-  return '<div class="home">'+homeAlerts()+`<div data-go="wx" style="cursor:pointer">${wxCard(false)}</div>`+favsView()+THEMES.map(([t,it])=>{const items=it.filter(([k])=>k!=="home"&&k!=="all");if(!items.length)return "";
-    return `<h2>${t}${t==="En direct"?'<i class="live" title="Mis à jour en continu"></i>':""}</h2><div class="tiles">`+items.map(([k,l,d])=>`<button class="tile" data-go="${k}"><span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TI[k]||""}</svg></span><b>${l}</b><small>${extra[k]||d}</small></button>`).join("")+"</div>"}).join("")+"</div>";
+  const ico=k=>`<span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TI[k]||""}</svg></span>`;
+  const hid=myHidden(),th=myThemes();
+  const tile=([k,l,d])=>`<button class="tile" data-go="${k}" data-k="${k}">${ico(k)}<b>${l}</b><small>${extra[k]||d}</small>${EDIT?`<i class="tdel" data-hide="${k}" role="button" aria-label="Masquer ${esc(l)}">−</i>`:""}</button>`;
+  const themes=th.map(([t,it],ti)=>{const items=it.filter(([k])=>k!=="home"&&k!=="all"&&!hid.has(k));if(!items.length&&!EDIT)return "";
+    const mv=EDIT?`<span class="thmv"><button data-tmv="${ti}" data-d="-1"${ti?"":" disabled"} aria-label="Monter le thème">↑</button><button data-tmv="${ti}" data-d="1"${ti<th.length-1?"":" disabled"} aria-label="Descendre le thème">↓</button></span>`:"";
+    return `<h2>${t}${t==="En direct"?'<i class="live" title="Mis à jour en continu"></i>':""}${mv}</h2><div class="tiles" data-th="${esc(t)}">${items.map(tile).join("")}${EDIT&&!items.length?'<div class="tempty">Glisse une rubrique ici</div>':""}</div>`}).join("");
+  const masked=EDIT&&hid.size?`<h2>Rubriques masquées</h2><div class="tiles hidden-tiles">${[...hid].filter(k=>RUB[k]).map(k=>{const [kk,l,d]=RUB[k].r;return `<button class="tile off" data-k="${kk}">${ico(kk)}<b>${l}</b><small>${d}</small><i class="tadd" data-unhide="${kk}" role="button" aria-label="Remettre ${esc(l)}">+</i></button>`}).join("")}</div>`:"";
+  const bar=EDIT?`<div class="editbar"><span>Glisse les tuiles pour les ranger · <b>−</b> pour masquer</span><button class="btn p" id="editDone">Terminé</button></div>`:"";
+  return '<div class="home'+(EDIT?" editing":"")+'">'+bar+(EDIT?"":homeAlerts())+(layGet().wx===false||EDIT?"":`<div data-go="wx" style="cursor:pointer">${wxCard(false)}</div>`)+(EDIT?"":favsView())+themes+masked+
+    (EDIT?"":`<button class="btn perso-open" id="editStart">Ranger l'accueil</button><p class="sub" style="text-align:center;margin-top:0">ou appui long sur une tuile</p>`)+"</div>";
 }
+function homeLayoutFromDom(){const th=myThemes(),L=layGet();
+  L.th=th.map(([t])=>{const g=document.querySelector(`.home .tiles[data-th="${CSS.escape(t)}"]`);return [t,g?[...g.querySelectorAll(".tile[data-k]")].map(x=>x.dataset.k):[]]});
+  const hid=new Set(L.hide||[]);L.th.forEach(([t,ks])=>{const base=th.find(([n])=>n===t);if(base)base[1].forEach(([k])=>{if(hid.has(k)&&!ks.includes(k))ks.push(k)})}); // les masquées gardent leur thème
+  laySet(L)}
+function editSet(on){EDIT=on;{const h=document.querySelector("header");if(h)document.documentElement.style.setProperty("--hdr",h.offsetHeight+"px")}if(on&&navigator.vibrate)navigator.vibrate(15);render()}
+/* appui long sur une tuile → mode rangement ; en mode rangement : glisser, −, +, flèches de thème */
+(function(){let lp=null,lpXY=null,drag=null,suppress=false;
+  const out=()=>document.getElementById("out");
+  document.addEventListener("pointerdown",e=>{suppress=false;const t=e.target.closest(".home .tile[data-k]");if(!t||e.button>0)return;
+    if(!EDIT){lpXY=[e.clientX,e.clientY];lp=setTimeout(()=>{lp=null;suppress=true;editSet(true)},550);return}
+    if(e.target.closest(".tdel,.tadd")||t.classList.contains("off"))return;
+    e.preventDefault();const r=t.getBoundingClientRect();
+    drag={t,dx:e.clientX-r.left,dy:e.clientY-r.top,ghost:null,moved:false,x0:e.clientX,y0:e.clientY,w:r.width,h:r.height}},{passive:false});
+  document.addEventListener("pointermove",e=>{
+    if(lp&&lpXY&&Math.hypot(e.clientX-lpXY[0],e.clientY-lpXY[1])>10){clearTimeout(lp);lp=null}
+    if(!drag)return;
+    if(!drag.moved){if(Math.hypot(e.clientX-drag.x0,e.clientY-drag.y0)<6)return;drag.moved=true;
+      const g=drag.t.cloneNode(true);g.classList.add("ghost");Object.assign(g.style,{width:drag.w+"px",height:drag.h+"px"});document.body.append(g);drag.ghost=g;drag.t.classList.add("ph")}
+    e.preventDefault();drag.ghost.style.transform=`translate(${e.clientX-drag.dx}px,${e.clientY-drag.dy}px) scale(1.06)`;
+    const el=document.elementFromPoint(e.clientX,e.clientY),over=el&&el.closest(".home .tiles[data-th] .tile[data-k]"),grid=el&&el.closest(".home .tiles[data-th]");
+    if(over&&over!==drag.t){const r=over.getBoundingClientRect(),after=e.clientX>r.left+r.width/2;over.parentNode.insertBefore(drag.t,after?over.nextSibling:over)}
+    else if(grid&&!over&&!grid.contains(drag.t)){const em=grid.querySelector(".tempty");if(em)em.remove();grid.append(drag.t)}
+    if(e.clientY<90)scrollBy(0,-12);else if(e.clientY>innerHeight-110)scrollBy(0,12)},{passive:false});
+  const end=()=>{if(lp){clearTimeout(lp);lp=null}if(!drag)return;const d=drag;drag=null;
+    if(d.ghost){d.ghost.remove();d.t.classList.remove("ph");homeLayoutFromDom();suppress=true;setTimeout(()=>render(),0)}};
+  document.addEventListener("pointerup",end);document.addEventListener("pointercancel",end);
+  document.addEventListener("touchmove",e=>{if(drag&&drag.moved)e.preventDefault()},{passive:false});
+  document.addEventListener("contextmenu",e=>{if(e.target.closest(".home .tile"))e.preventDefault()});
+  document.addEventListener("click",e=>{
+    if(suppress&&e.target.closest(".home .tile")){suppress=false;e.preventDefault();e.stopPropagation();return}
+    suppress=false;if(!EDIT||!e.target.closest(".home"))return;
+    const x=e.target.closest(".tdel,.tadd,[data-tmv],#editDone");
+    if(!x){if(e.target.closest(".tile")){e.preventDefault();e.stopPropagation()}return}
+    e.preventDefault();e.stopPropagation();const L=layGet(),h=new Set(L.hide||[]);
+    if(x.id==="editDone"){editSet(false);return}
+    if(x.dataset.hide){h.add(x.dataset.hide);L.hide=[...h];laySet(L);render();return}
+    if(x.dataset.unhide){h.delete(x.dataset.unhide);L.hide=[...h];laySet(L);render();return}
+    if(x.dataset.tmv){const th=myThemes(),i=+x.dataset.tmv,j=i+(+x.dataset.d);if(j<0||j>=th.length)return;[th[i],th[j]]=[th[j],th[i]];persoSave(th);render()}},true);
+  document.addEventListener("click",e=>{if(e.target.id==="editStart"){e.preventDefault();scrollTo(0,0);editSet(true)}});
+})();
 $("#menu").onclick=e=>{const b=e.target.closest(".mitem");if(b){tab=b.dataset.k;location.hash=tab;render()}if(b||e.target.id==="menu")$("#menu").classList.add("hide")};
 function setSeg(id,v){document.querySelectorAll(`#${id} button`).forEach(b=>b.classList.toggle("on",b.dataset.v===v))}
 function applyTheme(v){if(v==="light"||v==="dark")document.documentElement.dataset.theme=v;else delete document.documentElement.dataset.theme;store("coa-theme",v);setSeg("themeSeg",v)}
@@ -1734,7 +1886,7 @@ const SKEL=(n=3)=>`<div class="skel" aria-label="Chargement…">${Array.from({le
 function render(){
   document.querySelectorAll("#tabs button").forEach(b=>b.classList.toggle("on",b.dataset.k===tab));
   $("#menuCur").textContent=tabName(tab);
-  {const th=THEMES.find(([,it])=>it.some(([k])=>k===tab)),it=th&&th[1].find(([k])=>k===tab),t=$("h1 .ttl");
+  {const th=[...myThemes(),...THEMES].find(([,it])=>it.some(([k])=>k===tab)),it=th&&th[1].find(([k])=>k===tab),t=$("h1 .ttl");
    if(tab==="home"||!th){t.classList.remove("where");t.textContent="Boîte à outils COA"}
    else{t.classList.add("where");t.innerHTML=`<span class="tback" aria-hidden="true">‹</span><span class="tt"><small>${esc(th[0])}</small><span>${esc(it[1])}</span></span>`;t.title="Revenir à l'accueil"}}
   if(tab!=="ct"){CT.draft=null;if(AD.step!=="busy"){AD.step="";AD.draft=null}}
@@ -1793,7 +1945,7 @@ function render(){
   if(tab==="calc")bindCalc();
   bindMua();bindProc();
   abbrTips(out);const ot=$("#abTip");if(ot)ot.remove();
-  document.querySelectorAll("[data-go]").forEach(b=>b.onclick=e=>{if(e.target.closest("a,button:not(.tile)"))return;tab=b.dataset.go;location.hash=tab;render();scrollTo(0,0)});
+  document.querySelectorAll("[data-go]").forEach(b=>b.onclick=e=>{if(EDIT||e.target.closest("a,button:not(.tile)"))return;tab=b.dataset.go;location.hash=tab;render();scrollTo(0,0)});
   const wr=$("#wxRefresh");if(wr)wr.onclick=()=>{wr.textContent="…";wxLoad(true)};
   const nr=$("#ntRefresh");if(nr)nr.onclick=()=>{nr.textContent="…";notamLoad(true)};
   const vr=$("#vlRefresh");if(vr)vr.onclick=()=>{vr.textContent="…";volsLoad(true)};
