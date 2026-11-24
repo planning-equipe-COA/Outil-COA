@@ -93,6 +93,9 @@ mark{background:#ffe58a;color:#000;border-radius:2px}
 .tile.off{opacity:.6;animation:none!important}
 .tile.ph{opacity:.25;outline:2px dashed var(--acc);outline-offset:-2px;animation:none!important}
 .tile.ghost{position:fixed;left:0;top:0;z-index:50;pointer-events:none;margin:0;animation:none!important;box-shadow:0 14px 34px rgba(0,0,0,.28);opacity:.95}
+.home.dragging .tile{animation:none!important}
+.tile.ghost{will-change:transform;transition:none}
+.home.editing .tile{will-change:transform}
 .tempty{grid-column:1/-1;border:2px dashed var(--line);border-radius:14px;padding:18px;text-align:center;color:var(--mute);font-size:13.5px}
 .home h2 .thmv{float:right;display:flex;gap:6px;margin-top:-4px}
 .home h2 .thmv button{width:32px;height:28px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:15px;cursor:pointer}
@@ -867,18 +870,34 @@ function editSet(on){EDIT=on;{const h=document.querySelector("header");if(h)docu
     if(e.target.closest(".tdel,.tadd")||t.classList.contains("off"))return;
     e.preventDefault();const r=t.getBoundingClientRect();
     drag={t,dx:e.clientX-r.left,dy:e.clientY-r.top,ghost:null,moved:false,x0:e.clientX,y0:e.clientY,w:r.width,h:r.height}},{passive:false});
+  /* glisser fluide : position du doigt lue à chaque mouvement, tout le reste fait une fois par image (requestAnimationFrame) ;
+     les autres tuiles glissent jusqu'à leur nouvelle place (FLIP), le tremblement s'arrête pendant le glisser */
+  let px=0,py=0,raf=0,lastOver=null,lastSide=null,lastMove=0;
+  const tilesNow=()=>[...document.querySelectorAll(".home .tiles[data-th] .tile[data-k]")];
+  function flipMove(doMove){const els=tilesNow(),before=new Map(els.map(x=>[x,x.getBoundingClientRect()]));doMove();
+    els.forEach(x=>{const r0=before.get(x),r1=x.getBoundingClientRect(),dx=r0.left-r1.left,dy=r0.top-r1.top;
+      if((dx||dy)&&x.animate)x.animate([{transform:`translate3d(${dx}px,${dy}px,0)`},{transform:"translate3d(0,0,0)"}],{duration:200,easing:"cubic-bezier(.2,.8,.2,1)"})})}
+  function frame(){raf=0;if(!drag||!drag.moved)return;
+    drag.ghost.style.transform=`translate3d(${px-drag.dx}px,${py-drag.dy}px,0) scale(1.05)`;
+    const now=performance.now();
+    if(now-lastMove>70){const el=document.elementFromPoint(px,py),over=el&&el.closest(".home .tiles[data-th] .tile[data-k]"),grid=el&&el.closest(".home .tiles[data-th]");
+      if(over&&over!==drag.t){const r=over.getBoundingClientRect(),side=px>r.left+r.width/2;
+        if(over!==lastOver||side!==lastSide){const ref=side?over.nextSibling:over;if(ref!==drag.t&&drag.t.nextSibling!==ref){flipMove(()=>over.parentNode.insertBefore(drag.t,ref));lastMove=now}lastOver=over;lastSide=side}}
+      else if(grid&&!over&&!grid.contains(drag.t)){flipMove(()=>{const em=grid.querySelector(".tempty");if(em)em.remove();grid.append(drag.t)});lastMove=now;lastOver=null}
+      else if(!over)lastOver=null}
+    const edge=py<100?-1:py>innerHeight-120?1:0;
+    if(edge){scrollBy(0,edge*Math.round(6+10*(edge<0?(100-py)/100:(py-innerHeight+120)/120)));raf=requestAnimationFrame(frame)}}
   document.addEventListener("pointermove",e=>{
     if(lp&&lpXY&&Math.hypot(e.clientX-lpXY[0],e.clientY-lpXY[1])>10){clearTimeout(lp);lp=null}
-    if(!drag)return;
-    if(!drag.moved){if(Math.hypot(e.clientX-drag.x0,e.clientY-drag.y0)<6)return;drag.moved=true;
-      const g=drag.t.cloneNode(true);g.classList.add("ghost");Object.assign(g.style,{width:drag.w+"px",height:drag.h+"px"});document.body.append(g);drag.ghost=g;drag.t.classList.add("ph")}
-    e.preventDefault();drag.ghost.style.transform=`translate(${e.clientX-drag.dx}px,${e.clientY-drag.dy}px) scale(1.06)`;
-    const el=document.elementFromPoint(e.clientX,e.clientY),over=el&&el.closest(".home .tiles[data-th] .tile[data-k]"),grid=el&&el.closest(".home .tiles[data-th]");
-    if(over&&over!==drag.t){const r=over.getBoundingClientRect(),after=e.clientX>r.left+r.width/2;over.parentNode.insertBefore(drag.t,after?over.nextSibling:over)}
-    else if(grid&&!over&&!grid.contains(drag.t)){const em=grid.querySelector(".tempty");if(em)em.remove();grid.append(drag.t)}
-    if(e.clientY<90)scrollBy(0,-12);else if(e.clientY>innerHeight-110)scrollBy(0,12)},{passive:false});
-  const end=()=>{if(lp){clearTimeout(lp);lp=null}if(!drag)return;const d=drag;drag=null;
-    if(d.ghost){d.ghost.remove();d.t.classList.remove("ph");homeLayoutFromDom();suppress=true;setTimeout(()=>render(),0)}};
+    if(!drag)return;px=e.clientX;py=e.clientY;
+    if(!drag.moved){if(Math.hypot(px-drag.x0,py-drag.y0)<6)return;drag.moved=true;
+      const g=drag.t.cloneNode(true);g.classList.add("ghost");Object.assign(g.style,{width:drag.w+"px",height:drag.h+"px",transform:`translate3d(${px-drag.dx}px,${py-drag.dy}px,0) scale(1.05)`});document.body.append(g);drag.ghost=g;
+      drag.t.classList.add("ph");document.querySelector(".home").classList.add("dragging");if(navigator.vibrate)navigator.vibrate(8)}
+    e.preventDefault();if(!raf)raf=requestAnimationFrame(frame)},{passive:false});
+  const end=()=>{if(lp){clearTimeout(lp);lp=null}if(!drag)return;const d=drag;drag=null;if(raf){cancelAnimationFrame(raf);raf=0}lastOver=null;
+    if(d.ghost){const r=d.t.getBoundingClientRect(),g=d.ghost;d.t.classList.remove("ph");d.t.style.visibility="hidden";
+      g.style.transition="transform .16s cubic-bezier(.2,.8,.2,1)";g.style.transform=`translate3d(${r.left}px,${r.top}px,0) scale(1)`;
+      homeLayoutFromDom();suppress=true;setTimeout(()=>{g.remove();render()},170)}};
   document.addEventListener("pointerup",end);document.addEventListener("pointercancel",end);
   document.addEventListener("touchmove",e=>{if(drag&&drag.moved)e.preventDefault()},{passive:false});
   document.addEventListener("contextmenu",e=>{if(e.target.closest(".home .tile"))e.preventDefault()});

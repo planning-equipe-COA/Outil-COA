@@ -90,6 +90,9 @@ L'utilisateur échange en français.
 - **Réglages → Personnaliser** (`#perso`) : couleur (`coa-acc` → `html[data-acc]`, 6 couleurs, clair + sombre, appliquée dans le
   `<head>`), 3 boutons du milieu de la barre du bas (`coa-bnav`, `myBnav`, libellés courts `BSHORT`), carte météo de l'accueil,
   « Ranger les tuiles », « Rétablir l'agencement d'origine » (efface coa-layout et coa-bnav, pas la couleur).
+- Glisser fluide (signalé saccadé sur iPhone) : doigt lu au `pointermove`, tout le reste dans `requestAnimationFrame` (`frame`),
+  test de cible au plus toutes les 70 ms avec hystérésis, autres tuiles animées vers leur place (FLIP, `flipMove`), tremblement coupé
+  pendant le glisser (`.dragging`), fantôme en `translate3d`, dépose animée, défilement auto progressif.
 - Piège corrigé : `closest("[data-acc]")` remontait jusqu'à `<html data-acc>` → toujours `.pacc [data-acc]`.
 
 ## Fichiers
