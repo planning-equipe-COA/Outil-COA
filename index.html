@@ -1335,7 +1335,7 @@ function volRow(v,arr,q,ico){const h=v.t.slice(11,16),z=volZ(v.t),hd=MRS_HANDLER
       ${ico?`<span class="sub" style="width:14px">${ico}</span>`:""}<b style="font-size:17px;min-width:48px">${esc(h)}</b><span class="sub" style="min-width:52px">${esc(z)}Z</span>${volDone(v)||v.cls==="annulee"?"":`<span class="vcd" data-cd="${volMs(v.t)+(dl||0)*60e3}">${cdText(volMs(v.t)+(dl||0)*60e3)}</span>`}
       <b>${hl(v.n,q)}</b><span>${hl(v.ville,q)} <span class="u-ext" style="margin:0">${esc(v.code)}</span></span>
       ${v.st?`<span style="color:${stCls};font-weight:600;font-size:13px">${esc(v.st)}${dl&&dl>=15?` (+${dl} min)`:""}</span>`:""}<span class="sub" style="margin-left:auto">${open?"▴":"▾"}</span></div>
-      <div class="sub" style="margin-top:2px">${hl(v.cie,q)}${hd?" · "+hl(hd,q):""}${where?" · "+hl(where,q):""}</div>${open?volDetail(v,arr):""}</div>`}
+      <div class="sub" style="margin-top:2px">${hl(v.cie,q)}${hd?" · "+hl(hd,q):""}${where?" · "+hl(where,q):""}${v.reg?` · <span class="u-ext" style="margin:0;white-space:nowrap">${hl(fmtReg(v.reg),q)}${v.type?" · "+esc(v.type):""}</span>`:""}</div>${open?volDetail(v,arr):""}</div>`}
 /* vue rotations : arrivée + départ du même avion, rapprochés par compagnie, escale et numéros de vol voisins
    (AF 7342 → AF 7343), départ 20 min à 14 h après l'arrivée. Rapprochement probable, pas une donnée de l'aéroport. */
 /* nightstops : on rapproche aussi les arrivées de la veille à partir de 14 h (gardées par le relais) et on accepte 18 h d'escale */
