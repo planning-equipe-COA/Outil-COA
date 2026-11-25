@@ -97,7 +97,10 @@ L'utilisateur échange en français.
 
 - **Retour à l'accueil** (25 nov. 2026, demandé) : depuis une rubrique (titre ‹, bouton Accueil, retour arrière), l'accueil
   s'ouvre sur le thème de cette rubrique (`PREV_TAB`, fin de `render`), tuile soulignée brièvement (`.back`), pas en haut de page.
-- **Vols du jour** : boutons dans l'ordre Arrivées / Arr. + Dép. / Départs (demandé).
+- **Vols du jour** : boutons dans l'ordre Arrivées / Arr. + Dép. / Départs (demandé). Arrivées et départs en **cartes pleine
+  largeur** (`volRow` → `.vcard`, liste `.vlist`) : liseré gauche couleur du statut (`--vst`), heure locale en grand + Z, vol et
+  statut en pastille, ville en grand, pastilles porte/tapis, compte à rebours, immat./type ; compagnie · assistant en dessous.
+  Test local : routes playwright vers les données réelles du relais (le relais n'autorise que l'origine github.io).
 
 ## Fichiers
 - `index.html` — toute l'appli (HTML + CSS + JS). **Page d'accueil** (onglet « Accueil », ouverte au lancement, bouton maison en
