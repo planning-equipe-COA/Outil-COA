@@ -238,6 +238,11 @@ L'utilisateur échange en français.
   `ASM_ACT` (CON = configuration, même type ; EQT = type d'avion), motifs `ASM_WHY`, DEI `ASM_DEI`, types de service `ASM_SVC`,
   structure. Aussi dans « Tout ». Compagnies : `MRS_AL`, puis `ASM_AL_FIX` (CE = Chalair Aviation, OpenFlights périmé), puis
   airlines.json ; types : `TYPE_EXTRA` puis aircraft.json. Sources : extraits publics SSIM (wiki Avinor, OAG).
+  - Bouton « 📷 Photo » (25/11/2026, demandé par Raph plutôt que « Analyser le texte » d'iOS) : `ocrRead` → `ocrPrep` (gris,
+    contraste, ~2000 px) → Tesseract.js 5.1.1 (jsDelivr, chargé au 1er usage) avec le modèle `@tesseract.js-data/eng`
+    4.0.0_best_int (3 Mo, gardé par le navigateur) → `asmOcrFix` (O/0, I/1, T/7, B/8…, `//` mal lu, codes d'action à 1 lettre
+    près, compagnie desservant MRS préférée : T0 → TO) → décodage. Tout sur le téléphone, rien n'est envoyé. Testé : télex net
+    lu sans erreur (~1 s) ; photo floue et bruitée : quelques erreurs restantes → message « vérifie le texte lu ».
 - Calculs → « Heure d'arrivée à Marseille » : le résultat (ETA depuis l'ED) s'affiche dans un encadré **vert** (`#cEta.ok`,
   clair et sombre ; demandé le 23 nov. 2026), seulement quand le calcul aboutit.
 - **Soleil à LFML** (`sunTimes`, équation NOAA, ~1 min ; vérifié 21/11 : lever 06:40, coucher 16:10 UTC) et **nuit aéronautique**
