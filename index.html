@@ -403,6 +403,8 @@ html[data-theme=dark] .wxa.danger{background:#3d1a1d;color:#ffb3b3}
   <h2>Affichage</h2>
   <div class="seg" id="themeSeg"><button data-v="auto">Auto</button><button data-v="light">Clair</button><button data-v="dark">Sombre</button></div>
   <p class="sub">Auto suit le réglage du téléphone.</p>
+  <h2>Notifications</h2>
+  <div id="pushBox"><p class="sub">…</p></div>
   <h2>Personnaliser</h2>
   <p class="sub">Couleur, boutons de la barre du bas, ordre des thèmes et des rubriques de l'accueil. Réglé sur ce téléphone seulement.</p>
   <button class="btn p" data-perso style="width:100%">Personnaliser l'appli</button>
@@ -1269,7 +1271,7 @@ async function notamLoad(force){
 }
 /* Vols du jour : tableau public de l'aéroport Marseille Provence, via le même relais Cloudflare que les NOTAM (?vols=1).
    Consultation seulement (pas un GANTT). Heures du site = heures locales Paris. Dernière liste gardée (coa-vols) hors connexion. */
-const VL={data:null,at:0,err:"",loading:false,failAt:0,dir:"dep",day:0,done:false};
+const VL={data:null,at:0,err:"",loading:false,failAt:0,dir:"dep",day:0,done:false,reg:""};
 try{const c=JSON.parse(store("coa-vols")||"null");if(c&&c.data){VL.data=c.data;VL.at=c.at}}catch(e){}
 async function volsLoad(force){
   if(!NOTAM_URL||VL.loading||(!force&&VL.data&&Date.now()-VL.at<3*60e3))return;
@@ -1321,7 +1323,8 @@ function volDetail(v,arr){
     ${arr?line("Tapis bagages",esc(v.tapis)):line("Porte",esc([v.porte,v.zone&&v.zone!==v.term?"zone "+v.zone:"",v.term].filter(Boolean).join(" · ")))}
     ${arr?"":line("Banques d'enregistrement",esc(v.banques))}
     ${line("Assistant",esc(hd||""))}
-    <div class="vbtns">${handlerNames(hd).map(n=>`<button class="glink" data-ctq="${esc(n)}">Contacts ${esc(n)}</button>`).join("")}${st.map(p=>`<button class="glink" data-openposte="${esc(p)}">Fiche MUA ${esc(p)}</button>`).join("")}<button class="glink" data-alq="${esc(v.al)}">Fiche compagnie</button></div></div>`}
+    ${wxpLine(v)}
+    <div class="vbtns">${v.reg&&VL.reg!==v.reg?`<button class="glink" data-volreg="${esc(v.reg)}">Parcours de ${esc(fmtReg(v.reg))}</button>`:""}${handlerNames(hd).map(n=>`<button class="glink" data-ctq="${esc(n)}">Contacts ${esc(n)}</button>`).join("")}${st.map(p=>`<button class="glink" data-openposte="${esc(p)}">Fiche MUA ${esc(p)}</button>`).join("")}<button class="glink" data-alq="${esc(v.al)}">Fiche compagnie</button></div></div>`}
 /* compte à rebours « dans 12 min » (3 h à l'avance au plus), « maintenant » jusqu'à 10 min après ; rafraîchi par liveTick */
 function cdText(ms){const m=Math.round((ms-Date.now())/60e3);if(m<-10||m>180)return "";if(m<=0)return "maintenant";
   return "dans "+(m<60?m+" min":Math.floor(m/60)+" h"+(m%60?" "+String(m%60).padStart(2,"0"):""))}
@@ -1372,6 +1375,67 @@ function volRisk(d){if(!VL.data||volDone(d)||d.cls==="annulee")return null;const
   if(late<10)return null;const hhmm=new Date(min+parisOffset(new Date(min))*60e3).toISOString().slice(11,16);
   return `Avion attendu en ${a.n} à ${new Date(eta+parisOffset(new Date(eta))*60e3).toISOString().slice(11,16)}${how} : départ probablement pas avant ${hhmm} (+${late} min)`}
 const riskHtml=d=>{const t=volRisk(d);return t?`<div style="color:#b26a00;font-weight:600;font-size:13px;margin-top:2px">⚠ ${esc(t)}</div>`:""};
+/* voyant « source en panne » : relais injoignable, site de l'aéroport en panne (copie de secours) ou figé */
+const parisHM=ms=>new Date(ms+parisOffset(new Date(ms))*60e3).toISOString().slice(11,16);
+function volsHealth(){const D=VL.data;if(!D)return "";const m=[];const at=Date.parse(D.at)||VL.at;
+  if(VL.err)m.push(`${VL.err} Liste affichée : reçue il y a ${Math.round((Date.now()-VL.at)/60e3)} min.`);
+  if(D.stale)m.push(`Le site de l'aéroport ne répond plus (${D.err||"erreur"}) : liste relevée à ${parisHM(at)}.`);
+  else if(/^\d{1,2}:\d{2}$/.test(D.maj||"")){let g=parseHM(parisHM(at))-parseHM(D.maj);if(g<-720)g+=1440;if(g>30)m.push(`Le site de l'aéroport n'est plus mis à jour depuis ${D.maj}.`)}
+  return m.length?`<div class="wxa danger" style="margin:8px 0">⚠ <b>Vols : source en panne</b> · ${esc(m.join(" "))} Horaires et statuts peuvent être faux.</div>`:""}
+/* météo des escales (provenances des arrivées, destinations des départs, 6 prochaines heures) : relais ?wx= (aviationweather.gov) */
+const WXP={key:"",data:null,at:0,loading:false,err:"",failAt:0};
+const apOf=code=>loaded===true?AP.find(r=>r[0]===code):null;
+function wxpIds(){const D=VL.data;if(!D||loaded!==true)return [];const now=Date.now(),s=new Set();
+  [...D.arr,...D.dep].forEach(v=>{if(v.t.slice(0,10)!==D.today||volDone(v)||v.cls==="annulee")return;const m=volMs(v.t);if(m<now-3600e3||m>now+6*3600e3)return;
+    const ap=apOf(v.code);if(ap&&/^[A-Z]{4}$/.test(ap[1]||""))s.add(ap[1])});return [...s].sort().slice(0,40)}
+async function wxpLoad(){const ids=wxpIds();if(!ids.length||!NOTAM_URL)return;const key=ids.join(",");
+  if(WXP.loading||(WXP.key===key&&Date.now()-WXP.at<10*60e3)||(WXP.failAt&&Date.now()-WXP.failAt<2*60e3))return;
+  WXP.loading=true;try{const r=await fetch(NOTAM_URL+"?wx="+key);const j=await r.json();if(!r.ok||j.error)throw new Error(j.error||r.status);Object.assign(WXP,{key,data:j,at:Date.now(),err:"",failAt:0})}
+  catch(e){WXP.failAt=Date.now();WXP.err="Météo des escales indisponible ("+(/Failed to fetch|NetworkError|Load failed/i.test(String(e.message))?"pas de réseau":"relais pas encore mis à jour")+")."}
+  WXP.loading=false;if(tab==="vols")render()}
+/* phénomènes du TAF dont la période recoupe [from, to] (heures UTC du TAF ; PROB = « possible ») */
+function tafHaz(taf,from,to){if(!taf)return [];const now=new Date(from),Y=now.getUTCFullYear(),M=now.getUTCMonth(),D0=now.getUTCDate();
+  const at=(dd,hh)=>{let m=M;if(+dd<D0-15)m++;else if(+dd>D0+15)m--;return Date.UTC(Y,m,+dd,+hh)};
+  const parts=taf.replace(/\s+/g," ").split(/ (?=(?:PROB\d{2}|BECMG|FM\d{6})\b)|(?<!PROB\d{2}) (?=TEMPO\b)/);const out=new Set();
+  parts.forEach((g,i)=>{let a,b;const fm=g.match(/^FM(\d{2})(\d{2})(\d{2})/),pr=g.match(/(\d{2})(\d{2})\/(\d{2})(\d{2})/);
+    if(fm){a=at(fm[1],fm[2]);const nx=(parts.slice(i+1).find(x=>/^FM/.test(x))||"").match(/^FM(\d{2})(\d{2})/);b=nx?at(nx[1],nx[2]):Infinity}
+    else if(pr){a=at(pr[1],pr[2]);b=at(pr[3],pr[4])}else return;
+    if(i===0){const nx=parts.slice(1).find(x=>/^FM/.test(x));const m=nx&&nx.match(/^FM(\d{2})(\d{2})/);if(m)b=at(m[1],m[2])}
+    if(b<from||a>to)return;const w=g.split(" "),p=/^PROB/.test(g)?" possible":"";
+    if(w.some(x=>/^[+-]?(VC)?TS/.test(x)))out.add("orage"+p);if(w.some(x=>/^(MI|BC|PR|FZ)?FG$/.test(x)))out.add("brouillard"+p);
+    if(w.some(x=>/^[+-]?(SH|BL)?SN|^[+-]?FZ(RA|DZ)/.test(x)))out.add("neige / verglas"+p)});
+  return [...out]}
+/* lecture d'un relevé : niveau (danger / warn / "") et résumé en clair */
+function wxpEval(o){const t=[];let lvl="";const up=l=>{if(l==="danger"||!lvl)lvl=l};if(!o||!o.metar)return {lvl,txt:"",cat:""};
+  const raw=o.metar.replace(/^(METAR|SPECI)\s+\w{4}\s+\d{6}Z\s+(AUTO\s+)?/,"").split(/\s+(?:TEMPO|BECMG|NOSIG)\b/)[0];
+  const vm=/\bCAVOK\b/.test(raw)?9999:(raw.match(/(?:^|\s)(\d{4})(?:NDV)?(?=\s)/)||[])[1];const vis=vm!=null?+vm:typeof o.vis==="number"?Math.round(o.vis*1609):null;
+  if(vis!=null&&vis<1500){up(vis<600?"danger":"warn");t.push("visibilité "+(vis<1000?vis+" m":(vis/1000).toFixed(1).replace(".",",")+" km"))}
+  const ceil=Math.min(...[...raw.matchAll(/\b(BKN|OVC|VV)(\d{3})/g)].map(x=>+x[2]*100));if(ceil<=500){up(ceil<=200?"danger":"warn");t.push("plafond "+ceil+" ft")}
+  const w=raw.split(/\s+/);const has=re=>w.some(x=>re.test(x));
+  if(has(/^[+-]?(VC)?TS/))(up("danger"),t.push("orage"));if(has(/^(MI|BC|PR|FZ)?FG$/))(up("warn"),t.push("brouillard"));
+  if(has(/^[+-]?(SH|BL|DR)?SN|^[+-]?FZ(RA|DZ)|^[+-]?PL/))(up("danger"),t.push("neige / pluie verglaçante"));
+  const wm=raw.match(/\b(\d{3}|VRB)(\d{2,3})(?:G(\d{2,3}))?KT\b/);if(wm&&(+wm[2]>=30||+(wm[3]||0)>=40)){up("warn");t.push(`vent ${+wm[2]} kt${wm[3]?" rafales "+(+wm[3]):""}`)}
+  if(o.cat==="LIFR")up("danger");else if(o.cat==="IFR")up("warn");
+  if(!t.length&&(o.cat==="LIFR"||o.cat==="IFR"))t.push(o.cat==="LIFR"?"conditions très dégradées":"conditions IFR (visibilité ou plafond bas)");
+  const tf=tafHaz(o.taf,Date.now(),Date.now()+6*3600e3);if(tf.length){if(tf.some(x=>!/possible$/.test(x)))up("warn");t.push("prévu au TAF d'ici 6 h : "+tf.join(", "))}
+  return {lvl,txt:t.join(", "),cat:o.cat||""}}
+function wxpBlock(dir){if(!VL.data||VL.day!==0)return "";wxpLoad();const ids=wxpIds();if(!ids.length)return "";
+  if(!WXP.data)return WXP.err?`<div class="sub" style="margin:8px 0">${esc(WXP.err)}</div>`:"";
+  const D=VL.data,now=Date.now(),st=WXP.data.st||{},byIcao={};
+  [...(dir!=="dep"?D.arr.map(v=>[v,1]):[]),...(dir!=="arr"?D.dep.map(v=>[v,0]):[])].forEach(([v,a])=>{if(v.t.slice(0,10)!==D.today||volDone(v)||v.cls==="annulee")return;const m=volMs(v.t);if(m<now-3600e3||m>now+6*3600e3)return;
+    const ap=apOf(v.code);if(ap&&ap[1])(byIcao[ap[1]]||=[]).push([v,a])});
+  const rows=Object.entries(byIcao).map(([ic,l])=>[ic,l,wxpEval(st[ic])]).filter(x=>x[2].lvl).sort((x,y)=>(x[2].lvl==="danger"?0:1)-(y[2].lvl==="danger"?0:1));
+  const n=Object.keys(byIcao).length;
+  return `<div class="card" style="padding:8px 12px;margin:8px 0"><b>Météo des escales</b> <span class="sub">· ${dir==="arr"?"provenances":dir==="dep"?"destinations":"provenances et destinations"} des 6 prochaines heures · ${n} terrain${n>1?"s":""}</span>
+    ${rows.length?rows.map(([ic,l,e])=>{return `<div style="margin-top:6px;color:${e.lvl==="danger"?"#c62828":"#b26a00"}"><b>${esc(l[0][0].code)}</b> ${esc(l[0][0].ville)} <span class="u-ext" style="margin:0">${esc(ic)}${e.cat?" · "+esc(e.cat):""}</span> : ${esc(e.txt)}<div class="sub">${l.slice(0,4).map(([v,a])=>`${a?"↓":"↑"} ${esc(v.n)} ${esc(v.t.slice(11,16))}`).join(" · ")}${l.length>4?" …":""}</div></div>`}).join(""):`<div class="sub" style="margin-top:4px">Rien de marquant sur ces terrains (visibilité, plafond, orage, neige, vent).</div>`}
+    <details style="margin-top:6px"><summary class="sub">METAR et TAF de tous ces terrains</summary>${Object.keys(byIcao).sort().map(ic=>{const o=st[ic]||{};return `<div class="raw" style="margin-top:4px">${esc(o.metar||ic+" : pas de METAR")}${o.taf?"<br>"+esc(o.taf):""}</div>`}).join("")}<p class="sub">Source : aviationweather.gov (NOAA), relevé <span data-ago="${WXP.at}">il y a ${Math.round((now-WXP.at)/60e3)} min</span>. Aide à la lecture : les METAR et TAF bruts font foi.</p></details></div>`}
+function wxpLine(v){const ap=apOf(v.code);const o=ap&&WXP.data&&(WXP.data.st||{})[ap[1]];if(!o||!o.metar)return "";const e=wxpEval(o);
+  return `<div><span class="sub">Météo ${esc(v.code)}</span> ${e.lvl?`<b style="color:${e.lvl==="danger"?"#c62828":"#b26a00"}">${esc(e.txt)}</b>`:"rien de marquant"}${e.cat?` <span class="u-ext" style="margin:0">${esc(e.cat)}</span>`:""}<div class="raw" style="margin-top:2px">${esc(o.metar)}</div></div>`}
+/* parcours d'un avion : tous ses passages connus à Marseille (immatriculation) */
+function regTrack(reg){const D=VL.data;const L=[...D.arr.map(v=>[v,true]),...D.dep.map(v=>[v,false])].filter(([v])=>v.reg===reg).sort((a,b)=>a[0].t<b[0].t?-1:1);if(!L.length)return "";
+  const ty=(L.find(([v])=>v.type)||[{}])[0].type;
+  return `<div class="card" style="padding:8px 12px;margin:8px 0;border-color:var(--acc)"><div style="display:flex;align-items:center;gap:8px"><b>Parcours de ${esc(fmtReg(reg))}</b>${ty?`<span class="sub">${esc(ty)}</span>`:""}${VL.reg?`<button class="btn" data-volreg="" style="margin-left:auto">✕</button>`:""}</div>
+    <p class="sub" style="margin:2px 0 0">Ses passages à Marseille de la veille au soir à aujourd'hui (immatriculation fournie par AeroDataBox).</p>${L.map(([v,a])=>volRow(v,a,"",a?"↓":"↑")).join("")}</div>`}
 /* vue « Arr. + Dép. » : une carte par avion, arrivée et départ côte à côte, chacun avec sa provenance / destination */
 function rotRow(r,q){const {a,d}=r,v0=a||d;const k=a&&d?volKey(a)+"#"+volKey(d):volKey(v0),open=VL.open===k,hd=MRS_HANDLER[v0.al];
   const half=(v,arr)=>{if(!v)return `<div class="rhalf none">${arr?"↓ Arrivée":"↑ Départ"}<br>non trouvé${arr?"e":""}</div>`;
@@ -1400,12 +1464,14 @@ function volsView(q){
   let rots=null;if(rot){rots=volsRotations(day);if(!VL.done&&!q)rots=rots.filter(r=>!(r.d?volDone(r.d):volDone(r.a))||VL.open&&VL.open.includes(volKey(r.a||r.d)));
     if(q)rots=rots.filter(r=>(r.a&&volMatch(r.a,q))||(r.d&&volMatch(r.d,q)))}
   const nRot=rot?volsRotations(day).filter(r=>r.a&&r.d).length:0;
-  return `<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><div class="seg" id="vlDir"><button data-v="dep" class="${!arr&&!rot?"on":""}">Départs</button><button data-v="arr" class="${arr?"on":""}">Arrivées</button><button data-v="rot" class="${rot?"on":""}">Arr. + Dép.</button></div>
+  const qr=q&&!VL.reg?([...D.arr,...D.dep].find(v=>v.reg&&v.reg.toLowerCase()===q.replace(/[-\s]/g,""))||{}).reg:"";
+  const trk=VL.reg||qr?regTrack(VL.reg||qr):"";
+  return `${volsHealth()}${trk}<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><div class="seg" id="vlDir"><button data-v="dep" class="${!arr&&!rot?"on":""}">Départs</button><button data-v="arr" class="${arr?"on":""}">Arrivées</button><button data-v="rot" class="${rot?"on":""}">Arr. + Dép.</button></div>
     <div class="seg" id="vlDay">${dl.map((l,i)=>`<button data-v="${i}" class="${VL.day===i?"on":""}">${l}</button>`).join("")}</div>
     <label class="sub" style="display:flex;gap:4px;align-items:center"><input type="checkbox" id="vlDone"${VL.done?" checked":""}> ${rot?"rotations terminées":arr?"vols arrivés":"vols décollés"}${rot?"":` (${fini})`}</label></div>
   ${rot?`<div class="info">${nRot} rotations le ${day.split("-").reverse().join("/")} : arrivée ↓ et départ ↑ du même avion, reliés par l'immatriculation quand elle est connue${D.adb?` (${D.adb.hit??D.adb.n} vols avec immatriculation${D.adb.err?" · "+esc(D.adb.err):""})`:" (pas encore branchée)"}, sinon par compagnie, escale et numéros de vol (« probable »). Les vols sans rotation trouvée sont seuls. Site de l'aéroport mis à jour à ${esc(D.maj||"?")}, relu <span data-ago="${VL.at}">il y a ${age} min</span> <button class="btn" id="vlRefresh" style="font-size:12px;padding:3px 8px">Actualiser</button></div>
-  <div class="rlist">${rots.map(r=>rotRow(r,q)).join("")||'<div class="info">Aucun vol.</div>'}</div>`:`<div class="info">${all} ${arr?"arrivées":"départs"} le ${day.split("-").reverse().join("/")}${canc?` · <b style="color:#c62828">${canc} annulé${canc>1?"s":""}</b>`:""} · heures locales (Z à côté) · touche un vol pour sa fiche · site de l'aéroport mis à jour à ${esc(D.maj||"?")}, relu <span data-ago="${VL.at}">il y a ${age} min</span>${VL.err?" · "+esc(VL.err):""} <button class="btn" id="vlRefresh" style="font-size:12px;padding:3px 8px">Actualiser</button></div>
-  <div class="card" style="padding:2px 12px">${list.map(v=>volRow(v,arr,q)).join("")||'<div class="info">Aucun vol.</div>'}</div>`}
+  ${q?"":wxpBlock("rot")}<div class="rlist">${rots.map(r=>rotRow(r,q)).join("")||'<div class="info">Aucun vol.</div>'}</div>`:`<div class="info">${all} ${arr?"arrivées":"départs"} le ${day.split("-").reverse().join("/")}${canc?` · <b style="color:#c62828">${canc} annulé${canc>1?"s":""}</b>`:""} · heures locales (Z à côté) · touche un vol pour sa fiche · site de l'aéroport mis à jour à ${esc(D.maj||"?")}, relu <span data-ago="${VL.at}">il y a ${age} min</span>${VL.err?" · "+esc(VL.err):""} <button class="btn" id="vlRefresh" style="font-size:12px;padding:3px 8px">Actualiser</button></div>
+  ${q?"":wxpBlock(arr?"arr":"dep")}<div class="card" style="padding:2px 12px">${list.map(v=>volRow(v,arr,q)).join("")||'<div class="info">Aucun vol.</div>'}</div>`}
   <p class="sub">Source : tableau public des vols de l'aéroport Marseille Provence. Consultation seulement : horaires indicatifs, le GANTT et les messages compagnie font foi.${MUA.annu?"":" Déverrouille le MUA pour voir le poste au contact des portes."}</p>`;
 }
 /* recherche « Tout » : un numéro de vol (AF7343, AF 7343, 7343) */
@@ -1415,6 +1481,7 @@ function volsSearch(q){if(!volsFresh())return null;const c=q.replace(/\s/g,"");i
   return `<div class="card" style="padding:2px 12px">${d.map(v=>volRow(v,false,"")).join("")}${a.map(v=>volRow(v,true,"")).join("")}</div>`}
 /* bandeau d'alertes de l'accueil : vols annulés et gros retards (aujourd'hui, à venir) */
 function homeAlerts(){if(!volsFresh())return "";const now=Date.now(),{dep,arr}=volsOf(VL.data.today);const items=[];
+  const hl0=volsHealth();if(hl0)items.push(hl0.replace('style="margin:8px 0"','data-go="vols"'));
   const canc=[...dep.map(v=>[v,0]),...arr.map(v=>[v,1])].filter(([v])=>v.cls==="annulee"&&volMs(v.t)>now-2*3600e3);
   if(canc.length)items.push(`<div class="wxa danger" data-go="vols"><b>${canc.length} vol${canc.length>1?"s":""} annulé${canc.length>1?"s":""}</b> : ${canc.slice(0,4).map(([v,a])=>`${esc(v.n)} ${a?"de":"vers"} ${esc(v.ville)} (${esc(v.t.slice(11,16))})`).join(", ")}${canc.length>4?"…":""}</div>`);
   const dv=arr.filter(v=>volDiverted(v)&&volMs(v.t)>now-3*3600e3);
@@ -1988,13 +2055,38 @@ function render(){
   document.querySelectorAll(".vrow").forEach(r=>{const go=e=>{if(e.target.closest("button,a"))return;VL.open=VL.open===r.dataset.vk?null:r.dataset.vk;if(tab!=="vols"){VL.dir=r.dataset.varr==="1"?"arr":r.dataset.varr==="2"?"rot":"dep";VL.day=r.dataset.vk.split("|")[1].slice(0,10)===VL.data.today?0:1;tab="vols";location.hash="vols"}render()};r.onclick=go;r.onkeydown=e=>{if(e.key==="Enter")go(e)}});
   document.querySelectorAll("[data-ctq]").forEach(b=>b.onclick=()=>{$("#q").value=b.dataset.ctq;tab="ct";location.hash="ct";render();scrollTo(0,0)});
   document.querySelectorAll("[data-alq]").forEach(b=>b.onclick=()=>{$("#q").value=b.dataset.alq;tab="al";location.hash="al";render();scrollTo(0,0)});
+  document.querySelectorAll("[data-volreg]").forEach(b=>b.onclick=()=>{VL.reg=b.dataset.volreg||"";VL.open=null;if(tab!=="vols"){tab="vols";location.hash="vols"}render();scrollTo(0,0)});
   document.querySelectorAll("#vlDay button").forEach(b=>b.onclick=()=>{VL.day=+b.dataset.v;render()});
   const vd=$("#vlDone");if(vd)vd.onchange=()=>{VL.done=vd.checked;render()};
 }
 render();
 if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").catch(()=>{})}
 const SHARE_URL="https://planning-equipe-coa.github.io/Outil-COA/";
-$("#gear").onclick=()=>{muaSettings();$("#set").classList.remove("hide");$("#set").scrollTop=0;document.body.classList.add("noscroll")};
+/* notifications (Web Push par le relais : annulations, déroutements, retards ≥ 60 min, source en panne) */
+const PUSH_TYPES=[["annul","Vols annulés"],["derout","Arrivées déroutées"],["retard","Retards de 60 min ou plus"],["src","Source des vols en panne"]];
+function pushPrefs(){try{const p=JSON.parse(localStorage.getItem("coa-push-prefs"));if(Array.isArray(p))return p}catch(e){}return PUSH_TYPES.map(x=>x[0])}
+const u8=s=>{s=s.replace(/-/g,"+").replace(/_/g,"/");s+="=".repeat((4-s.length%4)%4);return Uint8Array.from(atob(s),c=>c.charCodeAt(0))};
+async function pushPost(action,sub,prefs){const r=await fetch(NOTAM_URL+"?push="+action,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sub,prefs})});
+  const j=await r.json().catch(()=>({}));if(!r.ok||j.error)throw new Error(j.error||r.status);return j}
+async function pushRender(msg){const B=$("#pushBox");if(!B)return;const say=h=>{B.innerHTML=h+(msg?`<p class="sub" style="color:var(--acc);font-weight:600">${esc(msg)}</p>`:"")};
+  const ios=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1),inst=matchMedia("(display-mode: standalone)").matches||navigator.standalone;
+  if(!("serviceWorker" in navigator)||!("PushManager" in window)||!("Notification" in window))return say(ios&&!inst?`<p class="sub">Sur iPhone, ajoute d'abord l'appli à l'écran d'accueil (Partager → « Sur l'écran d'accueil »), ouvre-la depuis son icône, puis reviens ici.</p>`:`<p class="sub">Ce navigateur ne gère pas les notifications.</p>`);
+  let key;try{const j=await (await fetch(NOTAM_URL+"?push=key",{cache:"no-store"})).json();if(!j.ok)return say(`<p class="sub">Pas encore activées sur le relais (réglage Cloudflare à faire).</p>`);key=j.key}catch(e){return say(`<p class="sub">Relais injoignable (pas de réseau ?).</p>`)}
+  if(Notification.permission==="denied")return say(`<p class="sub">Notifications refusées pour cette appli : à réautoriser dans les réglages du téléphone.</p>`);
+  const reg=await navigator.serviceWorker.ready,sub=await reg.pushManager.getSubscription();
+  if(!sub){say(`<p class="sub">Une alerte sur ce téléphone, même appli fermée, en cas d'annulation, de déroutement, de retard de 60 min ou plus, ou de panne de la source des vols (vols du jour, vérifiés toutes les 5 min).</p><button class="btn p" id="pushOn" style="width:100%">Activer les notifications</button>`);return bindPush(key)}
+  const pr=pushPrefs();
+  say(`<p class="sub">Activées sur ce téléphone (vols du jour, vérifiés toutes les 5 min). Recevoir :</p>${PUSH_TYPES.map(([k,l])=>`<label style="display:flex;gap:8px;align-items:center;margin:4px 0"><input type="checkbox" data-pt="${k}"${pr.includes(k)?" checked":""}> ${l}</label>`).join("")}<p style="display:flex;gap:8px"><button class="btn" id="pushTest">Envoyer un test</button><button class="btn" id="pushOff">Désactiver</button></p>`);bindPush(key,sub)}
+function bindPush(key,sub){const on=$("#pushOn");
+  if(on)on.onclick=async()=>{on.textContent="…";try{if(await Notification.requestPermission()!=="granted")return pushRender("Autorisation refusée.");
+    const reg=await navigator.serviceWorker.ready,s=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:u8(key)});
+    await pushPost("sub",s.toJSON(),pushPrefs());pushRender("C'est activé. Touche « Envoyer un test » pour vérifier.")}catch(e){pushRender("Échec : "+(e.message||e))}};
+  if(!sub)return;
+  document.querySelectorAll("[data-pt]").forEach(c=>c.onchange=async()=>{const p=[...document.querySelectorAll("[data-pt]:checked")].map(x=>x.dataset.pt);store("coa-push-prefs",JSON.stringify(p));
+    try{await pushPost("sub",sub.toJSON(),p)}catch(e){pushRender("Échec de l'enregistrement : "+(e.message||e))}});
+  $("#pushTest").onclick=async()=>{$("#pushTest").textContent="…";try{const j=await pushPost("test",sub.toJSON());pushRender(j.ok?"Test envoyé : la notification doit arriver dans quelques secondes.":"Le service de notification a refusé l'envoi (code "+j.status+").")}catch(e){pushRender("Échec : "+(e.message||e))}};
+  $("#pushOff").onclick=async()=>{try{await pushPost("unsub",sub.toJSON())}catch(e){}await sub.unsubscribe().catch(()=>{});pushRender("Désactivées sur ce téléphone.")}}
+$("#gear").onclick=()=>{muaSettings();pushRender();$("#set").classList.remove("hide");$("#set").scrollTop=0;document.body.classList.add("noscroll")};
 const closeSet=()=>{$("#set").classList.add("hide");document.body.classList.remove("noscroll")};
 $("#setX").onclick=closeSet;
 $("#set").onclick=e=>{if(e.target.id==="set")closeSet()};

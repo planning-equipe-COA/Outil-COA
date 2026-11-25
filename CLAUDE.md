@@ -375,3 +375,18 @@ L'utilisateur échange en français.
   « si c'est bien le même avion » quand la rotation est « probable ». Estimation de l'appli, pas une donnée aéroport.
   Déroutements (`volDiverted`, statut « Dérouté ») en rouge + alerte sur l'accueil. L'aéroport de déroutement n'est PAS
   fourni par le site de l'aéroport.
+- 25/11/2026 (choix de Raph : 1, 5, 6, 7 de la liste d'améliorations ; 3 « statuts éphémères » et 4 « fiche de relève » NON retenus) :
+  - Voyant panne (`volsHealth`) : relais injoignable, site aéroport en panne (le worker sert alors la dernière liste
+    valable `vols-last` gardée 24 h, avec `stale:true, err`), ou `maj` figé depuis plus de 30 min. Bandeau rouge Vols + accueil.
+  - Météo des escales (`wxpBlock`, `wxpLine`, `wxpEval`, `tafHaz`) : route worker `?wx=OACI,…` (aviationweather.gov, 40 max,
+    cache 10 min). Terrains des vols des 6 prochaines heures ; signalés si METAR dégradé (vis < 1500 m, plafond ≤ 500 ft,
+    orage, neige/verglas, vent ≥ 30 kt ou rafales ≥ 40, catégorie IFR/LIFR) ou phénomène CERTAIN au TAF pendant les 6 h
+    (les PROB « possible » ne font pas remonter un terrain : trop de bruit, vérifié sur les données réelles).
+  - Parcours d'un avion (`regTrack`) : bouton « Parcours de F-XXXX » dans la fiche, ou recherche de l'immat dans Vols.
+  - Notifications Web Push : worker `pushApi` (?push=key|sub|unsub|test, POST, origine vérifiée, hôtes push connus seulement,
+    40 téléphones max = limite de 50 sous-requêtes de l'offre gratuite) + `scheduled` → `pushRun` toutes les 5 min (sans
+    AeroDataBox). KV lié `PUSH` (clés `subs`, `sent` gardé 36 h ; 1re exécution = mémorise sans envoyer), variable
+    `VAPID_PUBLIC`, secret `VAPID_PRIVATE` (jamais dans le dépôt). Chiffrement RFC 8291 aes128gcm + JWT VAPID testés en local
+    (aller-retour). Appli : Réglages → Notifications (iPhone : appli ajoutée à l'écran d'accueil obligatoire). sw.js : push +
+    notificationclick (ouvre #vols).
+  - CTOT : pas de source publique (NM B2B Eurocontrol réservé aux organismes sous contrat).
