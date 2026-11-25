@@ -96,6 +96,9 @@ mark{background:#ffe58a;color:#000;border-radius:2px}
 .home.dragging .tile{animation:none!important}
 .tile.ghost{will-change:transform;transition:none}
 .home.editing .tile{will-change:transform}
+.home .tile.back{animation:tileBack 1.1s ease-out}
+@keyframes tileBack{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--acc) 55%,transparent)}100%{box-shadow:0 0 0 14px transparent}}
+@media (prefers-reduced-motion:reduce){.home .tile.back{animation:none;outline:2px solid var(--acc)}}
 .tempty{grid-column:1/-1;border:2px dashed var(--line);border-radius:14px;padding:18px;text-align:center;color:var(--mute);font-size:13.5px}
 .home h2 .thmv{float:right;display:flex;gap:6px;margin-top:-4px}
 .home h2 .thmv button{width:32px;height:28px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:15px;cursor:pointer}
@@ -1048,7 +1051,7 @@ function favsView(){
   ${annF.length?`<div class="card favlist" style="padding:4px 12px">${annF.map(([G,[label,nums,extra],k])=>{const title=G.gates?"Porte "+label:label;const parts=numParts(nums,G.gates?"":G.ext);
     return `<div class="u-row"><span class="u-label">${esc(title)} ${favBtn(k).replace('class="fav','style="font-size:16px;margin:0;padding:0 2px" class="fav')}<small>${esc(G.name)}${G.gates&&extra?" · "+esc(extra):""}</small></span><div class="u-nums">${parts.map(p=>numLine(p,title,"","")).join("")||'<div class="u-none">pas de numéro</div>'}</div></div>`}).join("")}</div>`:""}`;
 }
-let EDIT=false;
+let EDIT=false,PREV_TAB="home";
 function homeView(){
   volsLoad();
   const extra=Object.assign({mua:MUA.sheets?`${MUA.sheets.length} fiches de postes`:"Fiches de postes (code)",ct:MUA.annu?"Annuaire COA et mes numéros":"Assistants, services, portes"},liveTiles());
@@ -1670,7 +1673,7 @@ function volsView(q){
   const nRot=rot?volsRotations(day).filter(r=>r.a&&r.d).length:0;
   const qr=q&&!VL.reg?([...D.arr,...D.dep].find(v=>v.reg&&v.reg.toLowerCase()===q.replace(/[-\s]/g,""))||{}).reg:"";
   const trk=VL.reg||qr?regTrack(VL.reg||qr):"";
-  return `${volsHealth()}${trk}<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><div class="seg" id="vlDir"><button data-v="dep" class="${!arr&&!rot?"on":""}">Départs</button><button data-v="arr" class="${arr?"on":""}">Arrivées</button><button data-v="rot" class="${rot?"on":""}">Arr. + Dép.</button></div>
+  return `${volsHealth()}${trk}<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><div class="seg" id="vlDir"><button data-v="arr" class="${arr?"on":""}">Arrivées</button><button data-v="rot" class="${rot?"on":""}">Arr. + Dép.</button><button data-v="dep" class="${!arr&&!rot?"on":""}">Départs</button></div>
     <div class="seg" id="vlDay">${dl.map((l,i)=>`<button data-v="${i}" class="${VL.day===i?"on":""}">${l}</button>`).join("")}</div>
     <label class="sub" style="display:flex;gap:4px;align-items:center"><input type="checkbox" id="vlDone"${VL.done?" checked":""}> ${rot?"rotations terminées":arr?"vols arrivés":"vols décollés"}${rot?"":` (${fini})`}</label></div>
   ${rot?`<div class="info">${nRot} rotations le ${day.split("-").reverse().join("/")} : arrivée ↓ et départ ↑ du même avion, reliés par l'immatriculation quand elle est connue${D.adb?` (${D.adb.hit??D.adb.n} vols avec immatriculation${D.adb.err?" · "+esc(D.adb.err):""})`:" (pas encore branchée)"}, sinon par compagnie, escale et numéros de vol (« probable »). Les vols sans rotation trouvée sont seuls. Site de l'aéroport mis à jour à ${esc(D.maj||"?")}, relu <span data-ago="${VL.at}">il y a ${age} min</span> <button class="btn" id="vlRefresh" style="font-size:12px;padding:3px 8px">Actualiser</button></div>
@@ -2253,6 +2256,12 @@ function render(){
   if(tab==="calc")bindCalc();
   bindMua();bindProc();if(tab==="asm")bindAsm();
   abbrTips(out);const ot=$("#abTip");if(ot)ot.remove();
+  /* retour à l'accueil depuis une rubrique : on revient sur son thème (pas en haut de page), tuile mise en évidence */
+  if(tab==="home"&&!EDIT&&PREV_TAB!=="home"&&RUB[PREV_TAB]){const k=PREV_TAB;requestAnimationFrame(()=>requestAnimationFrame(()=>{
+    const t=document.querySelector(`.home .tile[data-k="${k}"]`);if(!t)return;let h=t.closest(".tiles").previousElementSibling;if(!h||h.tagName!=="H2")h=t;
+    const hd=document.querySelector("header"),y=h.getBoundingClientRect().top+scrollY-(hd?hd.offsetHeight:0)-8;
+    scrollTo({top:Math.max(0,y),behavior:"instant"});t.classList.remove("back");void t.offsetWidth;t.classList.add("back")}))}
+  PREV_TAB=tab;
   document.querySelectorAll("[data-go]").forEach(b=>b.onclick=e=>{if(EDIT||e.target.closest("a,button:not(.tile)"))return;tab=b.dataset.go;location.hash=tab;render();scrollTo(0,0)});
   const wr=$("#wxRefresh");if(wr)wr.onclick=()=>{wr.textContent="…";wxLoad(true)};
   const nr=$("#ntRefresh");if(nr)nr.onclick=()=>{nr.textContent="…";notamLoad(true)};

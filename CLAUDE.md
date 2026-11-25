@@ -95,6 +95,10 @@ L'utilisateur échange en français.
   pendant le glisser (`.dragging`), fantôme en `translate3d`, dépose animée, défilement auto progressif.
 - Piège corrigé : `closest("[data-acc]")` remontait jusqu'à `<html data-acc>` → toujours `.pacc [data-acc]`.
 
+- **Retour à l'accueil** (25 nov. 2026, demandé) : depuis une rubrique (titre ‹, bouton Accueil, retour arrière), l'accueil
+  s'ouvre sur le thème de cette rubrique (`PREV_TAB`, fin de `render`), tuile soulignée brièvement (`.back`), pas en haut de page.
+- **Vols du jour** : boutons dans l'ordre Arrivées / Arr. + Dép. / Départs (demandé).
+
 ## Fichiers
 - `index.html` — toute l'appli (HTML + CSS + JS). **Page d'accueil** (onglet « Accueil », ouverte au lancement, bouton maison en
   haut à droite ; demandée le 20 nov. 2026) : thèmes de haut en bas (`THEMES` sauf Recherche), tuiles encadrées 2 par ligne en
