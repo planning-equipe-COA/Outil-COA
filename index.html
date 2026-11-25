@@ -125,7 +125,7 @@ mark{background:#ffe58a;color:#000;border-radius:2px}
 #set .setcard{max-width:420px;width:100%;margin:0 auto}
 body.noscroll{overflow:hidden}
 #set.hide{display:none!important}
-.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:4px 0}
+.seg{display:inline-grid;grid-auto-flow:column;grid-auto-columns:1fr;border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:4px 0}
 .seg button{border:0;background:var(--card);color:var(--ink);padding:8px 12px;font:inherit;font-size:14px;cursor:pointer}
 .seg button+button{border-left:1px solid var(--line)}
 .seg button.on{background:var(--acc);color:#fff;font-weight:600}
@@ -1296,7 +1296,7 @@ function alMrsView(){
   const h=MRS_AL.some(([,i])=>MRS_HANDLER[i]);
   return `<div class="info">Tape un code IATA (AF), OACI (AFR), un nom ou un indicatif radio. ${AL.length.toLocaleString("fr")} compagnies dans la base.</div>
   <h2 style="margin-bottom:2px">Compagnies présentes à MRS</h2><p class="sub" style="margin-top:0">${MRS_AL.length} compagnies (site de l'aéroport et programmes de vols, relevé du 20/11/2026). Touche une ligne pour la fiche complète. À MRS, le passage (passagers) et la coordination (piste) peuvent être assurés par deux assistants différents : c'est précisé quand c'est le cas.</p>
-  <table class="ftab fld"><tr><th>Compagnie</th><th>IATA · OACI</th>${h?"<th>Assistant</th>":""}</tr>${MRS_AL.map(([n,i,o,c])=>`<tr data-flq="${esc(o||i)}"><td><b>${esc(n)}</b>${c?`<div class="sub">Indicatif ${esc(c)}</div>`:""}</td><td class="code">${esc(i)}${o?" · "+esc(o):""}</td>${h?`<td>${esc(MRS_HANDLER[i]||"")}</td>`:""}</tr>`).join("")}</table>`;
+  <table class="ftab fld"><tr><th>Compagnie</th><th style="white-space:normal">IATA · OACI</th>${h?'<th style="text-align:left;white-space:normal">Assistant</th>':""}</tr>${MRS_AL.map(([n,i,o,c])=>`<tr data-flq="${esc(o||i)}"><td style="overflow-wrap:anywhere"><b>${esc(n)}</b>${c?`<div class="sub">Indicatif ${esc(c)}</div>`:""}</td><td class="code" style="white-space:normal">${esc(i)}${o?" · "+esc(o):""}</td>${h?`<td style="white-space:normal;text-align:left">${esc(MRS_HANDLER[i]||"")}</td>`:""}</tr>`).join("")}</table>`;
 }
 function alTable(q,limit){
   if(!q)return alMrsView();
@@ -1312,7 +1312,7 @@ function alTable(q,limit){
 function plTable(q,limit){
   const {total,rows}=q?search(PL,r=>[r[0],r[1]],r=>[r[2]],q,limit):{total:PL.length,rows:PL.slice(0,limit)};
   if(!total)return `<div class="info">Aucun type d'avion.</div>`;
-  return `<table><tr><th>IATA</th><th>OACI</th><th>Type</th><th>Envergure · sillage</th></tr>${rows.map(r=>{const x=ACX[r[1]];return `<tr><td class="code">${hl(r[0]||"—",q)}</td><td class="code">${hl(r[1]||"—",q)}</td><td>${hl(r[2],q)}</td><td>${x?`<span class="tag" title="Lettre de code OACI : envergure">Env. ${x[0]}</span><span class="tag" title="Catégorie de turbulence de sillage OACI">Sillage ${x[1]}</span><div class="sub">${x[2]} m</div>`:'<span class="sub">—</span>'}</td></tr>`}).join("")}</table>${more(total,rows.length)}`;
+  return `<table><tr><th>IATA</th><th>OACI</th><th>Type</th><th>Envergure · sillage</th></tr>${rows.map(r=>{const x=ACX[r[1]];return `<tr><td class="code">${hl(r[0]||"—",q)}</td><td class="code">${hl(r[1]||"—",q)}</td><td style="overflow-wrap:anywhere">${hl(r[2],q)}</td><td>${x?`<span class="tag" title="Lettre de code OACI : envergure">Env. ${x[0]}</span><span class="tag" title="Catégorie de turbulence de sillage OACI">Sillage ${x[1]}</span><div class="sub">${x[2]} m</div>`:'<span class="sub">—</span>'}</td></tr>`}).join("")}</table>${more(total,rows.length)}`;
 }
 function grouped(list,q,codeIdx,label){
   const rows=q?list.filter(r=>norm(r.join(" ")).includes(q)):list;
@@ -1320,7 +1320,7 @@ function grouped(list,q,codeIdx,label){
   let h="",g="";
   for(const r of rows){
     if(r[0]!==g){if(g)h+="</table>";g=r[0];h+=`<h2>${esc(g)}</h2><table>`}
-    h+=`<tr><td class="code" style="width:${label}">${hl(r[1],q)}</td><td>${hl(r[2],q)}</td></tr>`;
+    h+=`<tr><td class="code" style="width:${label};white-space:normal">${hl(r[1],q)}</td><td style="overflow-wrap:anywhere">${hl(r[2],q)}</td></tr>`;
   }
   return h+"</table>";
 }
@@ -1823,7 +1823,7 @@ function ctMine(q){
     <a class="u-act" href="tel:${esc(telHref(t.tel))}" aria-label="Appeler ${esc(u.label)}">${IC_PHONE}</a><a class="u-act" href="sms:${esc(telHref(t.tel))}" aria-label="SMS à ${esc(u.label)}">${IC_MSG}</a></div>`).join(""):'<div class="u-none">Pas encore de numéro</div>'}</div>`).join(""):`<p class="sub">${q?"Aucun numéro perso pour cette recherche.":"Aucun numéro perso pour l'instant. Ajoute ici tes propres numéros, en plus de l'annuaire."}</p>`}
   </div>
   <p><button class="btn p" id="ctEdit">Ajouter ou modifier des numéros</button></p>
-  <p><button class="btn" id="ctCopy">Copier (sauvegarde)</button> <button class="btn" id="ctImp">Coller une sauvegarde</button> <span id="ctMsg" class="sub">${esc(CT.msg)}</span></p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 4px"><button class="btn" id="ctCopy">Copier (sauvegarde)</button><button class="btn" id="ctImp">Coller une sauvegarde</button></div><p id="ctMsg" class="sub" style="margin-top:0">${esc(CT.msg)}</p>
   <div id="ctBox" class="hide"><textarea id="ctTxt" placeholder="Colle ici le texte copié depuis un autre appareil"></textarea><p><button class="btn p" id="ctOk">Importer</button></p></div>
   <p class="sub">Les numéros restent sur ce téléphone. « Copier (sauvegarde) » permet de les transférer sur un autre appareil.</p>`;
 }
