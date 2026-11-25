@@ -154,18 +154,23 @@ async function fetchBoard(kind, stopDay) {
 // Variable ADB_REFRESH_MIN : délai entre deux mises à jour de la tranche en cours (360 = offre gratuite, 30 = offre Pro).
 // Tranches de 12 h (heure de Marseille) : veille 12 h-24 h (nightstops), aujourd'hui 0 h-12 h et 12 h-24 h.
 // Chaque tranche est gardée en cache : une tranche passée n'est plus jamais redemandée (24 h), un échec bloque 30 min.
-let adbLast = 0; // l'offre gratuite n'accepte qu'un appel par seconde : appels espacés de 1,2 s
+let adbLast = 0; // l'offre gratuite n'accepte qu'un appel par seconde : appels espacés de 2,5 s, un nouvel essai si refus
 async function adbWindow(env, from, to, current) {
-  const cache = caches.default, key = new Request(`https://notam-cache.local/adb/${from}`);
+  const cache = caches.default, key = new Request(`https://notam-cache.local/adb2/${from}`);
   const hit = await cache.match(key);
   if (hit) return hit.json();
-  const wait = adbLast + 1200 - Date.now();
-  if (wait > 0) await new Promise(r => setTimeout(r, wait));
-  adbLast = Date.now();
-  let body;
+  let body, failTtl = 1800;
   try {
     const url = `https://aerodatabox.p.rapidapi.com/flights/airports/icao/LFML/${from}/${to}?withLeg=false&direction=Both&withCancelled=true&withCodeshared=false&withCargo=false&withPrivate=false&withLocation=false`;
-    const r = await fetch(url, { headers: { 'X-RapidAPI-Key': env.ADB_KEY, 'X-RapidAPI-Host': 'aerodatabox.p.rapidapi.com' } });
+    let r;
+    for (let k = 0; k < 2; k++) {
+      const wait = adbLast + (k ? 4000 : 2500) - Date.now();
+      if (wait > 0) await new Promise(res => setTimeout(res, wait));
+      adbLast = Date.now();
+      r = await fetch(url, { headers: { 'X-RapidAPI-Key': env.ADB_KEY, 'X-RapidAPI-Host': 'aerodatabox.p.rapidapi.com' } });
+      if (r.status !== 429) break;
+    }
+    if (r.status === 429) failTtl = 120; // simple dépassement du débit : on réessaie vite
     if (r.status === 204) body = { regs: {}, at: Date.now() };
     else {
       if (!r.ok) { const t = await r.text().catch(() => ''); let m = ''; try { m = JSON.parse(t).message || ''; } catch (e) { m = t.slice(0, 120); }
@@ -174,7 +179,7 @@ async function adbWindow(env, from, to, current) {
       for (const [dir, list] of [['D', j.departures || []], ['A', j.arrivals || []]]) for (const f of list) {
         const reg = f.aircraft && f.aircraft.reg, t = f.movement && f.movement.scheduledTime && f.movement.scheduledTime.local;
         if (!reg || !f.number || !t) continue;
-        regs[`${dir}|${f.number.replace(/\s/g, '').toUpperCase()}|${t.slice(0, 16).replace(' ', 'T')}`] = [reg.replace(/-/g, '').toUpperCase(), (f.aircraft.model || '')];
+        (regs[`${dir}|${f.number.replace(/\s/g, '').toUpperCase()}`] ||= []).push([t.slice(0, 16).replace(' ', 'T'), reg.replace(/-/g, '').toUpperCase(), (f.aircraft.model || '')]);
       }
       body = { regs, at: Date.now(), left: r.headers.get('x-ratelimit-requests-remaining') || '' };
     }
@@ -182,7 +187,7 @@ async function adbWindow(env, from, to, current) {
     await cache.put(key, new Response(JSON.stringify(body), { headers: { 'Cache-Control': `max-age=${ttl}` } }));
   } catch (e) {
     body = { regs: {}, err: String(e.message || e) };
-    await cache.put(key, new Response(JSON.stringify(body), { headers: { 'Cache-Control': 'max-age=1800' } }));
+    await cache.put(key, new Response(JSON.stringify(body), { headers: { 'Cache-Control': `max-age=${failTtl}` } }));
   }
   return body;
 }
@@ -194,11 +199,21 @@ async function addRegs(env, body, now) {
   if (h >= 12) wins.push([today + 'T12:00', today + 'T23:59', true]);
   const res = [];
   for (const [a, b, c] of wins) res.push(await adbWindow(env, a, b, c)); // l'une après l'autre (limite 1 appel / s)
-  const regs = Object.assign({}, ...res.map(x => x.regs));
-  const put = (rows, dir) => rows.forEach(r => { const x = regs[`${dir}|${r.n.replace(/\s/g, '').toUpperCase()}|${r.t.slice(0, 16)}`]; if (x) { r.reg = x[0]; r.type = x[1]; } });
+  // même n° de vol, horaire le plus proche à ±4 h (les horaires AeroDataBox et ceux du site peuvent différer)
+  const regs = {};
+  for (const x of res) for (const [k, l] of Object.entries(x.regs || {})) if (Array.isArray(l)) (regs[k] ||= []).push(...l);
+  const ms = s => Date.parse(s + ':00Z');
+  let n = 0, hit = 0;
+  for (const l of Object.values(regs)) n += l.length;
+  const put = (rows, dir) => rows.forEach(r => {
+    const l = regs[`${dir}|${r.n.replace(/\s/g, '').toUpperCase()}`]; if (!l) return;
+    const t = ms(r.t.slice(0, 16)); let best = null, d = 4 * 3600e3 + 1;
+    for (const c of l) { const e = Math.abs(ms(c[0]) - t); if (e < d) { d = e; best = c; } }
+    if (best) { r.reg = best[1]; r.type = best[2]; hit++; }
+  });
   put(body.dep, 'D'); put(body.arr, 'A');
   const err = res.find(x => x.err);
-  body.adb = { n: Object.keys(regs).length, err: err ? err.err : '', left: (res.find(x => x.left) || {}).left || '' };
+  body.adb = { n, hit, err: err ? err.err : '', left: (res.find(x => x.left) || {}).left || '' };
 }
 async function vols(origin, ctx, env) {
   const cache = caches.default, key = new Request('https://notam-cache.local/vols');
