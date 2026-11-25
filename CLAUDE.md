@@ -100,6 +100,10 @@ L'utilisateur échange en français.
 - **Vols du jour** : boutons dans l'ordre Arrivées / Arr. + Dép. / Départs (demandé). Arrivées et départs en **cartes pleine
   largeur** (`volRow` → `.vcard`, liste `.vlist`) : liseré gauche couleur du statut (`--vst`), heure locale en grand + Z, vol et
   statut en pastille, ville en grand, pastilles porte/tapis, compte à rebours, immat./type ; compagnie · assistant en dessous.
+  **Lien arrivée ↔ départ sur chaque carte** (`volLink`, `volOutbound`) : « ↻ Repart AF 7343 · 16:05 » / « ↻ Arrive de … »,
+  trait plein = même immatriculation (sûr), pointillé + « ? » = probable. Rapprochement « probable » interdit si l'immat connue d'un
+  côté repart / arrive sur un autre vol (`regDep`/`regArr`, cas T7 1518 vu le 25/11). Les immat. viennent d'AeroDataBox (≈ 1 vol
+  sur 4, surtout proches de l'heure) : c'est la vraie limite.
   Test local : routes playwright vers les données réelles du relais (le relais n'autorise que l'origine github.io).
 
 ## Fichiers

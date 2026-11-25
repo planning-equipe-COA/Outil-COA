@@ -120,6 +120,8 @@ mark{background:#ffe58a;color:#000;border-radius:2px}
 .vc-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0 0 70px;font-size:12.5px}
 .vc-chip{background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:2px 9px;white-space:nowrap;color:var(--ink)}
 .vc-where{background:var(--acc2);border-color:transparent;color:var(--acc);font-weight:700}
+.vc-link{border-style:dashed}.vc-link:not(.prob){border-style:solid;border-color:color-mix(in srgb,var(--ok,#2e7d32) 45%,var(--line))}
+.vc-link.prob{color:var(--mute)}
 .vc-cie{color:var(--mute);flex-basis:100%;order:9}
 .vc-meta .vcd{margin:0}
 .vcard .vdet,.vcard>.risk{margin-left:70px}
@@ -1574,7 +1576,7 @@ function volRow(v,arr,q,ico){const h=v.t.slice(11,16),z=volZ(v.t),hd=MRS_HANDLER
       <div class="vc-main"><div class="vc-l1"><b class="vc-n">${hl(v.n,q)}</b>${v.st?`<span class="vc-st">${esc(v.st)}${dl&&dl>=15?` (+${dl} min)`:""}</span>`:""}</div>
         <div class="vc-city">${hl(v.ville,q)} <span class="u-ext">${esc(v.code)}</span></div></div>
       <span class="vc-chev">${open?"▴":"▾"}</span></div>
-    <div class="vc-meta">${where?`<span class="vc-chip vc-where">${hl(where,q)}</span>`:""}${volDone(v)||v.cls==="annulee"?"":`<span class="vc-chip vcd" data-cd="${volMs(v.t)+(dl||0)*60e3}">${cdText(volMs(v.t)+(dl||0)*60e3)}</span>`}<span class="vc-cie">${hl(v.cie,q)}${hd?" · "+hl(hd,q):""}</span>${v.reg?`<span class="vc-chip">${hl(fmtReg(v.reg),q)}${v.type?" · "+esc(v.type):""}</span>`:""}</div>
+    <div class="vc-meta">${where?`<span class="vc-chip vc-where">${hl(where,q)}</span>`:""}${volDone(v)||v.cls==="annulee"?"":`<span class="vc-chip vcd" data-cd="${volMs(v.t)+(dl||0)*60e3}">${cdText(volMs(v.t)+(dl||0)*60e3)}</span>`}${volLink(v,arr)}<span class="vc-cie">${hl(v.cie,q)}${hd?" · "+hl(hd,q):""}</span>${v.reg?`<span class="vc-chip">${hl(fmtReg(v.reg),q)}${v.type?" · "+esc(v.type):""}</span>`:""}</div>
     ${arr?"":riskHtml(v)}${open?volDetail(v,arr):""}</div>`}
 /* vue rotations : arrivée + départ du même avion, rapprochés par compagnie, escale et numéros de vol voisins
    (AF 7342 → AF 7343), départ 20 min à 14 h après l'arrivée. Rapprochement probable, pas une donnée de l'aéroport. */
@@ -1588,8 +1590,10 @@ function volsRotations(day){const D=VL.data;const prev=new Date(Date.parse(day+"
     let best=null;P.forEach(d=>{if(used.has(d)||d.reg!==a.reg)return;const td=volMs(d.t);if(td-ta<15*60e3||td>lim)return;if(!best||td<volMs(best.t))best=d});
     if(best){used.add(best);pair.set(a,[best,(volMs(best.t)-ta)/60e3,true])}});
   /* 2) sinon (immatriculation inconnue d'un côté) : compagnie + escale + numéros voisins, escale 20 min à 18 h */
+  const regDep=new Set(P.filter(d=>d.reg).map(d=>d.reg)),regArr=new Set(A.filter(a=>a.reg).map(a=>a.reg));
   A.forEach(a=>{if(pair.has(a))return;let best=null;P.forEach(d=>{if(used.has(d)||d.al!==a.al||d.code!==a.code||Math.abs(num(d)-num(a))>1)return;
-    if(a.reg&&d.reg&&a.reg!==d.reg)return;const g=(volMs(d.t)-volMs(a.t))/60e3;if(g<20||g>18*60)return;if(!best||g<best[1])best=[d,g]});
+    if(a.reg&&d.reg&&a.reg!==d.reg)return;if(a.reg&&regDep.has(a.reg)||d.reg&&regArr.has(d.reg))return; // l'immat connue d'un côté repart / arrive sur un autre vol
+    const g=(volMs(d.t)-volMs(a.t))/60e3;if(g<20||g>18*60)return;if(!best||g<best[1])best=[d,g]});
     if(best){used.add(best[0]);pair.set(a,[best[0],best[1],false])}});
   A.forEach(a=>{const p=pair.get(a);
     if(p){if(a.t.slice(0,10)===day||p[0].t.slice(0,10)===day)out.push({a,d:p[0],g:Math.round(p[1]),sure:p[2]})}
@@ -1601,8 +1605,12 @@ function volsRotations(day){const D=VL.data;const prev=new Date(Date.parse(day+"
 /* départ qui dépend d'un avion pas encore arrivé : arrivée déroutée, annulée ou en retard → départ à confirmer.
    L'aéroport affiche souvent « A l'heure » au départ tant que la compagnie n'a rien changé : c'est une estimation de l'appli. */
 const VOL_TURN_MIN=25;let _inb={at:-1,m:new Map()};
-function volInbound(d){if(_inb.at!==VL.at){_inb={at:VL.at,m:new Map()};const days=[...new Set(VL.data.dep.map(v=>v.t.slice(0,10)))];
-    days.forEach(day=>volsRotations(day).forEach(r=>{if(r.a&&r.d)_inb.m.set(r.d,r)}))}return _inb.m.get(d)}
+function volInbound(d){if(_inb.at!==VL.at){_inb={at:VL.at,m:new Map(),o:new Map()};const days=[...new Set(VL.data.dep.map(v=>v.t.slice(0,10)))];
+    days.forEach(day=>volsRotations(day).forEach(r=>{if(r.a&&r.d){_inb.m.set(r.d,r);_inb.o.set(r.a,r)}}))}return _inb.m.get(d)}
+function volOutbound(a){volInbound(VL.data.dep[0]||{});return _inb.o.get(a)}
+/* lien arrivée ↔ départ du même avion sur les cartes (demandé le 25 nov. 2026) : sûr si même immatriculation, sinon « probable » */
+function volLink(v,arr){if(!VL.data)return "";const r=arr?volOutbound(v):volInbound(v);if(!r)return "";const o=arr?r.d:r.a,hh=o.t.slice(11,16);
+  return `<span class="vc-chip vc-link${r.sure?"":" prob"}" title="${r.sure?"Même immatriculation":"Rapprochement probable (compagnie, escale, numéro)"}">${arr?"↻ Repart":"↻ Arrive de"} ${esc(o.n)} · ${esc(hh)}${r.sure?"":" ?"}</span>`}
 function volRisk(d){if(!VL.data||volDone(d)||d.cls==="annulee")return null;const r=volInbound(d);if(!r)return null;const a=r.a;if(volDone(a))return null;
   const how=r.sure?"":" (si c'est bien le même avion)";
   if(a.cls==="annulee")return `Arrivée ${a.n} annulée${how} : départ à confirmer`;
