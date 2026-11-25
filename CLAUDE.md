@@ -367,3 +367,11 @@ L'utilisateur échange en français.
   (départ suivant du même avion avant sa prochaine arrivée ; RYR qui reste plusieurs jours → seul, voulu), sinon par
   numéros voisins (« probable »). Deviner par les horaires : REFUSÉ par Raph (avions RYR immobilisés plusieurs jours l'hiver).
   Le GANTT « flight-planning » n'est pas utilisé en exploitation (Raph, 22/11/2026) : pas une source pour l'appli.
+- 25/11/2026 : nouvelle clé RapidAPI dans `ADB_KEY`, `ADB_REFRESH_MIN=30` posé dans Cloudflare. Rattachement immat = même
+  n° de vol + horaire le plus proche (±4 h) ; appels espacés de 2,5 s + 1 nouvel essai si 429 (échec 429 : cache 2 min) ;
+  clés de cache `adb2/`. `body.adb` = {n, hit, err, left}. Immat + type affichés sur chaque ligne Départs/Arrivées.
+- Départ à confirmer (`volRisk`, 25/11/2026) : si l'arrivée rapprochée (rotation) est déroutée, annulée ou attendue trop
+  tard (ETA + `VOL_TURN_MIN` = 25 min > départ + 10 min), alerte ⚠ orange sous le départ (lignes et cartes Arr.+Dép.),
+  « si c'est bien le même avion » quand la rotation est « probable ». Estimation de l'appli, pas une donnée aéroport.
+  Déroutements (`volDiverted`, statut « Dérouté ») en rouge + alerte sur l'accueil. L'aéroport de déroutement n'est PAS
+  fourni par le site de l'aéroport.

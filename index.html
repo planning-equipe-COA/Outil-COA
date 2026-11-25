@@ -1290,6 +1290,7 @@ function volZ(t){const d=new Date(t+"Z");if(isNaN(d))return "";return new Date(d
 /* heure réelle (ms) d'un horaire local Paris « 2026-11-21T20:25:00 » */
 function volMs(t){const d=new Date(t+"Z");return isNaN(d)?0:d.getTime()-parisOffset(d)*60e3}
 const volDone=v=>v.cls==="vol-take-off";
+const volDiverted=v=>/d[ée]rout|divert|d[ée]tourn/i.test(v.st+" "+v.cls);
 /* liste récente (< 30 min) : sinon l'accueil, la recherche et le MUA n'utilisent pas une vieille copie */
 const volsFresh=()=>!!(VL.data&&Date.now()-VL.at<30*60e3);
 const volKey=v=>v.n+"|"+v.t;
@@ -1329,13 +1330,13 @@ function liveTick(){if(document.hidden)return;
   document.querySelectorAll("[data-ago]").forEach(el=>{const m=Math.max(0,Math.round((Date.now()-+el.dataset.ago)/60e3)),t=m<1?"à l'instant":`il y a ${m} min`;if(el.textContent!==t)el.textContent=t})}
 setInterval(liveTick,20e3);document.addEventListener("visibilitychange",liveTick);
 function volRow(v,arr,q,ico){const h=v.t.slice(11,16),z=volZ(v.t),hd=MRS_HANDLER[v.al],open=VL.open===volKey(v),dl=volDelay(v);
-  const stCls=v.cls==="annulee"?"#c62828":volDone(v)?"var(--mute)":dl&&dl>=15||/retard/i.test(v.st)?"#b26a00":v.cls==="expected"||v.cls==="confirmed"?"var(--acc)":"#2e7d32";
+  const stCls=v.cls==="annulee"||volDiverted(v)?"#c62828":volDone(v)?"var(--mute)":dl&&dl>=15||/retard/i.test(v.st)?"#b26a00":v.cls==="expected"||v.cls==="confirmed"?"var(--acc)":"#2e7d32";
   const where=arr?(v.tapis?"Tapis "+v.tapis:""):[v.porte?"Porte "+v.porte:"",v.term].filter(Boolean).join(" · ");
   return `<div class="u-row vrow${open?" open":""}" data-vk="${esc(volKey(v))}" data-varr="${arr?1:0}" role="button" tabindex="0" style="display:block;padding:8px 0;cursor:pointer${v.cls==="annulee"?";opacity:.8":""}"><div style="display:flex;gap:10px;align-items:baseline;flex-wrap:wrap">
       ${ico?`<span class="sub" style="width:14px">${ico}</span>`:""}<b style="font-size:17px;min-width:48px">${esc(h)}</b><span class="sub" style="min-width:52px">${esc(z)}Z</span>${volDone(v)||v.cls==="annulee"?"":`<span class="vcd" data-cd="${volMs(v.t)+(dl||0)*60e3}">${cdText(volMs(v.t)+(dl||0)*60e3)}</span>`}
       <b>${hl(v.n,q)}</b><span>${hl(v.ville,q)} <span class="u-ext" style="margin:0">${esc(v.code)}</span></span>
       ${v.st?`<span style="color:${stCls};font-weight:600;font-size:13px">${esc(v.st)}${dl&&dl>=15?` (+${dl} min)`:""}</span>`:""}<span class="sub" style="margin-left:auto">${open?"▴":"▾"}</span></div>
-      <div class="sub" style="margin-top:2px">${hl(v.cie,q)}${hd?" · "+hl(hd,q):""}${where?" · "+hl(where,q):""}${v.reg?` · <span class="u-ext" style="margin:0;white-space:nowrap">${hl(fmtReg(v.reg),q)}${v.type?" · "+esc(v.type):""}</span>`:""}</div>${open?volDetail(v,arr):""}</div>`}
+      <div class="sub" style="margin-top:2px">${hl(v.cie,q)}${hd?" · "+hl(hd,q):""}${where?" · "+hl(where,q):""}${v.reg?` · <span class="u-ext" style="margin:0;white-space:nowrap">${hl(fmtReg(v.reg),q)}${v.type?" · "+esc(v.type):""}</span>`:""}</div>${arr?"":riskHtml(v)}${open?volDetail(v,arr):""}</div>`}
 /* vue rotations : arrivée + départ du même avion, rapprochés par compagnie, escale et numéros de vol voisins
    (AF 7342 → AF 7343), départ 20 min à 14 h après l'arrivée. Rapprochement probable, pas une donnée de l'aéroport. */
 /* nightstops : on rapproche aussi les arrivées de la veille à partir de 14 h (gardées par le relais) et on accepte 18 h d'escale */
@@ -1358,17 +1359,30 @@ function volsRotations(day){const D=VL.data;const prev=new Date(Date.parse(day+"
   /* tri sur l'heure du jour affiché : arrivée du jour, sinon départ (nightstop arrivé la veille) */
   const key=r=>r.a&&r.a.t.slice(0,10)===day?r.a.t:(r.d||r.a).t;
   return out.sort((x,y)=>key(x)<key(y)?-1:1)}
+/* départ qui dépend d'un avion pas encore arrivé : arrivée déroutée, annulée ou en retard → départ à confirmer.
+   L'aéroport affiche souvent « A l'heure » au départ tant que la compagnie n'a rien changé : c'est une estimation de l'appli. */
+const VOL_TURN_MIN=25;let _inb={at:-1,m:new Map()};
+function volInbound(d){if(_inb.at!==VL.at){_inb={at:VL.at,m:new Map()};const days=[...new Set(VL.data.dep.map(v=>v.t.slice(0,10)))];
+    days.forEach(day=>volsRotations(day).forEach(r=>{if(r.a&&r.d)_inb.m.set(r.d,r)}))}return _inb.m.get(d)}
+function volRisk(d){if(!VL.data||volDone(d)||d.cls==="annulee")return null;const r=volInbound(d);if(!r)return null;const a=r.a;if(volDone(a))return null;
+  const how=r.sure?"":" (si c'est bien le même avion)";
+  if(a.cls==="annulee")return `Arrivée ${a.n} annulée${how} : départ à confirmer`;
+  if(volDiverted(a))return `Arrivée ${a.n} déroutée${how} : départ à confirmer`;
+  const eta=volMs(a.t)+(volDelay(a)||0)*60e3,min=eta+VOL_TURN_MIN*60e3,late=Math.round((min-volMs(d.t))/60e3);
+  if(late<10)return null;const hhmm=new Date(min+parisOffset(new Date(min))*60e3).toISOString().slice(11,16);
+  return `Avion attendu en ${a.n} à ${new Date(eta+parisOffset(new Date(eta))*60e3).toISOString().slice(11,16)}${how} : départ probablement pas avant ${hhmm} (+${late} min)`}
+const riskHtml=d=>{const t=volRisk(d);return t?`<div style="color:#b26a00;font-weight:600;font-size:13px;margin-top:2px">⚠ ${esc(t)}</div>`:""};
 /* vue « Arr. + Dép. » : une carte par avion, arrivée et départ côte à côte, chacun avec sa provenance / destination */
 function rotRow(r,q){const {a,d}=r,v0=a||d;const k=a&&d?volKey(a)+"#"+volKey(d):volKey(v0),open=VL.open===k,hd=MRS_HANDLER[v0.al];
   const half=(v,arr)=>{if(!v)return `<div class="rhalf none">${arr?"↓ Arrivée":"↑ Départ"}<br>non trouvé${arr?"e":""}</div>`;
-    const dl=volDelay(v);const c=v.cls==="annulee"?"#c62828":volDone(v)?"var(--mute)":dl&&dl>=15?"#b26a00":"#2e7d32";
+    const dl=volDelay(v);const c=v.cls==="annulee"||volDiverted(v)?"#c62828":volDone(v)?"var(--mute)":dl&&dl>=15?"#b26a00":"#2e7d32";
     const other=v.t.slice(0,10)!==VL.dayShown?(v.t.slice(0,10)<VL.dayShown?"la veille":"le lendemain"):"";
     return `<div class="rhalf ${arr?"ra":"rd"}"><div class="rlab">${arr?"↓ Arrivée de":"↑ Départ vers"}${other?` <span style="color:var(--acc)">· ${other}</span>`:""}</div>
       <div class="rcity">${hl(v.ville,q)} <span class="u-ext" style="margin:0">${esc(v.code)}</span></div>
       <div><span class="rt">${esc(v.t.slice(11,16))}</span> <span class="sub">${esc(volZ(v.t))}Z</span></div>
       <div><b>${hl(v.n,q)}</b></div>
       ${v.st?`<div style="color:${c};font-weight:600;font-size:13px">${esc(v.st)}${dl&&dl>=15?` (+${dl} min)`:""}</div>`:""}
-      <div class="sub">${arr?(v.tapis?"Tapis "+esc(v.tapis):""):(v.porte?"Porte "+esc(v.porte):"")}</div></div>`};
+      <div class="sub">${arr?(v.tapis?"Tapis "+esc(v.tapis):""):(v.porte?"Porte "+esc(v.porte):"")}</div>${arr?"":riskHtml(v)}</div>`};
   const ns=a&&d&&d.t.slice(0,10)!==a.t.slice(0,10);
   return `<div class="rcard vrow${open?" open":""}" data-vk="${esc(k)}" data-varr="2" role="button" tabindex="0">
     <div class="rhead"><b>${hl(v0.cie,q)}</b>${hd?`<span class="sub">· ${hl(hd,q)}</span>`:""}${a&&d?`<span class="sub">· escale ${hm(r.g)}</span>`:""}${(a||{}).reg||(d||{}).reg?`<span class="u-ext" style="margin:0">${esc(fmtReg((a&&a.reg)||d.reg))}${((a&&a.type)||(d&&d.type))?" · "+esc((a&&a.type)||d.type):""}</span>`:""}${a&&d&&!r.sure?`<span class="sub" title="Rapproché par les numéros de vol, sans immatriculation">· probable</span>`:""}${ns?`<span class="u-ext" style="margin:0;color:var(--acc);border-color:var(--acc)">Nightstop</span>`:""}<span class="sub" style="margin-left:auto">${open?"▴":"▾"}</span></div>
@@ -1403,6 +1417,8 @@ function volsSearch(q){if(!volsFresh())return null;const c=q.replace(/\s/g,"");i
 function homeAlerts(){if(!volsFresh())return "";const now=Date.now(),{dep,arr}=volsOf(VL.data.today);const items=[];
   const canc=[...dep.map(v=>[v,0]),...arr.map(v=>[v,1])].filter(([v])=>v.cls==="annulee"&&volMs(v.t)>now-2*3600e3);
   if(canc.length)items.push(`<div class="wxa danger" data-go="vols"><b>${canc.length} vol${canc.length>1?"s":""} annulé${canc.length>1?"s":""}</b> : ${canc.slice(0,4).map(([v,a])=>`${esc(v.n)} ${a?"de":"vers"} ${esc(v.ville)} (${esc(v.t.slice(11,16))})`).join(", ")}${canc.length>4?"…":""}</div>`);
+  const dv=arr.filter(v=>volDiverted(v)&&volMs(v.t)>now-3*3600e3);
+  if(dv.length)items.push(`<div class="wxa danger" data-go="vols"><b>${dv.length} arrivée${dv.length>1?"s":""} déroutée${dv.length>1?"s":""}</b> : ${dv.slice(0,4).map(v=>`${esc(v.n)} de ${esc(v.ville)} (${esc(v.t.slice(11,16))})`).join(", ")}${dv.length>4?"…":""}</div>`);
   const late=[...dep.map(v=>[v,0]),...arr.map(v=>[v,1])].map(([v,a])=>[v,a,volDelay(v)]).filter(([v,,d])=>d>=30&&volMs(v.t)+d*60e3>now).sort((x,y)=>y[2]-x[2]);
   if(late.length)items.push(`<div class="wxa warn" data-go="vols"><b>Retard${late.length>1?"s":""} de 30 min ou plus</b> : ${late.slice(0,4).map(([v,a,d])=>`${esc(v.n)} ${a?"de":"vers"} ${esc(v.ville)} +${d} min`).join(", ")}${late.length>4?"…":""}</div>`);
   return items.length?`<div class="wxal" style="cursor:pointer">${items.join("")}</div>`:""}
