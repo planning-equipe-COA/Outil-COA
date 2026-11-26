@@ -251,29 +251,106 @@ async function vols(origin, ctx, env) {
 
 /* ---------- Météo des provenances / destinations : aviationweather.gov (NOAA), sans clé ---------- */
 // Appel : ?wx=LFPG,LFPO,EGSS (40 codes OACI au plus). Réponse gardée 10 min.
+// METAR + TAF de plusieurs terrains (cache 10 min), utilisé par la route ?wx= et par les alertes météo LFML
+async function wxFetch(ids) {
+  const cache = caches.default, key = new Request('https://notam-cache.local/wx/' + ids.join(','));
+  const hit = await cache.match(key);
+  if (hit) return hit.json();
+  const q = ids.join(','), h = { headers: { 'User-Agent': 'coa-outils-worker' } };
+  const [m, t] = await Promise.all([fetch(`https://aviationweather.gov/api/data/metar?ids=${q}&format=json`, h),
+    fetch(`https://aviationweather.gov/api/data/taf?ids=${q}&format=json`, h)]);
+  if (!m.ok) throw new Error('aviationweather ' + m.status);
+  const mj = m.status === 204 ? [] : await m.json(), tj = t.ok && t.status !== 204 ? await t.json().catch(() => []) : [];
+  const st = {};
+  for (const x of mj) { if (!x.icaoId) continue; const o = st[x.icaoId] ||= {}; if (o.obs && o.obs >= x.obsTime) continue;
+    Object.assign(o, { metar: x.rawOb || '', obs: x.obsTime || 0, cat: x.fltCat || '', vis: x.visib ?? '', wx: x.wxString || '',
+      wspd: x.wspd ?? null, wgst: x.wgst ?? null, clouds: x.clouds || [], name: x.name || '' }); }
+  for (const x of tj) { if (!x.icaoId) continue; const o = st[x.icaoId] ||= {}; if (!o.taf) o.taf = x.rawTAF || ''; }
+  const body = { at: new Date().toISOString(), source: 'aviationweather.gov (NOAA)', st };
+  await cache.put(key, new Response(JSON.stringify(body), { headers: { 'Cache-Control': 'max-age=600' } }));
+  return body;
+}
 async function wxMulti(origin, ctx, raw) {
   const ids = [...new Set(String(raw).split(',').map(x => x.trim().toUpperCase()).filter(x => /^[A-Z]{4}$/.test(x)))].sort().slice(0, 40);
   if (!ids.length) return json({ error: 'codes OACI manquants' }, 400, origin);
-  const cache = caches.default, key = new Request('https://notam-cache.local/wx/' + ids.join(','));
+  try { return json(await wxFetch(ids), 200, origin); }
+  catch (e) { return json({ error: String(e.message || e) }, 502, origin); }
+}
+
+/* ---------- Alertes NOTAM importants et météo LFML (tâche planifiée) ---------- */
+// NOTAM : aire de mouvement (pistes, voies, aires de trafic, postes) et ILS, fermés / hors service / limités / travaux.
+// Alerte quand un tel NOTAM apparaît, puis quand il entre en vigueur. NOTAM relus dans le cache commun (30 min).
+const NOTAM_SUBJ = /^(M[RXNKPSTDUA]|I[A-Z])$/, NOTAM_COND = /^(LC|AS|AU|LT|LH|LW|HW)$/;
+async function notamsCached(env) {
+  const cache = caches.default, key = new Request('https://notam-cache.local/LFML');
   const hit = await cache.match(key);
-  if (hit) return json(await hit.json(), 200, origin, { 'X-Cache': 'HIT' });
-  try {
-    const q = ids.join(','), h = { headers: { 'User-Agent': 'coa-outils-worker' } };
-    const [m, t] = await Promise.all([fetch(`https://aviationweather.gov/api/data/metar?ids=${q}&format=json`, h),
-      fetch(`https://aviationweather.gov/api/data/taf?ids=${q}&format=json`, h)]);
-    if (!m.ok) throw new Error('aviationweather ' + m.status);
-    const mj = m.status === 204 ? [] : await m.json(), tj = t.ok && t.status !== 204 ? await t.json().catch(() => []) : [];
-    const st = {};
-    for (const x of mj) { if (!x.icaoId) continue; const o = st[x.icaoId] ||= {}; if (o.obs && o.obs >= x.obsTime) continue;
-      Object.assign(o, { metar: x.rawOb || '', obs: x.obsTime || 0, cat: x.fltCat || '', vis: x.visib ?? '', wx: x.wxString || '',
-        wspd: x.wspd ?? null, wgst: x.wgst ?? null, clouds: x.clouds || [], name: x.name || '' }); }
-    for (const x of tj) { if (!x.icaoId) continue; const o = st[x.icaoId] ||= {}; if (!o.taf) o.taf = x.rawTAF || ''; }
-    const body = { at: new Date().toISOString(), source: 'aviationweather.gov (NOAA)', st };
-    ctx.waitUntil(cache.put(key, new Response(JSON.stringify(body), { headers: { 'Cache-Control': 'max-age=600' } })));
-    return json(body, 200, origin, { 'X-Cache': 'MISS' });
-  } catch (e) {
-    return json({ error: String(e.message || e) }, 502, origin);
+  if (hit) return (await hit.json()).notams || [];
+  if (!(env.AR_EMAIL && env.AR_PASSWORD)) return null;
+  const notams = await fetchAutorouter('LFML', env);
+  const body = { icao: 'LFML', at: new Date().toISOString(), source: 'autorouter.aero (base NOTAM européenne EAD)', count: notams.length, notams };
+  await cache.put(key, new Response(JSON.stringify(body), { headers: { 'Cache-Control': `max-age=${CACHE_SECONDS}` } }));
+  return notams;
+}
+const fmtZ = ms => { const d = new Date(ms); return `${String(d.getUTCDate()).padStart(2, '0')}/${String(d.getUTCMonth() + 1).padStart(2, '0')} ${String(d.getUTCHours()).padStart(2, '0')}:${String(d.getUTCMinutes()).padStart(2, '0')}Z`; };
+function notamEvents(list, sent, now) {
+  const ev = [], first = !sent._ninit;
+  for (const n of list) {
+    const subj = (n.q || '').slice(1, 3), cond = (n.q || '').slice(3, 5);
+    if (!NOTAM_SUBJ.test(subj) || !NOTAM_COND.test(cond)) continue;
+    const st = Date.parse(n.start) || 0, perm = /PERM/i.test(n.end || ''), en = perm ? Infinity : (Date.parse(n.end) || Infinity);
+    if (en < now) continue;
+    const what = String(n.text || '').replace(/\s+/g, ' ').trim().slice(0, 100), active = st <= now;
+    const when = perm ? `depuis le ${fmtZ(st)}, permanent` : active ? `jusqu'au ${fmtZ(en)}` : `du ${fmtZ(st)} au ${fmtZ(en)}`;
+    if (!sent['nn|' + n.id]) {
+      if (first) { sent['nn|' + n.id] = now; if (active) sent['na|' + n.id] = now; continue; } // 1re fois : on mémorise sans envoyer
+      ev.push({ k: 'nn|' + n.id, type: 'notam', txt: `${active ? 'NOTAM en vigueur' : 'Nouveau NOTAM'} ${n.id} : ${what} (${when})` });
+      if (active) sent['na|' + n.id] = now;
+    } else if (active && !sent['na|' + n.id] && st > now - 3 * 3600e3) {
+      ev.push({ k: 'na|' + n.id, type: 'notam', txt: `NOTAM en vigueur ${n.id} : ${what} (${when})` });
+    }
   }
+  sent._ninit = 1;
+  return ev;
+}
+// Météo LFML : LVP (visibilité < 800 m ou plafond ≤ 200 ft), orage, vent ≥ 30 kt ou rafales ≥ 40 kt.
+// Observé (METAR) ou prévu avec certitude au TAF dans les 3 h (les PROB ne déclenchent rien).
+// Une alerte au début de l'épisode, puis rien tant qu'il dure ; nouvelle alerte possible 2 h après la fin.
+function wxFlags(raw) {
+  const w = raw.split(/\s+/), cavok = /\bCAVOK\b/.test(raw), vt = raw.match(/(?:^|\s)(\d{4})(?:NDV)?(?=\s|$)/);
+  const vis = cavok ? 9999 : vt ? +vt[1] : null, ceil = Math.min(...[...raw.matchAll(/\b(BKN|OVC|VV)(\d{3})/g)].map(x => +x[2] * 100));
+  const wm = raw.match(/\b(\d{3}|VRB)(\d{2,3})(?:G(\d{2,3}))?KT\b/);
+  return { lvp: (vis != null && vis < 800) || ceil <= 200, ts: w.some(x => /^[+-]?(VC)?TS/.test(x)), wind: !!wm && (+wm[2] >= 30 || +(wm[3] || 0) >= 40),
+    det: { vis, ceil, wind: wm ? `${+wm[2]} kt${wm[3] ? ' rafales ' + (+wm[3]) + ' kt' : ''}` : '' } };
+}
+function tafGroups(taf, nowMs) {
+  const now = new Date(nowMs), Y = now.getUTCFullYear(), M = now.getUTCMonth(), D0 = now.getUTCDate();
+  const at = (dd, hh) => { let m = M; if (+dd < D0 - 15) m++; else if (+dd > D0 + 15) m--; return Date.UTC(Y, m, +dd, +hh); };
+  const body = String(taf).replace(/\s+/g, ' ').replace(/^TAF (AMD |COR )?\w{4} \d{6}Z /, '');
+  const parts = body.split(/ (?=(?:PROB\d{2}|BECMG|FM\d{6})\b)|(?<!PROB\d{2}) (?=TEMPO\b)/), out = [];
+  parts.forEach((g, i) => { let a, b; const fm = g.match(/^FM(\d{2})(\d{2})(\d{2})/), pr = g.match(/(\d{2})(\d{2})\/(\d{2})(\d{2})/);
+    if (fm) { a = at(fm[1], fm[2]); const nx = (parts.slice(i + 1).find(x => /^FM/.test(x)) || '').match(/^FM(\d{2})(\d{2})/); b = nx ? at(nx[1], nx[2]) : Infinity; }
+    else if (pr) { a = at(pr[1], pr[2]); b = at(pr[3], pr[4]); } else return;
+    out.push({ a, b, prob: /^PROB/.test(g), kind: (g.match(/^(PROB\d{2} TEMPO|PROB\d{2}|TEMPO|BECMG|FM)/) || ['base'])[0], txt: g.replace(/^(PROB\d{2} )?(TEMPO |BECMG )?(FM\d{6} )?\d{4}\/\d{4} ?/, '') }); });
+  return out;
+}
+function wxEvents(o, sent, now) {
+  const ev = []; if (!o || !o.metar) return ev;
+  const obsRaw = o.metar.replace(/^(METAR|SPECI)\s+\w{4}\s+\d{6}Z\s+(AUTO\s+)?/, '').split(/\s+(?:TEMPO|BECMG|NOSIG)\b/)[0];
+  const obs = wxFlags(obsRaw), fc = { lvp: null, ts: null, wind: null };
+  for (const g of tafGroups(o.taf || '', now)) { if (g.prob || g.b < now || g.a > now + 3 * 3600e3) continue; const f = wxFlags(g.txt);
+    for (const k of ['lvp', 'ts', 'wind']) if (f[k] && !fc[k]) fc[k] = { g, f }; }
+  const label = { lvp: 'conditions LVP', ts: 'orage', wind: 'vent fort' };
+  const detail = (k, d) => k === 'lvp' ? [d.vis != null && d.vis < 800 ? `visibilité ${d.vis} m` : '', d.ceil <= 200 ? `plafond ${d.ceil} ft` : ''].filter(Boolean).join(', ') : k === 'wind' ? d.wind : '';
+  for (const k of ['lvp', 'ts', 'wind']) {
+    const on = obs[k] || !!fc[k], key = 'w|' + k;
+    if (!on) { if (sent[key + '|on']) { delete sent[key + '|on']; sent[key + '|off'] = now; } continue; }
+    if (sent[key + '|on'] || now - (sent[key + '|off'] || 0) < 2 * 3600e3 && sent[key]) continue;
+    sent[key + '|on'] = 1; sent[key] = now;
+    const txt = obs[k] ? `LFML : ${label[k]} observé${k === 'lvp' ? 'es' : ''}${detail(k, obs.det) ? ' (' + detail(k, obs.det) + ')' : ''}`
+      : `LFML : ${label[k]} prévu${k === 'lvp' ? 'es' : ''} au TAF d'ici 3 h (${fc[k].g.kind === 'base' ? '' : fc[k].g.kind + ' '}${fmtZ(Math.max(fc[k].g.a, now)).slice(6)}${detail(k, fc[k].f.det) ? ', ' + detail(k, fc[k].f.det) : ''})`;
+    ev.push({ k: key + '|' + now, type: 'meteo', txt });
+  }
+  return ev;
 }
 
 /* ---------- Notifications (Web Push) : annulations, déroutements, retards ≥ 60 min, source en panne ---------- */
@@ -281,8 +358,8 @@ async function wxMulti(origin, ctx, raw) {
 // déclencheur cron « */5 * * * * ». Sans eux, rien n'est envoyé (le reste du worker marche normalement).
 // KV : « subs » = { id: { sub, prefs, at } }, « sent » = { clé d'alerte: horodatage } (gardé 36 h).
 const PUSH_HOSTS = /^(fcm\.googleapis\.com|updates\.push\.services\.mozilla\.com|web\.push\.apple\.com|[a-z0-9-]+\.notify\.windows\.com|[a-z0-9.-]+\.push\.apple\.com)$/;
-const PUSH_TYPES = ['annul', 'derout', 'retard', 'src'];
-const PUSH_MAX_SUBS = 40; // offre gratuite : 50 sous-requêtes par exécution
+const PUSH_TYPES = ['annul', 'derout', 'retard', 'src', 'notam', 'meteo'];
+const PUSH_MAX_SUBS = 35; // offre gratuite : 50 sous-requêtes par exécution (vols, NOTAM, météo + 1 par téléphone)
 const b64u = {
   enc: b => btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''),
   dec: s => { s = String(s).replace(/-/g, '+').replace(/_/g, '/'); s += '='.repeat((4 - s.length % 4) % 4); return Uint8Array.from(atob(s), c => c.charCodeAt(0)); },
@@ -339,7 +416,7 @@ async function pushApi(request, origin, env, action) {
     if (!subs[id] && Object.keys(subs).length >= PUSH_MAX_SUBS) return json({ error: `liste pleine (${PUSH_MAX_SUBS} téléphones)` }, 409, origin);
     subs[id] = { sub: { endpoint: sub.endpoint, keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth } }, prefs, at: Date.now() };
     await env.PUSH.put('subs', JSON.stringify(subs));
-    return json({ ok: true, n: Object.keys(subs).length }, 200, origin);
+    return json({ ok: true, n: Object.keys(subs).length, prefs }, 200, origin);
   }
   if (action === 'test') {
     if (!subs[id]) return json({ error: "ce téléphone n'est pas inscrit" }, 404, origin);
@@ -375,16 +452,22 @@ async function pushRun(env) {
       else if (v.cls !== 'vol-take-off') { const d = delayMin(v); if (d >= 60 && ms + d * 60e3 > now) ev.push({ k: 'r|' + v.n + '|' + v.t, type: 'retard', txt: `Retard +${d} min : ${lbl}` }); }
     }
   }
+  // NOTAM importants et météo LFML (une source en panne n'empêche pas les autres alertes)
+  try { const nl = await notamsCached(env); if (nl) ev.push(...notamEvents(nl, sent, now)); } catch (e) {}
+  try { const w = await wxFetch(['LFML']); ev.push(...wxEvents((w.st || {}).LFML, sent, now)); } catch (e) {}
   const first = !sent._init, fresh = ev.filter(e => !sent[e.k]);
-  for (const k of Object.keys(sent)) if (k !== '_init' && now - sent[k] > 36 * 3600e3) delete sent[k];
+  // NOTAM gardés 90 jours (sinon un NOTAM long redeviendrait « nouveau »), le reste 36 h
+  for (const k of Object.keys(sent)) if (k[0] !== '_' && !/\|o(n|ff)$/.test(k) && now - sent[k] > (/^n[na]\|/.test(k) ? 90 * 86400e3 : 36 * 3600e3)) delete sent[k];
   fresh.forEach(e => { sent[e.k] = now; }); sent._init = 1;
-  if (fresh.length || first) await env.PUSH.put('sent', JSON.stringify(sent));
+  await env.PUSH.put('sent', JSON.stringify(sent)); // aussi l'état des épisodes météo et les NOTAM déjà vus
   if (first || !fresh.length) return; // 1re exécution : on mémorise l'existant sans rien envoyer
   let changed = false;
   for (const [id, s] of Object.entries(subs)) {
     const mine = fresh.filter(e => (s.prefs || PUSH_TYPES).includes(e.type)); if (!mine.length) continue;
-    const msg = mine.length === 1 ? { title: 'Vols MRS', body: mine[0].txt } : { title: `Vols MRS · ${mine.length} alertes`, body: mine.slice(0, 5).map(e => e.txt).join('\n') + (mine.length > 5 ? '\n…' : '') };
-    msg.tag = 'coa-vols-' + now; msg.url = './#vols';
+    const kinds = [...new Set(mine.map(e => e.type === 'notam' ? 'notam' : e.type === 'meteo' ? 'wx' : 'vols'))];
+    const name = kinds.length > 1 ? 'Boîte à outils COA' : { notam: 'NOTAM LFML', wx: 'Météo LFML', vols: 'Vols MRS' }[kinds[0]];
+    const msg = mine.length === 1 ? { title: name, body: mine[0].txt } : { title: `${name} · ${mine.length} alertes`, body: mine.slice(0, 5).map(e => e.txt).join('\n') + (mine.length > 5 ? '\n…' : '') };
+    msg.tag = 'coa-' + kinds.join('-') + '-' + now; msg.url = './#' + (kinds.length > 1 ? 'home' : kinds[0]);
     try { const st = await pushSend(env, s.sub, msg); if (st === 404 || st === 410) { delete subs[id]; changed = true; } } catch (e) {}
   }
   if (changed) await env.PUSH.put('subs', JSON.stringify(subs));

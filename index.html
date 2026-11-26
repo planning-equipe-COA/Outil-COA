@@ -2319,7 +2319,7 @@ render();
 if("serviceWorker" in navigator){navigator.serviceWorker.register("sw.js").catch(()=>{})}
 const SHARE_URL="https://planning-equipe-coa.github.io/Outil-COA/";
 /* notifications (Web Push par le relais : annulations, déroutements, retards ≥ 60 min, source en panne) */
-const PUSH_TYPES=[["annul","Vols annulés"],["derout","Arrivées déroutées"],["retard","Retards de 60 min ou plus"],["src","Source des vols en panne"]];
+const PUSH_TYPES=[["annul","Vols annulés"],["derout","Arrivées déroutées"],["retard","Retards de 60 min ou plus"],["src","Source des vols en panne"],["notam","NOTAM importants : pistes, voies, postes, ILS (nouveau ou en vigueur)"],["meteo","Météo LFML : LVP, orage, vent fort (observés ou prévus d'ici 3 h)"]];
 function pushPrefs(){try{const p=JSON.parse(localStorage.getItem("coa-push-prefs"));if(Array.isArray(p))return p}catch(e){}return PUSH_TYPES.map(x=>x[0])}
 const u8=s=>{s=s.replace(/-/g,"+").replace(/_/g,"/");s+="=".repeat((4-s.length%4)%4);return Uint8Array.from(atob(s),c=>c.charCodeAt(0))};
 async function pushPost(action,sub,prefs){const r=await fetch(NOTAM_URL+"?push="+action,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sub,prefs})});
@@ -2330,9 +2330,15 @@ async function pushRender(msg){const B=$("#pushBox");if(!B)return;const say=h=>{
   let key;try{const j=await (await fetch(NOTAM_URL+"?push=key",{cache:"no-store"})).json();if(!j.ok)return say(`<p class="sub">Pas encore activées sur le relais (réglage Cloudflare à faire).</p>`);key=j.key}catch(e){return say(`<p class="sub">Relais injoignable (pas de réseau ?).</p>`)}
   if(Notification.permission==="denied")return say(`<p class="sub">Notifications refusées pour cette appli : à réautoriser dans les réglages du téléphone.</p>`);
   const reg=await navigator.serviceWorker.ready,sub=await reg.pushManager.getSubscription();
-  if(!sub){say(`<p class="sub">Une alerte sur ce téléphone, même appli fermée, en cas d'annulation, de déroutement, de retard de 60 min ou plus, ou de panne de la source des vols (vols du jour, vérifiés toutes les 5 min).</p><button class="btn p" id="pushOn" style="width:100%">Activer les notifications</button>`);return bindPush(key)}
+  if(!sub){say(`<p class="sub">Une alerte sur ce téléphone, même appli fermée : vols annulés, déroutés ou en retard de 60 min ou plus, NOTAM importants (pistes, voies, postes, ILS), météo LFML (LVP, orage, vent fort). Vérifié toutes les 5 min.</p><button class="btn p" id="pushOn" style="width:100%">Activer les notifications</button>`);return bindPush(key)}
   const pr=pushPrefs();
-  say(`<p class="sub">Activées sur ce téléphone (vols du jour, vérifiés toutes les 5 min). Recevoir :</p>${PUSH_TYPES.map(([k,l])=>`<label style="display:flex;gap:8px;align-items:center;margin:4px 0"><input type="checkbox" data-pt="${k}"${pr.includes(k)?" checked":""}> ${l}</label>`).join("")}<p style="display:flex;gap:8px"><button class="btn" id="pushTest">Envoyer un test</button><button class="btn" id="pushOff">Désactiver</button></p>`);bindPush(key,sub)}
+  say(`<p class="sub">Activées sur ce téléphone (vérifié toutes les 5 min). Recevoir :</p>${PUSH_TYPES.map(([k,l])=>`<label style="display:flex;gap:8px;align-items:center;margin:4px 0"><input type="checkbox" data-pt="${k}"${pr.includes(k)?" checked":""}> ${l}</label>`).join("")}<p style="display:flex;gap:8px"><button class="btn" id="pushTest">Envoyer un test</button><button class="btn" id="pushOff">Désactiver</button></p>`);bindPush(key,sub)}
+/* téléphones inscrits avant les alertes NOTAM / météo (26/11/2026) : on les ajoute une fois, sans rien demander.
+   Marqué fait seulement si le relais les connaît (sinon nouvel essai à la prochaine ouverture). */
+(async()=>{try{if(!NOTAM_URL||!("serviceWorker" in navigator)||!("PushManager" in window)||store("coa-push-v")==="2")return;
+  const reg=await navigator.serviceWorker.ready,sub=await reg.pushManager.getSubscription();if(!sub){store("coa-push-v","2");return}
+  const p=[...new Set([...pushPrefs(),"notam","meteo"])],j=await pushPost("sub",sub.toJSON(),p);
+  if(j.prefs&&j.prefs.includes("notam")){store("coa-push-prefs",JSON.stringify(p));store("coa-push-v","2")}}catch(e){}})();
 function bindPush(key,sub){const on=$("#pushOn");
   if(on)on.onclick=async()=>{on.textContent="…";try{if(await Notification.requestPermission()!=="granted")return pushRender("Autorisation refusée.");
     const reg=await navigator.serviceWorker.ready,s=await reg.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:u8(key)});

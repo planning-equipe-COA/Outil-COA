@@ -418,4 +418,16 @@ L'utilisateur échange en français.
   35 NOTAM (champs id, series, q, start, end, text, full, location), affichage vérifié avec ces données. Ajouts : tri par
   thème « en vigueur d'abord, puis à venir, par date de début » ; recherche en français (`NT_FR` : grue → CRANE,
   fermé → CLSD, piste → RWY, voie → TWY, poste → STAND, balisage → LGT/PAPI, obstacle, travaux, oiseaux, drone).
+- **Alertes NOTAM et météo LFML (26/11/2026, choix de Raph : idées 1 et 2 ; « NOTAM dans les fiches MUA » écarté : la tour
+  gère l'aire de trafic ; « fiche de relève » écartée : l'équipe en a déjà une)**. Dans `pushRun` (cron 5 min), types `notam`
+  et `meteo` :
+  - NOTAM (`notamEvents`, NOTAM relus dans le cache commun 30 min `notamsCached`) : sujets M* (pistes, voies, aires, postes)
+    et I* (ILS), conditions LC/AS/AU/LT/LH/LW/HW. Alerte « Nouveau NOTAM » à son apparition, « NOTAM en vigueur » à son début
+    (moins de 3 h après). Clés `nn|id` / `na|id` gardées 90 jours. Drapeau `_ninit` : la 1re exécution mémorise sans envoyer.
+  - Météo (`wxEvents`, `wxFlags`, `tafGroups`, METAR/TAF via `wxFetch` partagé avec ?wx=) : LVP (vis < 800 m ou plafond
+    ≤ 200 ft), orage, vent ≥ 30 kt / rafales ≥ 40 kt ; observé, ou prévu avec certitude au TAF dans les 3 h (PROB ignorés).
+    Une alerte au début de l'épisode (`w|k|on`), nouvelle alerte seulement 2 h après la fin (`w|k|off`).
+  - Titre selon le type (Vols MRS / NOTAM LFML / Météo LFML), notification ouvre #vols, #notam ou #wx.
+  - Testé en local (10 scénarios, NOTAM réels du 26/11 + météo simulée). Abonnés existants : l'appli ajoute une fois `notam`
+    et `meteo` à leurs choix (`coa-push-v` = 2, seulement si le relais les connaît : réponse `prefs`). `PUSH_MAX_SUBS` = 35.
 
