@@ -106,6 +106,11 @@ L'utilisateur échange en français.
   sur 4, surtout proches de l'heure) : c'est la vraie limite.
   Test local : routes playwright vers les données réelles du relais (le relais n'autorise que l'origine github.io).
 
+- **Recherche dans une rubrique** (26 nov. 2026, demandé : immat. introuvable depuis Temps de vol) : `globalParts(q)` (même
+  recherche que « Tout ») ; si la rubrique ne trouve rien → « Trouvé ailleurs dans l'appli » ; sinon seulement les correspondances
+  exactes d'ailleurs (pertinence ≥ 4 : immat., poste MUA, code) → « Aussi trouvé ailleurs ». Bouton « ouvrir » (`data-gotab`).
+  `immatLoad` re-rend aussi quand une recherche est tapée dans une rubrique.
+
 ## Fichiers
 - `index.html` — toute l'appli (HTML + CSS + JS). **Page d'accueil** (onglet « Accueil », ouverte au lancement, bouton maison en
   haut à droite ; demandée le 20 nov. 2026) : thèmes de haut en bas (`THEMES` sauf Recherche), tuiles encadrées 2 par ligne en

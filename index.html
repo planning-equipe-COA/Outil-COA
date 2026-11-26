@@ -127,6 +127,8 @@ mark{background:#ffe58a;color:#000;border-radius:2px}
 .vcard .vdet,.vcard>.risk{margin-left:70px}
 @media (max-width:360px){.vc-meta,.vcard .vdet,.vcard>.risk{margin-left:0}}
 @media (prefers-reduced-motion:reduce){.vcard{transition:none}}
+.elsewhere{margin-top:16px;padding-top:4px;border-top:2px dashed var(--line)}
+.elh{font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--acc);margin:10px 0 2px}
 .tempty{grid-column:1/-1;border:2px dashed var(--line);border-radius:14px;padding:18px;text-align:center;color:var(--mute);font-size:13.5px}
 .home h2 .thmv{float:right;display:flex;gap:6px;margin-top:-4px}
 .home h2 .thmv button{width:32px;height:28px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:15px;cursor:pointer}
@@ -1220,6 +1222,25 @@ function destList(){
     return `<tr data-flq="${esc(x.codes[0])}"><td><b>${esc(x.c)}</b> <span class="sub">${x.codes.map(esc).join(" · ")}</span></td><td>${hm(f.go)}</td><td>${hm(f.back)}</td></tr>`}).join("")}</table>`).join("");
 }
 document.addEventListener("click",e=>{const t=e.target.closest("[data-flq]");if(!t)return;$("#q").value=t.dataset.flq;render();scrollTo(0,0)});
+/* recherche dans toute l'appli : [titre, rubrique, html, pertinence] (utilisée par « Tout » et sous chaque rubrique) */
+function globalParts(q){
+  const parts=[];STRICT=true;
+  {const v=volsSearch(q);if(v)parts.push(["Vols du jour","vols",v,9])}
+  const Q=q.toUpperCase();
+  if(loaded===true){
+    const a=search(AP,r=>[r[0],r[1]],r=>[r[2],r[3],r[4],pfr(r[4])],q,8);if(a.total)parts.push(["Aéroports","ap",apTable(q,8),a.best]);
+    const b=search(AL,r=>[r[0],r[1]],r=>[r[2],r[3],r[4],pfr(r[4])],q,8);if(b.total)parts.push(["Compagnies","al",alTable(q,8),b.best]);
+    const c=search(PL,r=>[r[0],r[1]],r=>[r[2]],q,8);if(c.total)parts.push(["Avions","pl",plTable(q,8),c.best]);
+  }
+  const dm=DELAY.filter(r=>norm(r.join(" ")).includes(q));if(dm.length)parts.push(["Codes retard","dl",grouped(DELAY,q,1,"60px"),dm.some(r=>r[1]===Q)?3:1]);
+  {const x=asmView(q,true);if(x)parts.push(["Messages ASM / SSM","asm",x,[...ASM_ACT,...ASM_WHY].some(r=>norm(r[0])===q)?3:1])}
+  const am=ABBR.filter(r=>norm(r.join(" ")).includes(q));if(am.length)parts.push(["Abréviations","ab",grouped(ABBR,q,1,"150px"),am.some(r=>r[1].toUpperCase().split(/[ \/]+/).includes(Q))?3:1]);
+  if(MUA.annu){const r=annuView(q);if(r.total)parts.push(["Annuaire COA","ct",r.html,1])}
+  if(getContacts().some(u=>ctMatch(u,q)))parts.push(["Mes numéros","ct",ctMine(q).split("<p><button class=\"btn p\" id=\"ctEdit\"")[0],1]);
+  if(!IM.rows&&MUA.key)immatLoad();
+  if(IM.rows){const r=immatFind(q);if(r.length)parts.push(["Immatriculations","immat",immatView(q,5),r[0][0]===q.toUpperCase().replace(/[\s-]/g,"")?5:1])}
+  if(MUA.sheets){const m=muaMatch(q);if(m.length)parts.push(["MUA · fiches de postes","mua",muaView(q,4),m.some(x=>muaPostes(x).includes(q.toUpperCase().replace(/\s+/g,"")))?4:2])}
+  STRICT=false;return parts}
 function flView(q){
   if(loaded!==true)return `<div class="info">Chargement des aéroports…</div>`;
   const note='<p class="sub">Temps porte à porte estimés à partir de la distance (croisière ~800 km/h + 30 min de roulage, montée et descente), avec un vent moyen d\'ouest : un peu plus long vers l\'ouest, plus court vers l\'est. Vérifie toujours l\'horaire de la compagnie.</p>';
@@ -1772,6 +1793,7 @@ function isFav(k){return getFavs().includes(k)}
 function toggleFav(k){const f=getFavs();const i=f.indexOf(k);if(i<0)f.push(k);else f.splice(i,1);store("coa-favs",JSON.stringify(f));render()}
 const favBtn=k=>`<button class="fav${isFav(k)?" on":""}" data-fav="${esc(k)}" aria-label="${isFav(k)?"Retirer des favoris":"Ajouter aux favoris"}">${isFav(k)?"★":"☆"}</button>`;
 document.addEventListener("click",e=>{const b=e.target.closest("[data-fav]");if(b){e.stopPropagation();e.preventDefault();toggleFav(b.dataset.fav)}},true);
+document.addEventListener("click",e=>{const g=e.target.closest("[data-gotab]");if(g){e.preventDefault();tab=g.dataset.gotab;location.hash=tab;render();scrollTo(0,0)}});
 document.addEventListener("click",e=>{const b=e.target.closest("[data-openproc]");if(!b)return;e.preventDefault();const k=norm(b.dataset.openproc),p=(PROC.items||[]).find(x=>norm(x.title).includes(k));PROC.open=p?p.id:null;tab="proc";$("#q").value="";location.hash="proc";render();scrollTo(0,0)});
 const procLinks=(t,a)=>`<div class="card"><h2>${t}</h2><div class="vbtns">${a.map(([k,l])=>`<button class="glink" data-openproc="${esc(k)}">${esc(l)}</button>`).join("")}</div></div>`;
 document.addEventListener("click",e=>{const b=e.target.closest("[data-openposte]");if(b&&MUA.sheets){e.preventDefault();const i=MUA.sheets.findIndex(s=>s.poste===b.dataset.openposte||muaPostes(s).includes(b.dataset.openposte));if(i>=0)muaShow(i)}});
@@ -2086,7 +2108,7 @@ async function immatLoad(){if(IM.rows||IM.state==="busy"||!MUA.key)return;IM.sta
     const txt=await new Response(new Blob([plain]).stream().pipeThrough(new DecompressionStream("gzip"))).text();
     const j=JSON.parse(txt);IM.rows=j.rows;IM.date=j.date;IM.state="ok"}
   catch(e){IM.state="err";IM.err=String(e&&e.message||e)}
-  if(tab==="immat"||tab==="all")render()}
+  if(tab==="immat"||tab==="all"||($("#q").value.trim()&&tab!=="home"))render()}
 function immatFind(q){if(!IM.rows||!q)return [];const Q=q.toUpperCase().replace(/[\s-]/g,"");if(Q.length<2)return [];
   const ex=IM.rows.filter(r=>r[0]===Q),pre=IM.rows.filter(r=>r[0]!==Q&&r[0].startsWith(Q));
   const nm=Q.length>=3?IM.rows.filter(r=>r[0]!==Q&&!r[0].startsWith(Q)&&norm(r[2]).includes(q)):[];
@@ -2267,27 +2289,16 @@ function render(){
     case "lfml":h=lfmlView();break;
     default:{
       if(!q){h=`<div class="card"><b>Recherche globale</b><p class="sub">Une seule barre pour tout : poste MUA, code aéroport, compagnie, type d'avion, code retard, abréviation ou contact. Les onglets filtrent par rubrique.</p></div>`;break}
-      const parts=[];STRICT=true;
-      {const v=volsSearch(q);if(v)parts.push(["Vols du jour","vols",v,9])}
-      const Q=q.toUpperCase();
-      if(loaded===true){
-        const a=search(AP,r=>[r[0],r[1]],r=>[r[2],r[3],r[4],pfr(r[4])],q,8);if(a.total)parts.push(["Aéroports","ap",apTable(q,8),a.best]);
-        const b=search(AL,r=>[r[0],r[1]],r=>[r[2],r[3],r[4],pfr(r[4])],q,8);if(b.total)parts.push(["Compagnies","al",alTable(q,8),b.best]);
-        const c=search(PL,r=>[r[0],r[1]],r=>[r[2]],q,8);if(c.total)parts.push(["Avions","pl",plTable(q,8),c.best]);
-      }
-      const dm=DELAY.filter(r=>norm(r.join(" ")).includes(q));if(dm.length)parts.push(["Codes retard","dl",grouped(DELAY,q,1,"60px"),dm.some(r=>r[1]===Q)?3:1]);
-      {const x=asmView(q,true);if(x)parts.push(["Messages ASM / SSM","asm",x,[...ASM_ACT,...ASM_WHY].some(r=>norm(r[0])===q)?3:1])}
-      const am=ABBR.filter(r=>norm(r.join(" ")).includes(q));if(am.length)parts.push(["Abréviations","ab",grouped(ABBR,q,1,"150px"),am.some(r=>r[1].toUpperCase().split(/[ \/]+/).includes(Q))?3:1]);
-      if(MUA.annu){const r=annuView(q);if(r.total)parts.push(["Annuaire COA","ct",r.html,1])}
-      if(getContacts().some(u=>ctMatch(u,q)))parts.push(["Mes numéros","ct",ctMine(q).split("<p><button class=\"btn p\" id=\"ctEdit\"")[0],1]);
-      if(!IM.rows&&MUA.key)immatLoad();
-      if(IM.rows){const r=immatFind(q);if(r.length)parts.push(["Immatriculations","immat",immatView(q,5),r[0][0]===q.toUpperCase().replace(/[\s-]/g,"")?5:1])}
-      if(MUA.sheets){const m=muaMatch(q);if(m.length)parts.push(["MUA · fiches de postes","mua",muaView(q,4),m.some(x=>muaPostes(x).includes(q.toUpperCase().replace(/\s+/g,"")))?4:2])}
-      STRICT=false;
+      const parts=globalParts(q);
       parts.sort((x,y)=>y[3]-x[3]);
       h=parts.length?parts.map(([t,k,x])=>`<h2>${t} <button class="btn" style="font-size:11px;padding:2px 8px" onclick="tab='${k}';render()">voir tout</button></h2>${x}`).join(""):`<div class="info">Aucun résultat.</div>`;
     }
   }
+  /* recherche tapée dans une rubrique (demandé le 26 nov. 2026 : immat. introuvable depuis Temps de vol) : si la rubrique ne trouve
+     rien, on montre ce que le reste de l'appli trouve ; sinon seulement les correspondances exactes d'ailleurs (immat., poste, code) */
+  if(q&&!["home","all","calc"].includes(tab)){const empty=/class="info">\s*Aucun|Aucun résultat|Aucun vol|Aucun aéroport/.test(h)||!h.trim();
+    let el=globalParts(q).filter(p=>p[1]!==tab);if(!empty)el=el.filter(p=>p[3]>=4);
+    if(el.length){el.sort((x,y)=>y[3]-x[3]);h+=`<div class="elsewhere"><div class="elh">${empty?"Trouvé ailleurs dans l'appli":"Aussi trouvé ailleurs"}</div>`+el.slice(0,4).map(([t,k,x])=>`<h2>${t} <button class="btn" style="font-size:11px;padding:2px 8px" data-gotab="${k}">ouvrir</button></h2>${x}`).join("")+"</div>"}}
   out.innerHTML=(HELP[tab]&&!q?`<p class="tabhelp">${HELP[tab]}</p>`:"")+(q?"":quickView(tab))+h;
   bnavRender();
   liveTick();
