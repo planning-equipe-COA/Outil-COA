@@ -129,6 +129,8 @@ mark{background:#ffe58a;color:#000;border-radius:2px}
 @media (prefers-reduced-motion:reduce){.vcard{transition:none}}
 .elsewhere{margin-top:16px;padding-top:4px;border-top:2px dashed var(--line)}
 .elh{font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--acc);margin:10px 0 2px}
+.fqs{font-weight:700;white-space:normal!important;text-align:right;max-width:52%;flex-shrink:0;line-height:1.35}
+.fqs span{white-space:nowrap}
 .tempty{grid-column:1/-1;border:2px dashed var(--line);border-radius:14px;padding:18px;text-align:center;color:var(--mute);font-size:13.5px}
 .home h2 .thmv{float:right;display:flex;gap:6px;margin-top:-4px}
 .home h2 .thmv button{width:32px;height:28px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:15px;cursor:pointer}
@@ -1426,7 +1428,7 @@ const FREQ=[["ATIS","PROVENCE","125.355",""],["Tour","PROVENCE Tour","133.100","
   ["Approche","PROVENCE Approche","124.350","secteurs ME 1 et 2"],["Approche","PROVENCE Approche","132.300","secteur MB"],["Approche","PROVENCE Approche","127.725 / 129.475","auxiliaires"],
   ["Information","PROVENCE Information","124.350 / 126.260 / 132.300 / 132.950","SIV"],["Urgence","","121.500","détresse"]];
 function freqView(){return `<div class="wx"><div class="wxh"><b>Fréquences LFML</b><span class="sub">AIP · AD 2 LFML.18</span></div>
-  ${FREQ.map(([s,cs,f,n])=>`<div class="u-line" style="padding:5px 0;border-bottom:1px solid var(--line)"><div class="u-text"><span><b>${s}</b> <span class="sub">${esc(cs)}</span></span>${n?`<span class="u-note">${esc(n)}</span>`:""}</div><span class="u-tel" style="font-weight:700">${esc(f)}</span></div>`).join("")}
+  ${FREQ.map(([s,cs,f,n])=>`<div class="u-line" style="padding:5px 0;border-bottom:1px solid var(--line)"><div class="u-text"><span><b>${s}</b> <span class="sub">${esc(cs)}</span></span>${n?`<span class="u-note">${esc(n)}</span>`:""}</div><span class="u-tel fqs">${f.split(/\s*\/\s*/).map(x=>`<span>${esc(x)}</span>`).join(" / ")}</span></div>`).join("")}
   <p class="sub">Source : AIP France, AD 2 LFML.18 (AIRAC du 19 mars 2026), toutes H24. Les fréquences peuvent changer à chaque cycle AIRAC : vérifie l'AIP en vigueur sur sia.aviation-civile.gouv.fr. L'ATIS n'existe qu'en radio (pas de version texte publique).</p></div>`}
 /* ---------- Heure UTC / Marseille dans l'en-tête, soleil à LFML ---------- */
 function clockTick(){if(document.hidden)return;const d=new Date(),p=n=>String(n).padStart(2,"0");
