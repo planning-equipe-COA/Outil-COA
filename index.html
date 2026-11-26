@@ -1527,7 +1527,7 @@ async function notamLoad(force){
 }
 /* Vols du jour : tableau public de l'aéroport Marseille Provence, via le même relais Cloudflare que les NOTAM (?vols=1).
    Consultation seulement (pas un GANTT). Heures du site = heures locales Paris. Dernière liste gardée (coa-vols) hors connexion. */
-const VL={data:null,at:0,err:"",loading:false,failAt:0,dir:"dep",day:0,done:false,reg:""};
+const VL={data:null,at:0,err:"",loading:false,failAt:0,dir:"arr",day:0,done:false,reg:""};
 try{const c=JSON.parse(store("coa-vols")||"null");if(c&&c.data){VL.data=c.data;VL.at=c.at}}catch(e){}
 async function volsLoad(force){
   if(!NOTAM_URL||VL.loading||(!force&&VL.data&&Date.now()-VL.at<3*60e3))return;
@@ -2281,7 +2281,7 @@ function render(){
     case "home":if(q){tab="all";return render()}h=homeView();break;
     case "wx":h=wxCard(true)+procLinks("Procédures liées",[["LVP","Procédure LVP (faible visibilité)"],["Dégivrage","Dégivrage hiver"]])+freqView();wxLoad();break;
     case "notam":h=notamView(q);notamLoad();break;
-    case "vols":h=volsView(q);volsLoad();break;
+    case "vols":if(PREV_TAB!=="vols"&&!VL.keep)VL.dir="arr";VL.keep=false;h=volsView(q);volsLoad();break;
     case "fl":h=flView(q);break;
     case "calc":h=calcView();break;
     case "mua":h=muaView(q);if(MUA.annu)volsLoad();break;
@@ -2319,7 +2319,7 @@ function render(){
   const nr=$("#ntRefresh");if(nr)nr.onclick=()=>{nr.textContent="…";notamLoad(true)};
   const vr=$("#vlRefresh");if(vr)vr.onclick=()=>{vr.textContent="…";volsLoad(true)};
   document.querySelectorAll("#vlDir button").forEach(b=>b.onclick=()=>{VL.dir=b.dataset.v;VL.open=null;render()});
-  document.querySelectorAll(".vrow").forEach(r=>{const go=e=>{if(e.target.closest("button,a"))return;VL.open=VL.open===r.dataset.vk?null:r.dataset.vk;if(tab!=="vols"){VL.dir=r.dataset.varr==="1"?"arr":r.dataset.varr==="2"?"rot":"dep";VL.day=r.dataset.vk.split("|")[1].slice(0,10)===VL.data.today?0:1;tab="vols";location.hash="vols"}render()};r.onclick=go;r.onkeydown=e=>{if(e.key==="Enter")go(e)}});
+  document.querySelectorAll(".vrow").forEach(r=>{const go=e=>{if(e.target.closest("button,a"))return;VL.open=VL.open===r.dataset.vk?null:r.dataset.vk;if(tab!=="vols"){VL.keep=true;VL.dir=r.dataset.varr==="1"?"arr":r.dataset.varr==="2"?"rot":"dep";VL.day=r.dataset.vk.split("|")[1].slice(0,10)===VL.data.today?0:1;tab="vols";location.hash="vols"}render()};r.onclick=go;r.onkeydown=e=>{if(e.key==="Enter")go(e)}});
   document.querySelectorAll("[data-ctq]").forEach(b=>b.onclick=()=>{$("#q").value=b.dataset.ctq;tab="ct";location.hash="ct";render();scrollTo(0,0)});
   document.querySelectorAll("[data-alq]").forEach(b=>b.onclick=()=>{$("#q").value=b.dataset.alq;tab="al";location.hash="al";render();scrollTo(0,0)});
   document.querySelectorAll("[data-volreg]").forEach(b=>b.onclick=()=>{VL.reg=b.dataset.volreg||"";VL.open=null;if(tab!=="vols"){tab="vols";location.hash="vols"}render();scrollTo(0,0)});

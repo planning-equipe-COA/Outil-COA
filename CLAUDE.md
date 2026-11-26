@@ -97,7 +97,9 @@ L'utilisateur échange en français.
 
 - **Retour à l'accueil** (25 nov. 2026, demandé) : depuis une rubrique (titre ‹, bouton Accueil, retour arrière), l'accueil
   s'ouvre sur le thème de cette rubrique (`PREV_TAB`, fin de `render`), tuile soulignée brièvement (`.back`), pas en haut de page.
-- **Vols du jour** : boutons dans l'ordre Arrivées / Arr. + Dép. / Départs (demandé). Arrivées et départs en **cartes pleine
+- **Vols du jour** : boutons dans l'ordre Arrivées / Arr. + Dép. / Départs (demandé). **Arrivées par défaut** à chaque entrée dans
+  la rubrique (26 nov., « on travaille plutôt avec les arrivées ») ; le choix tient tant qu'on reste dans la rubrique (`VL.keep` quand
+  on ouvre un vol depuis une autre rubrique). Arrivées et départs en **cartes pleine
   largeur** (`volRow` → `.vcard`, liste `.vlist`) : liseré gauche couleur du statut (`--vst`), heure locale en grand + Z, vol et
   statut en pastille, ville en grand, pastilles porte/tapis, compte à rebours, immat./type ; compagnie · assistant en dessous.
   **Lien arrivée ↔ départ sur chaque carte** (`volLink`, `volOutbound`) : « ↻ Repart AF 7343 · 16:05 » / « ↻ Arrive de … »,
