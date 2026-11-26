@@ -430,4 +430,17 @@ L'utilisateur échange en français.
   - Titre selon le type (Vols MRS / NOTAM LFML / Météo LFML), notification ouvre #vols, #notam ou #wx.
   - Testé en local (10 scénarios, NOTAM réels du 26/11 + météo simulée). Abonnés existants : l'appli ajoute une fois `notam`
     et `meteo` à leurs choix (`coa-push-v` = 2, seulement si le relais les connaît : réponse `prefs`). `PUSH_MAX_SUBS` = 35.
+- **Alertes seulement en service (26/11/2026, demandé par Raph : « seulement en service, pas de NOTAM le matin si je suis
+  en soir » ; deux modes : automatique depuis le Planning COA, ou jours cochés)**. Lien volontaire avec le Planning COA
+  (dépôt planning-equipe-COA/horaires) — la dissociation du 20/11 concernait les liens d'interface.
+  - Appli : Réglages → Notifications → « Quand recevoir » (`pushWhen`) : Toujours / Seulement en service ; source Planning COA
+    (code de liaison `coa-push-link`, 16 car. A-H J-N P-Z 2-9, bouton Copier) ou « Je coche mes jours » (2 mois, toucher =
+    vide → M → S → N → J, `coa-shift-days`, horaires `SHIFT_DEF` = défauts du Planning : M 06–14, S 14–22, N 22–06, J 07:30–16:30 ;
+    `shiftSend` → ?push=shifts src manuel). `pushPost` envoie toujours `mode` et `link`. État via ?push=status.
+  - Worker : abonnement { …, mode: 'all'|'shift', link } ; KV `shifts:<link>` = { at, src, win } (90 j) ; `shiftsPut` valide
+    (≤ 200 créneaux, ≤ 16 h chacun, -3 j…+75 j). Dans `pushRun` : mode shift → rien hors créneau (marge 15 min avant) ; sans
+    horaires reçus → alertes à toute heure (l'appli l'affiche en orange). **Résumé « Début de service »** (`briefing`) dans les
+    30 min après le début : fermetures NOTAM (LC/AS/AU/LH, aire de mouvement et ILS) en cours ou qui commencent pendant le
+    service (4 max) + météo LFML (LVP, orage, vent) observée ou prévue avec certitude d'ici la fin ; rien si rien à dire.
+    Clé `ps|<link>|<début>`. Testé en local (tp4 : en service / hors service / sans horaires / validation / origine).
 

@@ -403,20 +403,44 @@ function validSub(s) {
   try { const u = new URL(s.endpoint); return u.protocol === 'https:' && PUSH_HOSTS.test(u.hostname) && s.endpoint.length < 1000 &&
     /^[A-Za-z0-9_-]{80,100}$/.test(s.keys.p256dh) && /^[A-Za-z0-9_-]{16,30}$/.test(s.keys.auth); } catch (e) { return false; }
 }
+/* Alertes seulement pendant le service : chaque téléphone en mode « shift » a un code de liaison (16 caractères) ;
+   ses horaires de service sont dans KV « shifts:<code> » = { at, src, win: [[début ms, fin ms], …] }, envoyés par le
+   Planning COA (automatique) ou par les cases cochées dans la Boîte à outils. Que des dates et heures, aucun nom. */
+const normLink = x => String(x || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+const linkOk = x => /^[A-HJ-NP-Z2-9]{16}$/.test(normLink(x));
+const SHIFT_MARGIN = 15 * 60e3; // alertes dès 15 min avant la prise de service
+const inWin = (w, t) => t >= w[0] - SHIFT_MARGIN && t < w[1];
+async function shiftsPut(b, origin, env) {
+  if (!b || !linkOk(b.link) || !Array.isArray(b.win) || b.win.length > 200) return json({ error: 'horaires invalides' }, 400, origin);
+  const now = Date.now(), win = [];
+  for (const w of b.win) { if (!Array.isArray(w) || w.length !== 2) continue; const [s0, e0] = w.map(Number);
+    if (!(e0 > s0) || e0 - s0 > 16 * 3600e3 || s0 < now - 3 * 86400e3 || s0 > now + 75 * 86400e3) continue; win.push([s0, e0]); }
+  win.sort((x, y) => x[0] - y[0]);
+  await env.PUSH.put('shifts:' + normLink(b.link), JSON.stringify({ at: now, src: b.src === 'planning' ? 'planning' : 'manuel', win }), { expirationTtl: 90 * 86400 });
+  return json({ ok: true, n: win.length }, 200, origin);
+}
 async function pushApi(request, origin, env, action) {
   if (action === 'key') return json({ key: env.VAPID_PUBLIC || '', ok: pushOk(env) }, 200, origin);
   if (request.method !== 'POST' || !ORIGINS.includes(origin)) return json({ error: 'refusé' }, 403, origin);
   if (!pushOk(env)) return json({ error: 'notifications pas encore configurées sur le relais' }, 503, origin);
   let b; try { b = await request.json(); } catch (e) { return json({ error: 'requête illisible' }, 400, origin); }
+  if (action === 'shifts') return shiftsPut(b, origin, env);
   const sub = b && b.sub; if (!sub || !validSub(sub)) return json({ error: 'abonnement invalide' }, 400, origin);
   const id = await subId(sub.endpoint), subs = JSON.parse(await env.PUSH.get('subs') || '{}');
   if (action === 'unsub') { if (subs[id]) { delete subs[id]; await env.PUSH.put('subs', JSON.stringify(subs)); } return json({ ok: true }, 200, origin); }
   const prefs = (Array.isArray(b.prefs) ? b.prefs : PUSH_TYPES).filter(x => PUSH_TYPES.includes(x));
   if (action === 'sub') {
     if (!subs[id] && Object.keys(subs).length >= PUSH_MAX_SUBS) return json({ error: `liste pleine (${PUSH_MAX_SUBS} téléphones)` }, 409, origin);
-    subs[id] = { sub: { endpoint: sub.endpoint, keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth } }, prefs, at: Date.now() };
+    const link = linkOk(b.link) ? normLink(b.link) : '', mode = b.mode === 'shift' && link ? 'shift' : 'all';
+    subs[id] = { sub: { endpoint: sub.endpoint, keys: { p256dh: sub.keys.p256dh, auth: sub.keys.auth } }, prefs, mode, link, at: Date.now() };
     await env.PUSH.put('subs', JSON.stringify(subs));
-    return json({ ok: true, n: Object.keys(subs).length, prefs }, 200, origin);
+    return json({ ok: true, n: Object.keys(subs).length, prefs, mode: subs[id].mode }, 200, origin);
+  }
+  if (action === 'status') {
+    const r = subs[id]; if (!r) return json({ error: "ce téléphone n'est pas inscrit" }, 404, origin);
+    const sh = r.link ? JSON.parse(await env.PUSH.get('shifts:' + r.link) || 'null') : null, now = Date.now();
+    const next = sh ? (sh.win.find(w => w[1] > now) || null) : null;
+    return json({ ok: true, mode: r.mode || 'all', prefs: r.prefs, shifts: sh ? { at: sh.at, src: sh.src, n: sh.win.filter(w => w[1] > now).length, next, now: !!sh.win.find(w => inWin(w, now)) } : null }, 200, origin);
   }
   if (action === 'test') {
     if (!subs[id]) return json({ error: "ce téléphone n'est pas inscrit" }, 404, origin);
@@ -436,6 +460,27 @@ function delayMin(v) {
   const m = String(v.st).match(/(\d{1,2}):(\d{2})/); if (!m) return 0;
   let d = (+m[1] * 60 + +m[2]) - (+v.t.slice(11, 13) * 60 + +v.t.slice(14, 16)); if (d < -720) d += 1440; if (d > 720) d -= 1440; return d;
 }
+// Résumé de prise de service : fermetures / hors service (aire de mouvement, ILS) en cours ou qui commencent pendant le
+// service, et météo LFML (LVP, orage, vent fort) observée ou prévue avec certitude d'ici la fin du service. [] si rien.
+function briefing(prefs, nl, wx, now, end) {
+  const L = [], short = t => String(t || '').replace(/\s+/g, ' ').trim().replace(/\.$/, '').slice(0, 70);
+  if (prefs.includes('notam') && nl) {
+    const span = n => [Date.parse(n.start) || 0, /PERM/i.test(n.end || '') ? Infinity : (Date.parse(n.end) || Infinity)];
+    const c = nl.filter(n => NOTAM_SUBJ.test((n.q || '').slice(1, 3)) && /^(LC|AS|AU|LH)$/.test((n.q || '').slice(3, 5)) && span(n)[0] < end && span(n)[1] > now)
+      .sort((a, b) => span(a)[0] - span(b)[0]);
+    c.slice(0, 4).forEach(n => { const [st, en] = span(n); L.push(`${short(n.text)} (${st <= now ? (en === Infinity ? 'permanent' : "jusqu'au " + fmtZ(en)) : 'à partir du ' + fmtZ(st)})`); });
+    if (c.length > 4) L.push(`… et ${c.length - 4} autre${c.length - 4 > 1 ? 's' : ''} NOTAM de fermeture`);
+  }
+  if (prefs.includes('meteo') && wx && wx.metar) {
+    const obs = wxFlags(wx.metar.replace(/^(METAR|SPECI)\s+\w{4}\s+\d{6}Z\s+(AUTO\s+)?/, '').split(/\s+(?:TEMPO|BECMG|NOSIG)\b/)[0]);
+    const lab = { lvp: 'conditions LVP', ts: 'orage', wind: 'vent fort' }, got = [];
+    for (const k of ['lvp', 'ts', 'wind']) if (obs[k]) got.push(lab[k] + ' en ce moment');
+    for (const g of tafGroups(wx.taf || '', now)) { if (g.prob || g.b < now || g.a > end) continue; const f = wxFlags(g.txt);
+      for (const k of ['lvp', 'ts', 'wind']) if (f[k] && !obs[k] && !got.some(x => x.startsWith(lab[k]))) got.push(`${lab[k]} prévu${k === 'lvp' ? 'es' : ''} (${g.kind === 'base' ? '' : g.kind + ' '}${fmtZ(Math.max(g.a, now)).slice(6)})`); }
+    if (got.length) L.push('Météo LFML : ' + got.join(', '));
+  }
+  return L;
+}
 async function pushRun(env) {
   if (!pushOk(env)) return;
   const subs = JSON.parse(await env.PUSH.get('subs') || '{}'); if (!Object.keys(subs).length) return;
@@ -453,23 +498,38 @@ async function pushRun(env) {
     }
   }
   // NOTAM importants et météo LFML (une source en panne n'empêche pas les autres alertes)
-  try { const nl = await notamsCached(env); if (nl) ev.push(...notamEvents(nl, sent, now)); } catch (e) {}
-  try { const w = await wxFetch(['LFML']); ev.push(...wxEvents((w.st || {}).LFML, sent, now)); } catch (e) {}
+  let nl = null, wxo = null;
+  try { nl = await notamsCached(env); if (nl) ev.push(...notamEvents(nl, sent, now)); } catch (e) {}
+  try { wxo = ((await wxFetch(['LFML'])).st || {}).LFML; ev.push(...wxEvents(wxo, sent, now)); } catch (e) {}
   const first = !sent._init, fresh = ev.filter(e => !sent[e.k]);
   // NOTAM gardés 90 jours (sinon un NOTAM long redeviendrait « nouveau »), le reste 36 h
   for (const k of Object.keys(sent)) if (k[0] !== '_' && !/\|o(n|ff)$/.test(k) && now - sent[k] > (/^n[na]\|/.test(k) ? 90 * 86400e3 : 36 * 3600e3)) delete sent[k];
   fresh.forEach(e => { sent[e.k] = now; }); sent._init = 1;
-  await env.PUSH.put('sent', JSON.stringify(sent)); // aussi l'état des épisodes météo et les NOTAM déjà vus
-  if (first || !fresh.length) return; // 1re exécution : on mémorise l'existant sans rien envoyer
   let changed = false;
-  for (const [id, s] of Object.entries(subs)) {
-    const mine = fresh.filter(e => (s.prefs || PUSH_TYPES).includes(e.type)); if (!mine.length) continue;
+  const shiftCache = {};
+  const shiftsOf = async l => l in shiftCache ? shiftCache[l] : (shiftCache[l] = JSON.parse(await env.PUSH.get('shifts:' + l) || 'null'));
+  if (!first) for (const [id, s] of Object.entries(subs)) {
+    const prefs = s.prefs || PUSH_TYPES;
+    let mine = fresh.filter(e => prefs.includes(e.type)), brief = [];
+    // mode « en service » : rien hors service ; résumé à la prise de service (ce qui a pu tomber pendant le repos)
+    if (s.mode === 'shift' && s.link) {
+      const sh = await shiftsOf(s.link).catch(() => null);
+      if (sh && sh.win && sh.win.length) {           // pas encore d'horaires reçus : alertes à toute heure (l'appli le signale)
+        const w = sh.win.find(x => inWin(x, now));
+        if (!w) mine = [];
+        else if (now <= w[0] + 30 * 60e3 && !sent['ps|' + s.link + '|' + w[0]]) { sent['ps|' + s.link + '|' + w[0]] = now; brief = briefing(prefs, nl, wxo, now, w[1]); }
+      }
+    }
+    if (!mine.length && !brief.length) continue;
     const kinds = [...new Set(mine.map(e => e.type === 'notam' ? 'notam' : e.type === 'meteo' ? 'wx' : 'vols'))];
     const name = kinds.length > 1 ? 'Boîte à outils COA' : { notam: 'NOTAM LFML', wx: 'Météo LFML', vols: 'Vols MRS' }[kinds[0]];
-    const msg = mine.length === 1 ? { title: name, body: mine[0].txt } : { title: `${name} · ${mine.length} alertes`, body: mine.slice(0, 5).map(e => e.txt).join('\n') + (mine.length > 5 ? '\n…' : '') };
-    msg.tag = 'coa-' + kinds.join('-') + '-' + now; msg.url = './#' + (kinds.length > 1 ? 'home' : kinds[0]);
+    const lines = [...brief, ...mine.map(e => e.txt)];
+    const msg = brief.length ? { title: 'Début de service', body: lines.slice(0, 7).join('\n') + (lines.length > 7 ? '\n…' : '') }
+      : mine.length === 1 ? { title: name, body: mine[0].txt } : { title: `${name} · ${mine.length} alertes`, body: lines.slice(0, 5).join('\n') + (lines.length > 5 ? '\n…' : '') };
+    msg.tag = 'coa-' + (brief.length ? 'service' : kinds.join('-')) + '-' + now; msg.url = './#' + (brief.length || kinds.length > 1 ? 'home' : kinds[0]);
     try { const st = await pushSend(env, s.sub, msg); if (st === 404 || st === 410) { delete subs[id]; changed = true; } } catch (e) {}
   }
+  await env.PUSH.put('sent', JSON.stringify(sent)); // alertes vues, épisodes météo, NOTAM déjà vus, résumés de prise de service envoyés
   if (changed) await env.PUSH.put('subs', JSON.stringify(subs));
 }
 

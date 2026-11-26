@@ -2322,7 +2322,20 @@ const SHARE_URL="https://planning-equipe-coa.github.io/Outil-COA/";
 const PUSH_TYPES=[["annul","Vols annulés"],["derout","Arrivées déroutées"],["retard","Retards de 60 min ou plus"],["src","Source des vols en panne"],["notam","NOTAM importants : pistes, voies, postes, ILS (nouveau ou en vigueur)"],["meteo","Météo LFML : LVP, orage, vent fort (observés ou prévus d'ici 3 h)"]];
 function pushPrefs(){try{const p=JSON.parse(localStorage.getItem("coa-push-prefs"));if(Array.isArray(p))return p}catch(e){}return PUSH_TYPES.map(x=>x[0])}
 const u8=s=>{s=s.replace(/-/g,"+").replace(/_/g,"/");s+="=".repeat((4-s.length%4)%4);return Uint8Array.from(atob(s),c=>c.charCodeAt(0))};
-async function pushPost(action,sub,prefs){const r=await fetch(NOTAM_URL+"?push="+action,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sub,prefs})});
+/* « seulement en service » : code de liaison (16 caractères, sans 0/O/1/I), mode, source des horaires */
+const LINK_ABC="ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+function pushLink(){let l=store("coa-push-link");if(!/^[A-HJ-NP-Z2-9]{16}$/.test(l||"")){const r=crypto.getRandomValues(new Uint8Array(16));l=[...r].map(x=>LINK_ABC[x%32]).join("");store("coa-push-link",l)}return l}
+const linkFmt=l=>l.replace(/(.{4})(?=.)/g,"$1-");
+const pushMode=()=>store("coa-push-mode")==="shift"?"shift":"all",pushSrc=()=>store("coa-push-src")==="manuel"?"manuel":"planning";
+const SHIFT_DEF={M:["Matin","06:00","14:00"],S:["Soir","14:00","22:00"],N:["Nuit","22:00","06:00"],J:["Journée","07:30","16:30"]},SHIFT_CYCLE=["","M","S","N","J"];
+function shiftDays(){try{return JSON.parse(store("coa-shift-days")||"{}")||{}}catch(e){return {}}}
+/* jours cochés → créneaux [début, fin] en ms (heure du téléphone), de la veille à +62 jours */
+function shiftWins(){const d=shiftDays(),out=[],t0=Date.now()-2*864e5,t1=Date.now()+62*864e5;
+  for(const [k,c] of Object.entries(d)){const def=SHIFT_DEF[c];if(!def)continue;const [y,m,dd]=k.split("-").map(Number);const [h1,m1]=def[1].split(":").map(Number),[h2,m2]=def[2].split(":").map(Number);
+    const a=new Date(y,m-1,dd,h1,m1).getTime();let b=new Date(y,m-1,dd,h2,m2).getTime();if(b<=a)b+=864e5;if(b>t0&&a<t1)out.push([a,b])}
+  return out.sort((x,y)=>x[0]-y[0])}
+let shiftT=0;function shiftSend(){clearTimeout(shiftT);shiftT=setTimeout(async()=>{try{await fetch(NOTAM_URL+"?push=shifts",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({link:pushLink(),src:"manuel",win:shiftWins()})})}catch(e){}},700)}
+async function pushPost(action,sub,prefs){const r=await fetch(NOTAM_URL+"?push="+action,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({sub,prefs,mode:pushMode(),link:pushLink()})});
   const j=await r.json().catch(()=>({}));if(!r.ok||j.error)throw new Error(j.error||r.status);return j}
 async function pushRender(msg){const B=$("#pushBox");if(!B)return;const say=h=>{B.innerHTML=h+(msg?`<p class="sub" style="color:var(--acc);font-weight:600">${esc(msg)}</p>`:"")};
   const ios=/iP(hone|ad|od)/.test(navigator.userAgent)||(navigator.platform==="MacIntel"&&navigator.maxTouchPoints>1),inst=matchMedia("(display-mode: standalone)").matches||navigator.standalone;
@@ -2332,7 +2345,33 @@ async function pushRender(msg){const B=$("#pushBox");if(!B)return;const say=h=>{
   const reg=await navigator.serviceWorker.ready,sub=await reg.pushManager.getSubscription();
   if(!sub){say(`<p class="sub">Une alerte sur ce téléphone, même appli fermée : vols annulés, déroutés ou en retard de 60 min ou plus, NOTAM importants (pistes, voies, postes, ILS), météo LFML (LVP, orage, vent fort). Vérifié toutes les 5 min.</p><button class="btn p" id="pushOn" style="width:100%">Activer les notifications</button>`);return bindPush(key)}
   const pr=pushPrefs();
-  say(`<p class="sub">Activées sur ce téléphone (vérifié toutes les 5 min). Recevoir :</p>${PUSH_TYPES.map(([k,l])=>`<label style="display:flex;gap:8px;align-items:center;margin:4px 0"><input type="checkbox" data-pt="${k}"${pr.includes(k)?" checked":""}> ${l}</label>`).join("")}<p style="display:flex;gap:8px"><button class="btn" id="pushTest">Envoyer un test</button><button class="btn" id="pushOff">Désactiver</button></p>`);bindPush(key,sub)}
+  say(`<p class="sub">Activées sur ce téléphone (vérifié toutes les 5 min). Recevoir :</p>${PUSH_TYPES.map(([k,l])=>`<label style="display:flex;gap:8px;align-items:center;margin:4px 0"><input type="checkbox" data-pt="${k}"${pr.includes(k)?" checked":""}> ${l}</label>`).join("")}<div id="pushWhen"></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px"><button class="btn" id="pushTest">Envoyer un test</button><button class="btn" id="pushOff">Désactiver</button></div>`);bindPush(key,sub);pushWhen(sub)}
+/* Quand recevoir : toujours, ou seulement pendant le service (horaires du Planning COA, ou jours cochés ici) */
+async function pushWhen(sub,msg){const B=$("#pushWhen");if(!B)return;const mode=pushMode(),src=pushSrc();
+  let h=`<h3 style="margin:14px 0 4px;font-size:15px">Quand recevoir les alertes</h3><div class="seg" id="pwMode" style="display:grid;width:100%"><button data-v="all" class="${mode==="all"?"on":""}">Toujours</button><button data-v="shift" class="${mode==="shift"?"on":""}">Seulement en service</button></div>`;
+  if(mode==="shift"){h+=`<p class="sub" style="margin:6px 0">Rien pendant tes repos. Au début de chaque service, un résumé des fermetures (NOTAM) et de la météo à surveiller.</p>
+    <div class="seg" id="pwSrc" style="display:grid;width:100%;margin-top:6px"><button data-v="planning" class="${src==="planning"?"on":""}">Planning COA</button><button data-v="manuel" class="${src==="manuel"?"on":""}">Je coche mes jours</button></div>`;
+    if(src==="planning")h+=`<p class="sub" style="margin:8px 0 4px">Tes horaires arrivent tout seuls depuis l'appli Planning COA. À faire une fois : copie ce code, puis dans Planning COA → Réglages → « Alertes de la Boîte à outils », colle-le.</p>
+      <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center"><code style="font-size:17px;font-weight:700;letter-spacing:1px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;text-align:center">${linkFmt(pushLink())}</code><button class="btn p" id="pwCopy">Copier</button></div>`;
+    else{const d=shiftDays(),now=new Date();h+=`<p class="sub" style="margin:8px 0 4px">Touche un jour pour choisir ton service (touche encore pour changer, jusqu'à vide).</p>`;
+      for(let k=0;k<2;k++){const m0=new Date(now.getFullYear(),now.getMonth()+k,1),Y=m0.getFullYear(),M=m0.getMonth(),n=new Date(Y,M+1,0).getDate(),off=(m0.getDay()+6)%7;
+        h+=`<div style="margin-top:8px;font-weight:600">${m0.toLocaleDateString("fr-FR",{month:"long",year:"numeric"})}</div><div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-top:4px">${["L","M","M","J","V","S","D"].map(x=>`<div class="sub" style="text-align:center;font-size:11px">${x}</div>`).join("")}${"<div></div>".repeat(off)}`;
+        for(let i=1;i<=n;i++){const key=`${Y}-${String(M+1).padStart(2,"0")}-${String(i).padStart(2,"0")}`,c=d[key]||"",past=new Date(Y,M,i+1)<now;
+          h+=`<button class="btn${c?" p":""}" data-sday="${key}" style="padding:4px 0;min-height:40px;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1${past?";opacity:.45":""}"><span style="font-size:12px">${i}</span><b style="font-size:12px;min-height:14px">${c}</b></button>`}
+        h+="</div>"}
+      h+=`<p class="sub" style="margin-top:6px">${Object.entries(SHIFT_DEF).map(([c,[l,a,b]])=>`<b>${c}</b> ${l} ${a}–${b}`).join(" · ")} (heures de Marseille).</p>`}
+    h+=`<p class="sub" id="pwStat" style="margin-top:6px">…</p>`}
+  if(msg)h+=`<p class="sub" style="color:var(--acc);font-weight:600">${esc(msg)}</p>`;
+  B.innerHTML=h;
+  B.querySelectorAll("#pwMode button").forEach(b=>b.onclick=async()=>{store("coa-push-mode",b.dataset.v);try{await pushPost("sub",sub.toJSON(),pushPrefs());if(b.dataset.v==="shift"&&pushSrc()==="manuel")shiftSend();pushWhen(sub)}catch(e){pushWhen(sub,"Échec : "+(e.message||e))}});
+  B.querySelectorAll("#pwSrc button").forEach(b=>b.onclick=()=>{store("coa-push-src",b.dataset.v);if(b.dataset.v==="manuel")shiftSend();pushWhen(sub)});
+  const cp=$("#pwCopy");if(cp)cp.onclick=async()=>{try{await navigator.clipboard.writeText(linkFmt(pushLink()));cp.textContent="Copié"}catch(e){pushWhen(sub,"Copie refusée : recopie le code à la main.")}};
+  B.querySelectorAll("[data-sday]").forEach(b=>b.onclick=()=>{const d=shiftDays(),k=b.dataset.sday,c=SHIFT_CYCLE[(SHIFT_CYCLE.indexOf(d[k]||"")+1)%SHIFT_CYCLE.length];if(c)d[k]=c;else delete d[k];
+    store("coa-shift-days",JSON.stringify(d));b.classList.toggle("p",!!c);b.querySelector("b").textContent=c;shiftSend()});
+  const st=$("#pwStat");if(st){try{const j=await pushPost("status",sub.toJSON(),pushPrefs()),sh=j.shifts,fmt=ms=>new Date(ms).toLocaleString("fr-FR",{weekday:"short",day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"});
+    st.innerHTML=!sh||!sh.n?`<b style="color:#b26a00">Aucun horaire de service reçu pour l'instant : en attendant, les alertes arrivent à toute heure.</b>`
+      :`Horaires ${sh.src==="planning"?"reçus du Planning COA":"cochés ici"} le ${esc(fmt(sh.at))} · ${sh.n} service${sh.n>1?"s":""} à venir${sh.now?" · <b>en service maintenant</b>":sh.next?" · prochain : "+esc(fmt(sh.next[0]))+" → "+esc(new Date(sh.next[1]).toLocaleTimeString("fr-FR",{hour:"2-digit",minute:"2-digit"})):""}.`}
+    catch(e){st.textContent="État des horaires indisponible (relais à mettre à jour ?)."}}}
 /* téléphones inscrits avant les alertes NOTAM / météo (26/11/2026) : on les ajoute une fois, sans rien demander.
    Marqué fait seulement si le relais les connaît (sinon nouvel essai à la prochaine ouverture). */
 (async()=>{try{if(!NOTAM_URL||!("serviceWorker" in navigator)||!("PushManager" in window)||store("coa-push-v")==="2")return;
