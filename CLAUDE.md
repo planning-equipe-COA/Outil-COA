@@ -414,3 +414,8 @@ L'utilisateur échange en français.
     (aller-retour). Appli : Réglages → Notifications (iPhone : appli ajoutée à l'écran d'accueil obligatoire). sw.js : push +
     notificationclick (ouvre #vols).
   - CTOT : pas de source publique (NM B2B Eurocontrol réservé aux organismes sous contrat).
+- **NOTAM actifs (26/11/2026)** : autorouter a accordé l'accès API au compte de Raph. Un seul appel de test `?icao=LFML` :
+  35 NOTAM (champs id, series, q, start, end, text, full, location), affichage vérifié avec ces données. Ajouts : tri par
+  thème « en vigueur d'abord, puis à venir, par date de début » ; recherche en français (`NT_FR` : grue → CRANE,
+  fermé → CLSD, piste → RWY, voie → TWY, poste → STAND, balisage → LGT/PAPI, obstacle, travaux, oiseaux, drone).
+

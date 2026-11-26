@@ -1751,7 +1751,11 @@ function notamView(q){
   if(!NT.list)return NT.err?`<div class="info">${esc(NT.err)}</div>`:`<div class="card">${SKEL(5)}</div>`;
   const now=Date.now();
   let list=NT.list.filter(n=>!n.end||/PERM/i.test(n.end)||new Date(n.end).getTime()>now);
-  if(q)list=list.filter(n=>norm(n.id+" "+n.text+" "+n.full).includes(q));
+  /* recherche en français dans des NOTAM en anglais : « grue » trouve CRANE, « fermé » CLSD… */
+  const NT_FR=[[/^grue/,"crane"],[/^ferm/,"clsd|closed"],[/^piste/,"rwy|runway"],[/^voie|^taxi/,"twy|taxiway"],[/^poste|^parking/,"stand|apron|acft stand"],[/^balis|^feu|^lumi/,"lgt|light|papi"],[/^obsta/,"obst"],[/^trav/,"work|wip"],[/^oiseau/,"bird"],[/^drone/,"uas|drone"]];
+  if(q){const alt=(NT_FR.find(([re])=>re.test(q))||[])[1];const re=alt?new RegExp(alt):null;list=list.filter(n=>{const t=norm(n.id+" "+n.text+" "+n.full);return t.includes(q)||(re&&re.test(t))})}
+  /* en vigueur d'abord, puis à venir, chacun par date de début */
+  const t0=n=>n.start?new Date(n.start).getTime():0;list.sort((a,b)=>((t0(a)>now)-(t0(b)>now))||(t0(a)-t0(b)));
   const groups=NQG.map(([name,re])=>[name,[]]);
   list.forEach(n=>{const subj=(n.q||"").replace(/^Q/,"").slice(0,2);const i=NQG.findIndex(([,re])=>re.test(subj));groups[i<0?groups.length-1:i][1].push(n)});
   const age=Math.round((now-NT.at)/60e3);
