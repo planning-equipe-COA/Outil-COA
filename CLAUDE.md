@@ -115,6 +115,13 @@ L'utilisateur échange en français.
   Départs avec la pastille « AG » (`agRows`, case « aviation générale », `coa-vl-ag`). **Il faut recoller tools/notam-worker.js
   dans Cloudflare (worker coa-notam)** pour l'activer ; sans ça la case n'apparaît pas. Cache adb3 (ADB_REFRESH_MIN : la tranche en
   cours n'est relue que toutes les 6 h sur l'offre gratuite).
+  **Relais redéployé par Raph le 27 nov. au soir.** Tri des mouvements AeroDataBox absents du tableau (`agRows`) : écartés s'ils sont
+  en fait un vol du tableau (même immat ±2 h ; mêmes chiffres de numéro + même escale ±90 min, ex. HOP « A5 6168 » = « AF 6168 » ;
+  indicatif radio « FR 266E », « TO 81JP » = vol de la même compagnie ±60 min) ; **Cargo** (`AG_CARGO`, `AG_CARGO_N` : Swiftair,
+  ASL, Star Air, EAT Leipzig…) ; **Hors tableau** (jaune) pour un vol commercial passagers inexpliqué ; sinon AG. **Plus de « dérouté ? »
+  rouge automatique** (`div` toujours faux) : AeroDataBox liste les vols prévus vers MRS, pas les déroutements, et l'heuristique
+  donnait de fausses urgences (HOP, Ryanair, cargos). Case renommée « hors tableau (AG, cargo…) ». Fiche du vol : plus de compagnie /
+  escale devinée quand le code est vide (`apOf`, `al`).
   **« Vérifier en direct »** (27 nov., KL 1469 affiché « A l'heure » par le site alors que pas parti d'AMS) : bouton dans la fiche
   d'un vol → relais `?vol=KL1469&date=AAAA-MM-JJ` (`volStatus`, AeroDataBox /flights/number, 1 appel, cache 5 min) → décollage
   réel / estimé à la provenance, arrivée estimée, « pas encore décollé » en rouge (`vchkHtml`, `VCHK`). Nécessite aussi le

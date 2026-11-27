@@ -135,6 +135,8 @@ mark{background:#ffe58a;color:#000;border-radius:2px}
 .ntt{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;margin-top:3px;white-space:pre-wrap}
 .asmsi{margin-top:6px;padding-top:6px;border-top:1px dashed var(--line);font-size:13.5px}
 .asmbref{background:color-mix(in srgb,#2e7d32 12%,var(--card));border-left:4px solid #2e7d32;border-radius:10px;padding:9px 11px;margin:6px 0 10px;font-size:14.5px;line-height:1.45}
+.vc-cargo{background:#455a64;border-color:transparent;color:#fff;font-weight:800}
+.vc-hors{background:#e5a000;border-color:transparent;color:#1c1b29;font-weight:800}
 .vc-div{background:#c62828;border-color:transparent;color:#fff;font-weight:800}
 .vc-ag{background:#5d4037;border-color:transparent;color:#fff;font-weight:800;letter-spacing:.04em}
 .vc-where{background:var(--acc2);border-color:transparent;color:var(--acc);font-weight:700}
@@ -1673,10 +1675,20 @@ function volDelay(v){if(volDone(v)||v.cls==="annulee")return null;const m=String
   const s0=parseHM(v.t.slice(11,16)),s1=+m[1]*60+ +m[2];let d=s1-s0;if(d<-720)d+=1440;if(d>720)d-=1440;return d>=5?d:null}
 /* aviation générale et vols hors tableau (AeroDataBox via le relais, body.ga ; demandé le 27 nov. 2026) */
 const AG_ST={Expected:"Prévu",EnRoute:"En vol",Approaching:"En approche",Arrived:"Arrivé",Departed:"Décollé",Delayed:"Retardé",Canceled:"Annulé",CanceledUncertain:"Annulé ?",Diverted:"Dérouté",Boarding:"Embarquement",GateClosed:"Porte fermée",CheckIn:"Enregistrement"};
+/* compagnies cargo (vols réguliers absents du tableau passagers) */
+const AG_CARGO=/^(WT|5O|DJ|QY|3S|FX|5X|3V|CV|D0|X5|QT|M3|PO|ES|2Y|E6|KZ|RU|BCS|SWT|FPO|SRR)$/,AG_CARGO_N=/cargo|express|dhl|fedex|ups|tnt|aerologic|swiftair|asl airlines|star air|eat leipzig|post/i;
+/* les mouvements AeroDataBox absents du tableau, sauf ceux qui sont en fait un vol du tableau sous un autre nom (27 nov. 2026 :
+   HOP « A5 6168 » = « AF 6168 » du tableau, Ryanair « FR 266E » = indicatif radio d'un vol du tableau, même immatriculation) */
 function agRows(day,arr){const D=VL.data;if(!D||!Array.isArray(D.ga)||VL.ag===false)return [];
-  return D.ga.filter(f=>f.d===(arr?"A":"D")&&f.t.slice(0,10)===day).map(f=>({n:/^[A-Z0-9]{2} \d/.test(f.n)?f.n:(f.cs||f.n),al:"",cie:f.op||"Aviation générale",t:f.t,ville:f.ville,code:f.iata||f.icao,
+  const board=(arr?D.arr:D.dep).filter(v=>Math.abs(volMs(v.t)-Date.parse(day+"T12:00"))<36*3600e3),dig=n=>(String(n).match(/\d+[A-Z]?$/)||[""])[0],pre=n=>String(n).split(" ")[0];
+  const near=(a,b,min)=>Math.abs(volMs(a)-volMs(b))<=min*60e3;
+  const dup=f=>board.some(v=>(f.reg&&v.reg&&v.reg===f.reg&&near(v.t,f.t,120))
+    ||(dig(v.n)&&dig(v.n)===dig(f.n)&&(v.code===f.iata||!f.iata)&&near(v.t,f.t,90))
+    ||(/\d[A-Z]{1,2}$/.test(f.n)&&(pre(v.n)===pre(f.n)||(pre(f.n)==="A5"&&pre(v.n)==="AF"))&&(v.code===f.iata||!f.iata)&&near(v.t,f.t,60)));
+  return D.ga.filter(f=>f.d===(arr?"A":"D")&&f.t.slice(0,10)===day&&!dup(f)).map(f=>{const p=pre(f.n),comm=/^[A-Z0-9]{2} \d/.test(f.n),cargo=f.cargo||AG_CARGO.test(p)||AG_CARGO_N.test(f.op||"");
+    return {n:comm?f.n:(f.cs||f.n),al:comm?p:"",cie:f.op||"Aviation générale",t:f.t,ville:/^unknown$/i.test(f.ville||"")?"":f.ville,code:f.iata||f.icao,
     st:AG_ST[f.st]||"",cls:/^(Arrived|Departed)$/.test(f.st)?"vol-take-off":/^Canceled/.test(f.st)?"annulee":"",reg:f.reg,type:f.model,ag:1,porte:"",tapis:"",term:"",
-    div:f.d==="A"&&!!f.op&&!f.cargo&&/^[A-Z0-9]{2} \d{1,4}[A-Z]?$/.test(f.n)}))}
+    cargo,hors:comm&&!cargo,div:false}})}
 const agCount=day=>agRows(day,true).length+agRows(day,false).length;
 function volsOf(day){const D=VL.data;if(!D)return {dep:[],arr:[]};const by=(a,b)=>a.t<b.t?-1:a.t>b.t?1:0;
   return {dep:[...D.dep.filter(v=>v.t.slice(0,10)===day),...agRows(day,false)].sort(by),arr:[...D.arr.filter(v=>v.t.slice(0,10)===day),...agRows(day,true)].sort(by)}}
@@ -1710,7 +1722,7 @@ async function vchkRun(v){const k=vchkKey(v),[nb,date]=k.split("|");VCHK[k]={loa
 document.addEventListener("click",e=>{const b=e.target.closest("[data-vchk]");if(!b||!VL.data)return;e.preventDefault();e.stopPropagation();
   const v=[...VL.data.arr,...VL.data.dep].find(x=>volKey(x)===b.dataset.vchk);if(v)vchkRun(v)},true);
 function volDetail(v,arr){
-  const al=MRS_AL.find(r=>r[1]===v.al)||(loaded===true&&AL.find(r=>r[0]===v.al));
+  const al=v.al?(MRS_AL.find(r=>r[1]===v.al)||(loaded===true&&AL.find(r=>r[0]===v.al))):null;
   const alTxt=al?(al.length===4?`${al[0]} · ${al[1]}${al[2]?" · "+al[2]:""}${al[3]?" · indicatif "+al[3]:""}`:`${al[2]} · ${al[0]}${al[1]?" · "+al[1]:""}${al[3]?" · indicatif "+al[3]:""}`):v.cie;
   const ap=loaded===true&&AP.find(r=>r[0]===v.code);const f=ap&&flightInfo(ap[7],ap[8]);
   const hd=MRS_HANDLER[v.al],st=v.porte?standsForGate(v.porte):[],dl=volDelay(v);
@@ -1743,7 +1755,7 @@ function volRow(v,arr,q,ico){const h=v.t.slice(11,16),z=volZ(v.t),hd=MRS_HANDLER
       <div class="vc-main"><div class="vc-l1"><b class="vc-n">${hl(v.n,q)}</b>${v.st?`<span class="vc-st">${esc(stZ(v))}${dl&&dl>=15?` (+${dl} min)`:""}</span>`:""}</div>
         <div class="vc-city">${hl(v.ville,q)} <span class="u-ext">${esc(v.code)}</span></div></div>
       <span class="vc-chev">${open?"▴":"▾"}</span></div>
-    <div class="vc-meta">${v.div?`<span class="vc-chip vc-div" title="Vol commercial absent du tableau de l'aéroport : très probablement dérouté vers Marseille">Hors programme · dérouté ?</span>`:""}${v.ag&&!v.div?`<span class="vc-chip vc-ag" title="Aviation générale ou vol hors tableau de l'aéroport (AeroDataBox)">AG</span>`:""}${where?`<span class="vc-chip vc-where">${hl(where,q)}</span>`:""}${volDone(v)||v.cls==="annulee"?"":`<span class="vc-chip vcd" data-cd="${volMs(v.t)+(dl||0)*60e3}">${cdText(volMs(v.t)+(dl||0)*60e3)}</span>`}${volLink(v,arr)}<span class="vc-cie">${hl(v.cie,q)}${hd?" · "+hl(hd,q):""}</span>${v.reg?`<span class="vc-chip">${hl(fmtReg(v.reg),q)}${v.type?" · "+esc(v.type):""}</span>`:""}</div>
+    <div class="vc-meta">${v.cargo?`<span class="vc-chip vc-cargo" title="Vol cargo (absent du tableau passagers)">Cargo</span>`:v.hors?`<span class="vc-chip vc-hors" title="Vol commercial absent du tableau de l'aéroport (AeroDataBox) : positionnement, vol de remplacement… ou éventuel déroutement, à vérifier">Hors tableau</span>`:""}${v.ag&&!v.cargo&&!v.hors?`<span class="vc-chip vc-ag" title="Aviation générale ou vol hors tableau de l'aéroport (AeroDataBox)">AG</span>`:""}${where?`<span class="vc-chip vc-where">${hl(where,q)}</span>`:""}${volDone(v)||v.cls==="annulee"?"":`<span class="vc-chip vcd" data-cd="${volMs(v.t)+(dl||0)*60e3}">${cdText(volMs(v.t)+(dl||0)*60e3)}</span>`}${volLink(v,arr)}<span class="vc-cie">${hl(v.cie,q)}${hd?" · "+hl(hd,q):""}</span>${v.reg?`<span class="vc-chip">${hl(fmtReg(v.reg),q)}${v.type?" · "+esc(v.type):""}</span>`:""}</div>
     ${arr?"":riskHtml(v)}${open?volDetail(v,arr):""}</div>`}
 /* vue rotations : arrivée + départ du même avion, rapprochés par compagnie, escale et numéros de vol voisins
    (AF 7342 → AF 7343), départ 20 min à 14 h après l'arrivée. Rapprochement probable, pas une donnée de l'aéroport. */
@@ -1795,7 +1807,7 @@ function volsHealth(){const D=VL.data;if(!D)return "";const m=[];const at=Date.p
   return m.length?`<div class="wxa danger" style="margin:8px 0">⚠ <b>Vols : source en panne</b> · ${esc(m.join(" "))} Horaires et statuts peuvent être faux.</div>`:""}
 /* météo des escales (provenances des arrivées, destinations des départs, 6 prochaines heures) : relais ?wx= (aviationweather.gov) */
 const WXP={key:"",data:null,at:0,loading:false,err:"",failAt:0};
-const apOf=code=>loaded===true?AP.find(r=>r[0]===code):null;
+const apOf=code=>loaded===true&&code?AP.find(r=>r[0]===code||(code.length===4&&r[1]===code)):null;
 function wxpIds(){const D=VL.data;if(!D||loaded!==true)return [];const now=Date.now(),s=new Set();
   [...D.arr,...D.dep].forEach(v=>{if(v.t.slice(0,10)!==D.today||volDone(v)||v.cls==="annulee")return;const m=volMs(v.t);if(m<now-3600e3||m>now+6*3600e3)return;
     const ap=apOf(v.code);if(ap&&/^[A-Z]{4}$/.test(ap[1]||""))s.add(ap[1])});return [...s].sort().slice(0,40)}
@@ -1879,7 +1891,7 @@ function volsView(q){
   const trk=VL.reg||qr?regTrack(VL.reg||qr):"";
   return `${volsHealth()}${trk}<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><div class="seg" id="vlDir"><button data-v="arr" class="${arr?"on":""}">Arrivées</button><button data-v="rot" class="${rot?"on":""}">Arr. + Dép.</button><button data-v="dep" class="${!arr&&!rot?"on":""}">Départs</button></div>
     <div class="seg" id="vlDay">${dl.map((l,i)=>`<button data-v="${i}" class="${VL.day===i?"on":""}">${l}</button>`).join("")}</div>
-    <label class="sub" style="display:flex;gap:4px;align-items:center"><input type="checkbox" id="vlDone"${VL.done?" checked":""}> ${rot?"rotations terminées":arr?"vols arrivés":"vols décollés"}${rot?"":` (${fini})`}</label>${!rot&&Array.isArray(D.ga)?`<label class="sub" style="display:flex;gap:4px;align-items:center"><input type="checkbox" id="vlAg"${VL.ag!==false?" checked":""}> aviation générale${VL.ag!==false?` (${agRows(day,arr).length})`:""}</label>`:""}</div>
+    <label class="sub" style="display:flex;gap:4px;align-items:center"><input type="checkbox" id="vlDone"${VL.done?" checked":""}> ${rot?"rotations terminées":arr?"vols arrivés":"vols décollés"}${rot?"":` (${fini})`}</label>${!rot&&Array.isArray(D.ga)?`<label class="sub" style="display:flex;gap:4px;align-items:center"><input type="checkbox" id="vlAg"${VL.ag!==false?" checked":""}> hors tableau (AG, cargo…)${VL.ag!==false?` (${agRows(day,arr).length})`:""}</label>`:""}</div>
   ${rot?`<div class="info">${nRot} rotations le ${day.split("-").reverse().join("/")} : arrivée ↓ et départ ↑ du même avion, reliés par l'immatriculation quand elle est connue${D.adb?` (${D.adb.hit??D.adb.n} vols avec immatriculation${D.adb.err?" · "+esc(D.adb.err):""})`:" (pas encore branchée)"}, sinon par compagnie, escale et numéros de vol (« probable »). Les vols sans rotation trouvée sont seuls. Site de l'aéroport mis à jour à ${/^\d{1,2}:\d{2}$/.test(D.maj||"")?esc(volZ(D.today+"T"+D.maj.padStart(5,"0")))+"Z":esc(D.maj||"?")}, relu <span data-ago="${VL.at}">il y a ${age} min</span> <button class="btn refresh" id="vlRefresh" style="font-size:12px;padding:3px 8px">Actualiser</button></div>
   ${q?"":wxpBlock("rot")}<div class="rlist">${rots.map(r=>rotRow(r,q)).join("")||'<div class="info">Aucun vol.</div>'}</div>`:`<div class="info">${all} ${arr?"arrivées":"départs"} le ${day.split("-").reverse().join("/")}${canc?` · <b style="color:#c62828">${canc} annulé${canc>1?"s":""}</b>`:""} · heures en Z (heure locale à côté) · touche un vol pour sa fiche · site de l'aéroport mis à jour à ${/^\d{1,2}:\d{2}$/.test(D.maj||"")?esc(volZ(D.today+"T"+D.maj.padStart(5,"0")))+"Z":esc(D.maj||"?")}, relu <span data-ago="${VL.at}">il y a ${age} min</span>${VL.err?" · "+esc(VL.err):""} <button class="btn refresh" id="vlRefresh" style="font-size:12px;padding:3px 8px">Actualiser</button></div>
   ${q?"":wxpBlock(arr?"arr":"dep")}<div class="vlist">${list.map(v=>volRow(v,arr,q)).join("")||'<div class="info">Aucun vol.</div>'}</div>`}
