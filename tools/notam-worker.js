@@ -294,6 +294,41 @@ async function volStatus(origin, env, nb, date) {
   return json(b, 200, origin, { 'X-Cache': 'MISS' });
 }
 
+/* ---------- Trafic en direct autour de LFML : OpenSky Network (ADS-B), pour repérer un avion en approche non prévu ----------
+   Appel : ?traffic=1 → avions dans un carré d'environ 40 NM autour de Marseille-Provence (indicatif, altitude, vitesse verticale,
+   distance). Réponse partagée 90 s (plusieurs téléphones = un seul appel OpenSky). Identifiants OAuth2 facultatifs (secrets
+   OPENSKY_CLIENT_ID / OPENSKY_CLIENT_SECRET : 4 000 crédits par jour au lieu de 400 sans compte). Ajouté le 27 nov. 2026. */
+const LFML_POS = [43.4393, 5.2214];
+let osTok = null;
+async function osToken(env) {
+  if (!env.OPENSKY_CLIENT_ID || !env.OPENSKY_CLIENT_SECRET) return null;
+  if (osTok && osTok.exp > Date.now() + 60e3) return osTok.t;
+  const r = await fetch('https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token', {
+    method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ grant_type: 'client_credentials', client_id: env.OPENSKY_CLIENT_ID, client_secret: env.OPENSKY_CLIENT_SECRET }) });
+  if (!r.ok) return null;
+  const j = await r.json(); osTok = { t: j.access_token, exp: Date.now() + (j.expires_in || 1800) * 1000 }; return osTok.t;
+}
+async function traffic(origin, env) {
+  if (!ORIGINS.includes(origin)) return json({ error: 'refusé' }, 403, origin);
+  const cache = caches.default, key = new Request('https://notam-cache.local/traffic');
+  const hit = await cache.match(key);
+  if (hit) return json(await hit.json(), 200, origin, { 'X-Cache': 'HIT' });
+  const [la, lo] = LFML_POS, tok = await osToken(env).catch(() => null);
+  const url = `https://opensky-network.org/api/states/all?lamin=${(la - .7).toFixed(2)}&lomin=${(lo - .95).toFixed(2)}&lamax=${(la + .7).toFixed(2)}&lomax=${(lo + .95).toFixed(2)}`;
+  const r = await fetch(url, tok ? { headers: { Authorization: 'Bearer ' + tok } } : {});
+  if (!r.ok) return json({ error: 'OpenSky ' + r.status, auth: !!tok }, 502, origin);
+  const j = await r.json(), rad = Math.PI / 180;
+  const nm = (a, b) => { const dl = (a[0] - b[0]) * rad, dn = (a[1] - b[1]) * rad, x = Math.sin(dl / 2) ** 2 + Math.cos(a[0] * rad) * Math.cos(b[0] * rad) * Math.sin(dn / 2) ** 2; return 3440 * 2 * Math.asin(Math.sqrt(x)); };
+  // states : [icao24, callsign, pays, t_pos, t_contact, lon, lat, alt_baro (m), au sol, vitesse (m/s), route, vz (m/s), …, alt_geo, squawk]
+  const ac = (j.states || []).filter(x => x[5] != null && x[6] != null).map(x => ({ id: x[0], cs: (x[1] || '').trim(), pays: x[2] || '',
+    alt: x[7] != null ? Math.round(x[7] * 3.281) : null, sol: !!x[8], gs: x[9] != null ? Math.round(x[9] * 1.944) : null, trk: x[10] != null ? Math.round(x[10]) : null,
+    vz: x[11] != null ? Math.round(x[11] * 196.85) : null, sq: x[14] || '', d: Math.round(nm([x[6], x[5]], LFML_POS) * 10) / 10 }));
+  const body = { at: Date.now(), t: j.time || 0, auth: !!tok, ac, left: r.headers.get('x-rate-limit-remaining') || '' };
+  await cache.put(key, new Response(JSON.stringify(body), { headers: { 'Cache-Control': 'max-age=90' } }));
+  return json(body, 200, origin, { 'X-Cache': 'MISS' });
+}
+
 /* ---------- Météo des provenances / destinations : aviationweather.gov (NOAA), sans clé ---------- */
 // Appel : ?wx=LFPG,LFPO,EGSS (40 codes OACI au plus). Réponse gardée 10 min.
 // METAR + TAF de plusieurs terrains (cache 10 min), utilisé par la route ?wx= et par les alertes météo LFML
@@ -586,6 +621,7 @@ export default {
     const sp = new URL(request.url).searchParams;
     if (sp.has('vols')) return vols(origin, ctx, env);
     if (sp.has('vol')) return volStatus(origin, env, sp.get('vol'), sp.get('date'));
+    if (sp.has('traffic')) return traffic(origin, env);
     if (sp.has('wx')) return wxMulti(origin, ctx, sp.get('wx'));
     if (sp.has('push')) return pushApi(request, origin, env, sp.get('push'));
     const icao = (new URL(request.url).searchParams.get('icao') || 'LFML').toUpperCase();

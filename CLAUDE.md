@@ -122,6 +122,12 @@ L'utilisateur échange en français.
   rouge automatique** (`div` toujours faux) : AeroDataBox liste les vols prévus vers MRS, pas les déroutements, et l'heuristique
   donnait de fausses urgences (HOP, Ryanair, cargos). Case renommée « hors tableau (AG, cargo…) ». Fiche du vol : plus de compagnie /
   escale devinée quand le code est vide (`apOf`, `al`).
+  **Avion en approche non prévu (déroutement)** (27 nov., demandé) : relais `?traffic=1` (`traffic`, OpenSky Network states/all dans
+  un carré ~40 NM autour de LFML, cache 90 s, réservé à l'origine de l'appli, OAuth2 facultatif via secrets OPENSKY_CLIENT_ID /
+  OPENSKY_CLIENT_SECRET : 4 000 crédits/jour au lieu de 400). Appli : `trafficLoad` (accueil et Vols, toutes les 2 min),
+  `trafficAlerts` : indicatif de compagnie connue et active (pas militaire/État), < 35 NM, < 10 000 ft, pas en montée, compagnie sans
+  arrivée attendue de −90 à +150 min (tableau + `ga`) → alerte rouge (urgence Vols, accueil, haut de Vols) ; squawk 7700/7600/7500 dans
+  la zone → rouge. Ligne d'état sous la liste (`trafficLine`). Le compte OpenSky de Raph existe (appli GANTT) : à brancher.
   **« Vérifier en direct »** (27 nov., KL 1469 affiché « A l'heure » par le site alors que pas parti d'AMS) : bouton dans la fiche
   d'un vol → relais `?vol=KL1469&date=AAAA-MM-JJ` (`volStatus`, AeroDataBox /flights/number, 1 appel, cache 5 min) → décollage
   réel / estimé à la provenance, arrivée estimée, « pas encore décollé » en rouge (`vchkHtml`, `VCHK`). Nécessite aussi le

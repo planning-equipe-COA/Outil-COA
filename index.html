@@ -1074,6 +1074,33 @@ document.getElementById("perso").addEventListener("change",e=>{const t=e.target,
       await Promise.race([Promise.all(ps),new Promise(r=>setTimeout(r,10000))])}catch(e){}
     render();u.classList.remove("spin");show(TH,"À jour ✓");setTimeout(()=>{hide();busy=false},700)});
 })();
+
+/* ---------- Avion en approche non prévu (déroutement probable) : trafic ADS-B OpenSky via le relais (?traffic=1) ----------
+   Demandé le 27 nov. 2026. Avions de compagnie (indicatif OACI 3 lettres + numéro) à moins de 35 NM de LFML, sous 10 000 ft, pas en
+   montée, dont la compagnie n'a aucune arrivée attendue (tableau + AeroDataBox) entre −90 min et +150 min → alerte rouge.
+   Squawk 7700 / 7600 / 7500 dans la zone → alerte rouge aussi. */
+const TR={data:null,at:0,loading:false,err:""};
+function icaoToIata(c){const m=MRS_AL.find(x=>x[2]===c);if(m)return m[1];const r=loaded===true&&AL.find(x=>x[1]===c&&x[0]);return r?r[0]:""}
+function icaoName(c){const m=MRS_AL.find(x=>x[2]===c);if(m)return m[0];const r=loaded===true&&AL.find(x=>x[1]===c&&x[5]===true&&!/air force|a[ée]rienne fran|navy|army|arm[ée]e|military|militar|coast ?guard|police|gendarmerie|douane|s[ée]curit[ée] civile|government|gouvernement|ministry/i.test(x[2]+" "+x[3]));return r?r[2]:""}
+async function trafficLoad(force){if(TR.loading||!NOTAM_URL)return;if(!force&&Date.now()-TR.at<120e3)return;TR.loading=true;
+  try{const r=await fetch(`${NOTAM_URL}?traffic=1`,{cache:"no-store"}),j=await r.json();if(j.error||!Array.isArray(j.ac))throw new Error(j.error||"pas de données");
+    TR.data=j;TR.err=""}catch(e){TR.err=e.message}TR.at=Date.now();TR.loading=false;if(tab==="home"||tab==="vols")render();bnavRender()}
+function trafficLine(){if(!TR.at)return "";const D=TR.data;
+  if(TR.err&&(!D||Date.now()-D.at>6*60e3))return `<p class="sub" style="margin:10px 2px">Trafic ADS-B en direct (OpenSky) : indisponible (${esc(TR.err)}).</p>`;
+  if(!D)return "";const n=D.ac.filter(a=>!a.sol).length;
+  return `<p class="sub" style="margin:10px 2px">Trafic ADS-B en direct (OpenSky${D.auth?"":", sans compte"}) : ${n} avion${n>1?"s":""} en vol autour de LFML · relu à ${new Date(D.at).toISOString().slice(11,16)}Z. Sert à repérer un avion en approche non prévu.</p>`}
+const SQ_TXT={"7700":"urgence","7600":"panne radio","7500":"intervention illicite"};
+function trafficAlerts(){const D=TR.data;if(!D||Date.now()-D.at>6*60e3)return [];const now=Date.now(),out=[];
+  const arr=VL.data?[...VL.data.arr,...(Array.isArray(VL.data.ga)?VL.data.ga.filter(f=>f.d==="A").map(f=>({n:f.n,t:f.t,cs:f.cs})):[])]:[];
+  for(const a of D.ac){
+    if(SQ_TXT[a.sq]){out.push({k:"sq",a,txt:`Squawk ${a.sq} (${SQ_TXT[a.sq]}) : ${a.cs||a.id} à ${a.d} NM${a.alt!=null?", "+a.alt.toLocaleString("fr-FR")+" ft":""}`});continue}
+    const m=/^([A-Z]{3})(\d[A-Z0-9]{0,4})$/.exec(a.cs);if(!m||a.sol||a.alt==null||a.alt>10000||a.d>35)continue;
+    if(a.vz!=null&&a.vz>300)continue; // en montée : départ
+    const iata=icaoToIata(m[1]);if(!iata&&!icaoName(m[1]))continue; // pas une compagnie connue (militaire, école…)
+    const exp=arr.some(v=>{const dt=volMs(v.t)-now;if(dt<-90*60e3||dt>150*60e3)return false;
+      return (v.cs&&v.cs===a.cs)||(iata&&String(v.n).split(" ")[0]===iata)});
+    if(!exp)out.push({k:"div",a,txt:`Avion en approche non prévu (dérouté ?) : ${a.cs}${icaoName(m[1])?" · "+icaoName(m[1]):""} à ${a.d} NM, ${a.alt.toLocaleString("fr-FR")} ft${a.vz!=null&&a.vz<-200?", en descente":""}`})}
+  return out}
 /* ---------- État ---------- */
 let AP=[],AL=[],PL=[],loaded=false;
 const TABS=[["home","Accueil"],["eta","ETA depuis une ED"],["mua","MUA"],["ap","Aéroports"],["al","Compagnies"],["pl","Avions"],["codes","Codes avion"],["immat","Immatriculations"],["vols","Vols du jour"],["wx","Météo"],["notam","NOTAM"],["proc","Procédures"],["lfml","Aérodrome"],["ct","Contacts MRS"],["fl","Temps de vol"],["calc","Calculs"],["dl","Codes retard"],["asm","ASM / SSM"],["ab","Abréviations"],["nato","Alphabet"],["all","Tout"]];
@@ -1148,7 +1175,7 @@ const ntUrgent=n=>{const s=(n.q||"").slice(1,3),c=(n.q||"").slice(3,5),st=Date.p
   return st<=Date.now()&&((/^M[RSTDUA]$/.test(s)&&/^(LC|AU)$/.test(c))||(/^I[A-Z]$/.test(s)&&/^(AS|AU|LC)$/.test(c)))};
 /* vol commercial à l'arrivée absent du tableau de l'aéroport = hors programme, très probablement dérouté vers MRS (urgent : malade
    à bord, problème technique…). Vient d'AeroDataBox (body.ga), donc seulement une fois le relais mis à jour. */
-const divInbound=()=>VL.data&&Array.isArray(VL.data.ga)?agRows(VL.data.today,true).filter(v=>v.div&&!volDone(v)&&v.cls!=="annulee"&&Math.abs(volMs(v.t)-Date.now())<3*3600e3):[];
+const divInbound=()=>trafficAlerts().map(x=>({n:x.a.cs||x.a.id,txt:x.txt}));
 function alertUrgent(k){try{
   if(k==="wx")return !!WX.metar&&wxAlerts().some(a=>a.lvl==="danger"&&!/^TAF/.test(a.when||""));
   if(k==="notam")return ntImportant().some(ntUrgent);
@@ -1196,7 +1223,7 @@ function favsView(){
 }
 let EDIT=false,PREV_TAB="home";
 function homeView(){
-  volsLoad();notamLoad();
+  volsLoad();notamLoad();trafficLoad();
   const extra=Object.assign({mua:MUA.sheets?`${MUA.sheets.length} fiches de postes`:"Fiches de postes (code)",ct:MUA.annu?"Annuaire COA et mes numéros":"Assistants, services, portes"},liveTiles());
   const ico=k=>`<span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TI[k]||""}</svg></span>`;
   const hid=myHidden(),th=myThemes();
@@ -1905,7 +1932,7 @@ function volsSearch(q){if(!volsFresh())return null;const c=q.replace(/\s/g,"");i
 /* bandeau d'alertes de l'accueil : vols annulés et gros retards (aujourd'hui, à venir) */
 function homeAlerts(){if(!volsFresh())return "";const now=Date.now(),{dep,arr}=volsOf(VL.data.today);const items=[];
   {const nu=ntImportant().filter(ntUrgent);if(nu.length)items.push(`<div class="wxa danger" data-go="notam"><b>NOTAM en cours</b> : ${nu.slice(0,2).map(n=>`${esc(n.id)} ${esc(String(n.text||"").replace(/\s+/g," ").slice(0,70))}`).join(" · ")}${nu.length>2?" …":""}</div>`)}
-  {const dv=divInbound();if(dv.length)items.push(`<div class="wxa danger" data-go="vols"><b>Vol${dv.length>1?"s":""} hors programme à l'arrivée (dérouté${dv.length>1?"s":""} ?)</b> : ${dv.slice(0,3).map(v=>`${esc(v.n)} de ${esc(v.ville||v.code)} ${esc(volZ(v.t))}Z`).join(", ")}</div>`)}
+  {const dv=trafficAlerts();dv.forEach(x=>items.push(`<div class="wxa danger" data-go="vols"><b>${esc(x.txt)}</b> <span class="sub">(ADS-B OpenSky, à confirmer avec la tour)</span></div>`))}
   const hl0=volsHealth();if(hl0)items.push(hl0.replace('style="margin:8px 0"','data-go="vols"'));
   const canc=[...dep.map(v=>[v,0]),...arr.map(v=>[v,1])].filter(([v])=>v.cls==="annulee"&&volMs(v.t)>now-2*3600e3);
   if(canc.length)items.push(`<div class="wxa danger" data-go="vols"><b>${canc.length} vol${canc.length>1?"s":""} annulé${canc.length>1?"s":""}</b> : ${canc.slice(0,4).map(([v,a])=>`${esc(v.n)} ${a?"de":"vers"} ${esc(v.ville)} (${esc(volZ(v.t))}Z)`).join(", ")}${canc.length>4?"…":""}</div>`);
@@ -2452,7 +2479,7 @@ function render(){
     case "home":if(q){tab="all";return render()}h=homeView();break;
     case "wx":h=wxCard(true)+procLinks("Procédures liées",[["LVP","Procédure LVP (faible visibilité)"],["Dégivrage","Dégivrage hiver"]])+freqView();wxLoad();break;
     case "notam":h=notamView(q);notamLoad();break;
-    case "vols":if(PREV_TAB!=="vols"&&!VL.keep)VL.dir="arr";VL.keep=false;h=volsView(q);volsLoad();break;
+    case "vols":if(PREV_TAB!=="vols"&&!VL.keep)VL.dir="arr";VL.keep=false;trafficLoad();h=(q?"":trafficAlerts().map(x=>`<div class="wxa danger" style="margin:6px 0"><b>${esc(x.txt)}</b><br><span class="sub">Vu sur le trafic ADS-B en direct (OpenSky), à confirmer avec la tour.</span></div>`).join(""))+volsView(q)+trafficLine();volsLoad();break;
     case "fl":h=flView(q);break;
     case "calc":h=calcView();break;
     case "eta":h=calcView("eta");break;
