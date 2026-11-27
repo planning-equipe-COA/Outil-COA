@@ -135,7 +135,7 @@ L'utilisateur échange en français.
   et retirée après 650 ms ; les rendus suivants (météo, vols, NOTAM qui arrivent) ne rejouent plus l'animation.
 
 - **Pastille rouge de la barre du bas** (Vols, Météo) : alerte en cours **pas encore vue** (`bdotOn`, `bdotSig`, localStorage
-  `coa-seen-vols` / `coa-seen-wx`) ; s'éteint en ouvrant la rubrique, revient si l'alerte change (heures et compteurs ignorés).
+  `coa-seen-vols` / `coa-seen-wx`) ; s'éteint en ouvrant la rubrique, revient si l'alerte change (heures et compteurs ignorés). Même règle sur l'accueil : cadre rouge qui pulse (`.tile.alert`).
 
 ## Fichiers
 - `index.html` — toute l'appli (HTML + CSS + JS). **Page d'accueil** (onglet « Accueil », ouverte au lancement, bouton maison en

@@ -138,6 +138,11 @@ mark{background:#ffe58a;color:#000;border-radius:2px}
 .elh{font-size:12px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:var(--acc);margin:10px 0 2px}
 .fqs{font-weight:700;white-space:normal!important;text-align:right;max-width:52%;flex-shrink:0;line-height:1.35}
 .fqs span{white-space:nowrap}
+/* tuile d'une rubrique avec une alerte pas encore vue : cadre rouge qui pulse (27 nov. 2026) */
+.home .tile.alert{border-color:#e5484d;animation:tileAlert 1.6s ease-in-out infinite}
+@keyframes tileAlert{0%,100%{box-shadow:0 0 0 0 rgba(229,72,77,.0)}50%{box-shadow:0 0 0 4px rgba(229,72,77,.35)}}
+#out.enter .home .tile.alert{animation:riseIn .4s cubic-bezier(.2,.8,.2,1) both,tileAlert 1.6s ease-in-out .4s infinite}
+@media (prefers-reduced-motion:reduce){.home .tile.alert{animation:none!important;box-shadow:0 0 0 2px rgba(229,72,77,.4)}}
 .tempty{grid-column:1/-1;border:2px dashed var(--line);border-radius:14px;padding:18px;text-align:center;color:var(--mute);font-size:13.5px}
 .home h2 .thmv{float:right;display:flex;gap:6px;margin-top:-4px}
 .home h2 .thmv button{width:32px;height:28px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:15px;cursor:pointer}
@@ -1137,7 +1142,7 @@ function homeView(){
   const extra=Object.assign({mua:MUA.sheets?`${MUA.sheets.length} fiches de postes`:"Fiches de postes (code)",ct:MUA.annu?"Annuaire COA et mes numéros":"Assistants, services, portes"},liveTiles());
   const ico=k=>`<span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TI[k]||""}</svg></span>`;
   const hid=myHidden(),th=myThemes();
-  const tile=([k,l,d])=>`<button class="tile" data-go="${k}" data-k="${k}">${ico(k)}<b>${l}</b><small>${extra[k]||d}</small>${EDIT?`<i class="tdel" data-hide="${k}" role="button" aria-label="Masquer ${esc(l)}">−</i>`:""}</button>`;
+  const tile=([k,l,d])=>`<button class="tile${!EDIT&&bdotOn(k)?" alert":""}" data-go="${k}" data-k="${k}">${ico(k)}<b>${l}</b><small>${extra[k]||d}</small>${EDIT?`<i class="tdel" data-hide="${k}" role="button" aria-label="Masquer ${esc(l)}">−</i>`:""}</button>`;
   const themes=th.map(([t,it],ti)=>{const items=it.filter(([k])=>k!=="home"&&k!=="all"&&!hid.has(k));if(!items.length&&!EDIT)return "";
     const mv=EDIT?`<span class="thmv"><button data-tmv="${ti}" data-d="-1"${ti?"":" disabled"} aria-label="Monter le thème">↑</button><button data-tmv="${ti}" data-d="1"${ti<th.length-1?"":" disabled"} aria-label="Descendre le thème">↓</button></span>`:"";
     return `<h2>${t}${t==="En direct"?'<i class="live" title="Mis à jour en continu"></i>':""}${mv}</h2><div class="tiles" data-th="${esc(t)}">${items.map(tile).join("")}${EDIT&&!items.length?'<div class="tempty">Glisse une rubrique ici</div>':""}</div>`}).join("");
