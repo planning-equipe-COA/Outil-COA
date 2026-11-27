@@ -126,6 +126,11 @@ L'utilisateur échange en français.
   exactes d'ailleurs (pertinence ≥ 4 : immat., poste MUA, code) → « Aussi trouvé ailleurs ». Bouton « ouvrir » (`data-gotab`).
   `immatLoad` re-rend aussi quand une recherche est tapée dans une rubrique.
 
+- **Tirer vers le bas pour actualiser** (27 nov. 2026, demandé) : en haut de page, tirer ≥ 70 px (après amortissement) → pastille
+  `#ptr` (« Tire / Relâche pour actualiser », « À jour ✓ ») ; vols → `volsLoad(true)` + météo des escales, météo → `wxLoad(true)`,
+  NOTAM → `notamLoad(true)`, accueil → les trois ; toujours vérification d'une nouvelle version (service worker). Bloqué en
+  rangement de l'accueil et quand un panneau est ouvert. Boutons « Actualiser » en vert (`.btn.refresh`), horloge en vert (`--clk`).
+
 ## Fichiers
 - `index.html` — toute l'appli (HTML + CSS + JS). **Page d'accueil** (onglet « Accueil », ouverte au lancement, bouton maison en
   haut à droite ; demandée le 20 nov. 2026) : thèmes de haut en bas (`THEMES` sauf Recherche), tuiles encadrées 2 par ligne en

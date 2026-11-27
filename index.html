@@ -143,6 +143,13 @@ mark{background:#ffe58a;color:#000;border-radius:2px}
 .home h2 .thmv button{width:32px;height:28px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:15px;cursor:pointer}
 .home h2 .thmv button:disabled{opacity:.3}
 @media (prefers-reduced-motion:reduce){.home.editing .tile{animation:none}}
+#ptr{position:fixed;left:50%;top:calc(var(--hdr,96px) + 4px);z-index:30;transform:translate(-50%,-48px);opacity:0;display:flex;align-items:center;gap:8px;
+  background:var(--card);border:1.5px solid var(--line);border-radius:999px;padding:7px 14px 7px 10px;box-shadow:0 6px 18px rgba(0,0,0,.15);font-size:13px;font-weight:700;color:var(--mute);pointer-events:none}
+#ptr .ptr-i{display:inline-grid;place-items:center;width:22px;height:22px;border-radius:50%;background:var(--acc2);color:var(--acc);font-size:15px}
+#ptr.ready{color:#2e7d32;border-color:#2e7d32}#ptr.ready .ptr-i{background:#2e7d32;color:#fff}
+#ptr.spin .ptr-i{animation:ptrSpin .8s linear infinite}
+@keyframes ptrSpin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){#ptr.spin .ptr-i{animation:none}}
 #perso{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:22;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain}
 #perso .setcard{animation:riseIn .22s ease-out}
 .pacc{display:flex;gap:10px;flex-wrap:wrap;margin:6px 0 4px}
@@ -1002,6 +1009,27 @@ document.getElementById("perso").addEventListener("change",e=>{const t=e.target,
   if(t.dataset.show){const h=new Set(L.hide||[]);t.checked?h.delete(t.dataset.show):h.add(t.dataset.show);L.hide=[...h];laySet(L);persoApply();return}
   if(t.id==="pWx"){L.wx=t.checked;laySet(L);if(tab==="home")render();return}
   if(t.dataset.bn){const b=myBnav().slice(1,4).map(x=>x[0]);const i=+t.dataset.bn,v=t.value,o=b.indexOf(v);if(o>=0&&o!==i)b[o]=b[i];b[i]=v;store("coa-bnav",JSON.stringify(b));persoApply()}});
+
+/* ---------- Tirer vers le bas pour actualiser (demandé le 27 nov. 2026) ----------
+   En haut de page, tirer l'écran vers le bas : la rubrique affichée relit ses données (vols, météo, NOTAM ; accueil = tout),
+   et l'appli vérifie s'il existe une nouvelle version. Rien pendant le rangement de l'accueil ni avec un panneau ouvert. */
+(function(){const TH=70;let y0=null,dy=0,busy=false,el=null;
+  const ui=()=>el||(el=Object.assign(document.createElement("div"),{id:"ptr",innerHTML:'<span class="ptr-i">↻</span><span class="ptr-t"></span>'}),document.body.append(el),el);
+  const blocked=()=>EDIT||busy||[...document.querySelectorAll("#viewer,#perso,#set,#menu,#daySheet")].some(x=>x&&!x.classList.contains("hide")&&getComputedStyle(x).display!=="none");
+  const show=(d,txt)=>{const u=ui(),p=Math.min(d,TH*1.6),hd=document.querySelector("header");u.style.top=((hd?hd.offsetHeight:90)+4)+"px";u.style.transform=`translate(-50%,${p-48}px)`;u.style.opacity=Math.min(1,d/TH);
+    u.querySelector(".ptr-i").style.transform=`rotate(${d*4}deg)`;u.querySelector(".ptr-t").textContent=txt;u.classList.toggle("ready",d>=TH)};
+  const hide=()=>{if(!el)return;el.style.transition="transform .25s, opacity .25s";el.style.transform="translate(-50%,-48px)";el.style.opacity=0;setTimeout(()=>{if(el)el.style.transition=""},260)};
+  addEventListener("touchstart",e=>{if(e.touches.length!==1||scrollY>0||blocked()||e.target.closest("input,textarea,select"))return;y0=e.touches[0].clientY;dy=0},{passive:true});
+  addEventListener("touchmove",e=>{if(y0==null)return;dy=e.touches[0].clientY-y0;if(dy<=0||scrollY>0){y0=null;hide();return}
+    if(dy>8){e.preventDefault();show(dy*.55,dy*.55>=TH?"Relâche pour actualiser":"Tire pour actualiser")}},{passive:false});
+  addEventListener("touchend",async()=>{if(y0==null)return;const d=dy*.55;y0=null;if(d<TH){hide();return}
+    busy=true;const u=ui();u.classList.add("spin");show(TH,"Actualisation…");if(navigator.vibrate)navigator.vibrate(10);
+    const jobs={home:()=>[wxLoad(true),volsLoad(true),notamLoad(true)],vols:()=>{WXP.at=0;return [volsLoad(true),wxpLoad()]},wx:()=>[wxLoad(true)],notam:()=>[notamLoad(true)]}[tab];
+    try{const ps=(jobs?jobs():[]).map(p=>Promise.resolve(p).catch(()=>{}));
+      if(navigator.serviceWorker)ps.push(navigator.serviceWorker.getRegistration().then(r=>r&&r.update()).catch(()=>{}));
+      await Promise.race([Promise.all(ps),new Promise(r=>setTimeout(r,10000))])}catch(e){}
+    render();u.classList.remove("spin");show(TH,"À jour ✓");setTimeout(()=>{hide();busy=false},700)});
+})();
 /* ---------- État ---------- */
 let AP=[],AL=[],PL=[],loaded=false;
 const TABS=[["home","Accueil"],["mua","MUA"],["ap","Aéroports"],["al","Compagnies"],["pl","Avions"],["codes","Codes avion"],["immat","Immatriculations"],["vols","Vols du jour"],["wx","Météo"],["notam","NOTAM"],["proc","Procédures"],["lfml","Aérodrome"],["ct","Contacts MRS"],["fl","Temps de vol"],["calc","Calculs"],["dl","Codes retard"],["asm","ASM / SSM"],["ab","Abréviations"],["nato","Alphabet"],["all","Tout"]];
