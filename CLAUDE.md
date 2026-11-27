@@ -106,6 +106,8 @@ L'utilisateur échange en français.
   trait plein = même immatriculation (sûr), pointillé + « ? » = probable. Rapprochement « probable » interdit si l'immat connue d'un
   côté repart / arrive sur un autre vol (`regDep`/`regArr`, cas T7 1518 vu le 25/11). Les immat. viennent d'AeroDataBox (≈ 1 vol
   sur 4, surtout proches de l'heure) : c'est la vraie limite.
+  **Heures en TU (27 nov.)** : météo des escales, liens « ↻ Repart », alerte « avion attendu… », alertes de l'accueil et départs
+  aux portes (MUA) en heure Z ; les cartes de vol gardent l'heure locale en grand + Z (affichage du site de l'aéroport).
   Test local : routes playwright vers les données réelles du relais (le relais n'autorise que l'origine github.io).
 
 - **Recherche dans une rubrique** (26 nov. 2026, demandé : immat. introuvable depuis Temps de vol) : `globalParts(q)` (même

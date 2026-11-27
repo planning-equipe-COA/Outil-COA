@@ -1632,15 +1632,15 @@ function volInbound(d){if(_inb.at!==VL.at){_inb={at:VL.at,m:new Map(),o:new Map(
     days.forEach(day=>volsRotations(day).forEach(r=>{if(r.a&&r.d){_inb.m.set(r.d,r);_inb.o.set(r.a,r)}}))}return _inb.m.get(d)}
 function volOutbound(a){volInbound(VL.data.dep[0]||{});return _inb.o.get(a)}
 /* lien arrivée ↔ départ du même avion sur les cartes (demandé le 25 nov. 2026) : sûr si même immatriculation, sinon « probable » */
-function volLink(v,arr){if(!VL.data)return "";const r=arr?volOutbound(v):volInbound(v);if(!r)return "";const o=arr?r.d:r.a,hh=o.t.slice(11,16);
+function volLink(v,arr){if(!VL.data)return "";const r=arr?volOutbound(v):volInbound(v);if(!r)return "";const o=arr?r.d:r.a,hh=volZ(o.t)+"Z";
   return `<span class="vc-chip vc-link${r.sure?"":" prob"}" title="${r.sure?"Même immatriculation":"Rapprochement probable (compagnie, escale, numéro)"}">${arr?"↻ Repart":"↻ Arrive de"} ${esc(o.n)} · ${esc(hh)}${r.sure?"":" ?"}</span>`}
 function volRisk(d){if(!VL.data||volDone(d)||d.cls==="annulee")return null;const r=volInbound(d);if(!r)return null;const a=r.a;if(volDone(a))return null;
   const how=r.sure?"":" (si c'est bien le même avion)";
   if(a.cls==="annulee")return `Arrivée ${a.n} annulée${how} : départ à confirmer`;
   if(volDiverted(a))return `Arrivée ${a.n} déroutée${how} : départ à confirmer`;
   const eta=volMs(a.t)+(volDelay(a)||0)*60e3,min=eta+VOL_TURN_MIN*60e3,late=Math.round((min-volMs(d.t))/60e3);
-  if(late<10)return null;const hhmm=new Date(min+parisOffset(new Date(min))*60e3).toISOString().slice(11,16);
-  return `Avion attendu en ${a.n} à ${new Date(eta+parisOffset(new Date(eta))*60e3).toISOString().slice(11,16)}${how} : départ probablement pas avant ${hhmm} (+${late} min)`}
+  if(late<10)return null;const z=t=>new Date(t).toISOString().slice(11,16)+"Z";
+  return `Avion attendu en ${a.n} à ${z(eta)}${how} : départ probablement pas avant ${z(min)} (+${late} min)`}
 const riskHtml=d=>{const t=volRisk(d);return t?`<div style="color:#b26a00;font-weight:600;font-size:13px;margin-top:2px">⚠ ${esc(t)}</div>`:""};
 /* voyant « source en panne » : relais injoignable, site de l'aéroport en panne (copie de secours) ou figé */
 const parisHM=ms=>new Date(ms+parisOffset(new Date(ms))*60e3).toISOString().slice(11,16);
@@ -1671,7 +1671,7 @@ function tafHaz(taf,from,to){if(!taf)return [];const now=new Date(from),Y=now.ge
     if(b<from||a>to)return;const w=g.split(" "),p=/^PROB/.test(g)?" possible":"";
     if(w.some(x=>/^[+-]?(VC)?TS/.test(x)))out.add("orage"+p);if(w.some(x=>/^(MI|BC|PR|FZ)?FG$/.test(x)))out.add("brouillard"+p);
     if(w.some(x=>/^[+-]?(SH|BL)?SN|^[+-]?FZ(RA|DZ)/.test(x)))out.add("neige / verglas"+p)});
-  return [...out]}
+  return [...out].filter(x=>!(/ possible$/.test(x)&&out.has(x.replace(/ possible$/,""))))}
 /* lecture d'un relevé : niveau (danger / warn / "") et résumé en clair */
 function wxpEval(o){const t=[];let lvl="";const up=l=>{if(l==="danger"||!lvl)lvl=l};if(!o||!o.metar)return {lvl,txt:"",cat:""};
   const raw=o.metar.replace(/^(METAR|SPECI)\s+\w{4}\s+\d{6}Z\s+(AUTO\s+)?/,"").split(/\s+(?:TEMPO|BECMG|NOSIG)\b/)[0];
@@ -1694,7 +1694,7 @@ function wxpBlock(dir){if(!VL.data||VL.day!==0)return "";wxpLoad();const ids=wxp
   const rows=Object.entries(byIcao).map(([ic,l])=>[ic,l,wxpEval(st[ic])]).filter(x=>x[2].lvl).sort((x,y)=>(x[2].lvl==="danger"?0:1)-(y[2].lvl==="danger"?0:1));
   const n=Object.keys(byIcao).length;
   return `<div class="card" style="padding:8px 12px;margin:8px 0"><b>Météo des escales</b> <span class="sub">· ${dir==="arr"?"provenances":dir==="dep"?"destinations":"provenances et destinations"} des 6 prochaines heures · ${n} terrain${n>1?"s":""}</span>
-    ${rows.length?rows.map(([ic,l,e])=>{return `<div style="margin-top:6px;color:${e.lvl==="danger"?"#c62828":"#b26a00"}"><b>${esc(l[0][0].code)}</b> ${esc(l[0][0].ville)} <span class="u-ext" style="margin:0">${esc(ic)}${e.cat?" · "+esc(e.cat):""}</span> : ${esc(e.txt)}<div class="sub">${l.slice(0,4).map(([v,a])=>`${a?"↓":"↑"} ${esc(v.n)} ${esc(v.t.slice(11,16))}`).join(" · ")}${l.length>4?" …":""}</div></div>`}).join(""):`<div class="sub" style="margin-top:4px">Rien de marquant sur ces terrains (visibilité, plafond, orage, neige, vent).</div>`}
+    ${rows.length?rows.map(([ic,l,e])=>{return `<div style="margin-top:6px;color:${e.lvl==="danger"?"#c62828":"#b26a00"}"><b>${esc(l[0][0].code)}</b> ${esc(l[0][0].ville)} <span class="u-ext" style="margin:0">${esc(ic)}${e.cat?" · "+esc(e.cat):""}</span> : ${esc(e.txt)}<div class="sub">${l.slice(0,4).map(([v,a])=>`${a?"↓":"↑"} ${esc(v.n)} ${esc(volZ(v.t))}Z`).join(" · ")}${l.length>4?" …":""}</div></div>`}).join(""):`<div class="sub" style="margin-top:4px">Rien de marquant sur ces terrains (visibilité, plafond, orage, neige, vent).</div>`}
     <details style="margin-top:6px"><summary class="sub">METAR et TAF de tous ces terrains</summary>${Object.keys(byIcao).sort().map(ic=>{const o=st[ic]||{};return `<div class="raw" style="margin-top:4px">${esc(o.metar||ic+" : pas de METAR")}${o.taf?"<br>"+esc(o.taf):""}</div>`}).join("")}<p class="sub">Source : aviationweather.gov (NOAA), relevé <span data-ago="${WXP.at}">il y a ${Math.round((now-WXP.at)/60e3)} min</span>. Aide à la lecture : les METAR et TAF bruts font foi.</p></details></div>`}
 function wxpLine(v){const ap=apOf(v.code);const o=ap&&WXP.data&&(WXP.data.st||{})[ap[1]];if(!o||!o.metar)return "";const e=wxpEval(o);
   return `<div><span class="sub">Météo ${esc(v.code)}</span> ${e.lvl?`<b style="color:${e.lvl==="danger"?"#c62828":"#b26a00"}">${esc(e.txt)}</b>`:"rien de marquant"}${e.cat?` <span class="u-ext" style="margin:0">${esc(e.cat)}</span>`:""}<div class="raw" style="margin-top:2px">${esc(o.metar)}</div></div>`}
@@ -1750,9 +1750,9 @@ function volsSearch(q){if(!volsFresh())return null;const c=q.replace(/\s/g,"");i
 function homeAlerts(){if(!volsFresh())return "";const now=Date.now(),{dep,arr}=volsOf(VL.data.today);const items=[];
   const hl0=volsHealth();if(hl0)items.push(hl0.replace('style="margin:8px 0"','data-go="vols"'));
   const canc=[...dep.map(v=>[v,0]),...arr.map(v=>[v,1])].filter(([v])=>v.cls==="annulee"&&volMs(v.t)>now-2*3600e3);
-  if(canc.length)items.push(`<div class="wxa danger" data-go="vols"><b>${canc.length} vol${canc.length>1?"s":""} annulé${canc.length>1?"s":""}</b> : ${canc.slice(0,4).map(([v,a])=>`${esc(v.n)} ${a?"de":"vers"} ${esc(v.ville)} (${esc(v.t.slice(11,16))})`).join(", ")}${canc.length>4?"…":""}</div>`);
+  if(canc.length)items.push(`<div class="wxa danger" data-go="vols"><b>${canc.length} vol${canc.length>1?"s":""} annulé${canc.length>1?"s":""}</b> : ${canc.slice(0,4).map(([v,a])=>`${esc(v.n)} ${a?"de":"vers"} ${esc(v.ville)} (${esc(volZ(v.t))}Z)`).join(", ")}${canc.length>4?"…":""}</div>`);
   const dv=arr.filter(v=>volDiverted(v)&&volMs(v.t)>now-3*3600e3);
-  if(dv.length)items.push(`<div class="wxa danger" data-go="vols"><b>${dv.length} arrivée${dv.length>1?"s":""} déroutée${dv.length>1?"s":""}</b> : ${dv.slice(0,4).map(v=>`${esc(v.n)} de ${esc(v.ville)} (${esc(v.t.slice(11,16))})`).join(", ")}${dv.length>4?"…":""}</div>`);
+  if(dv.length)items.push(`<div class="wxa danger" data-go="vols"><b>${dv.length} arrivée${dv.length>1?"s":""} déroutée${dv.length>1?"s":""}</b> : ${dv.slice(0,4).map(v=>`${esc(v.n)} de ${esc(v.ville)} (${esc(volZ(v.t))}Z)`).join(", ")}${dv.length>4?"…":""}</div>`);
   const late=[...dep.map(v=>[v,0]),...arr.map(v=>[v,1])].map(([v,a])=>[v,a,volDelay(v)]).filter(([v,,d])=>d>=30&&volMs(v.t)+d*60e3>now).sort((x,y)=>y[2]-x[2]);
   if(late.length)items.push(`<div class="wxa warn" data-go="vols"><b>Retard${late.length>1?"s":""} de 30 min ou plus</b> : ${late.slice(0,4).map(([v,a,d])=>`${esc(v.n)} ${a?"de":"vers"} ${esc(v.ville)} +${d} min`).join(", ")}${late.length>4?"…":""}</div>`);
   return items.length?`<div class="wxal" style="cursor:pointer">${items.join("")}</div>`:""}
@@ -2169,7 +2169,7 @@ function muaCard(s,q){
   ${muaPostes(s).filter(p=>MUA.dims&&MUA.dims[p]).map(p=>`<div class="sub" style="margin-top:3px">${muaPostes(s).length>1?`<b>${esc(p)}</b> · `:""}Max : envergure ${f2(MUA.dims[p].ws,2)} m · longueur ${f2(MUA.dims[p].lg,2)} m</div>`).join("")}
   ${muaPostes(s).map(p=>[p,synthOf(p)]).filter(([,e])=>e).map(([p,e])=>`<div class="sub" style="margin-top:3px">${muaPostes(s).length>1?`<b>${esc(p)}</b> · `:""}${esc(shortDep(e.depart))} · neutralise ${esc(e.neutr.replace(/\.$/,""))}</div>`).join("")}
   ${(()=>{const m=volsByStand(),now=Date.now();const vs=[...new Set(muaPostes(s).flatMap(p=>m[p]||[]))].filter(v=>!volDone(v)&&v.cls!=="annulee"&&volMs(v.t)>now-30*60e3).sort((a,b)=>a.t<b.t?-1:1);
-    return vs.length?`<div class="mvols"><b>Départs prévus à ses portes</b> <span class="sub">(site de l'aéroport, indicatif)</span>${vs.slice(0,3).map(v=>`<div>${esc(v.t.slice(11,16))} · <b>${esc(v.n)}</b> ${esc(v.ville)} · porte ${esc(v.porte)}${v.t.slice(0,10)!==VL.data.today?" · demain":""}</div>`).join("")}${vs.length>3?`<div class="sub">+ ${vs.length-3} autre(s)</div>`:""}</div>`:""})()}
+    return vs.length?`<div class="mvols"><b>Départs prévus à ses portes</b> <span class="sub">(site de l'aéroport, indicatif)</span>${vs.slice(0,3).map(v=>`<div>${esc(volZ(v.t))}Z · <b>${esc(v.n)}</b> ${esc(v.ville)} · porte ${esc(v.porte)}${v.t.slice(0,10)!==VL.data.today?" · demain":""}</div>`).join("")}${vs.length>3?`<div class="sub">+ ${vs.length-3} autre(s)</div>`:""}</div>`:""})()}
   ${s.consignes.length?`<div class="sub" style="margin-top:4px">${s.consignes.length} consigne(s) d'exploitation</div>`:""}</div>`;
 }
 function muaView(q,limit){
