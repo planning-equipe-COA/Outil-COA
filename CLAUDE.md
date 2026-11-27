@@ -134,6 +134,9 @@ L'utilisateur échange en français.
 - **Plus de clignotement à l'ouverture** (27 nov.) : la classe `enter` (animation riseIn) n'est posée qu'au changement de rubrique
   et retirée après 650 ms ; les rendus suivants (météo, vols, NOTAM qui arrivent) ne rejouent plus l'animation.
 
+- **Pastille rouge de la barre du bas** (Vols, Météo) : alerte en cours **pas encore vue** (`bdotOn`, `bdotSig`, localStorage
+  `coa-seen-vols` / `coa-seen-wx`) ; s'éteint en ouvrant la rubrique, revient si l'alerte change (heures et compteurs ignorés).
+
 ## Fichiers
 - `index.html` — toute l'appli (HTML + CSS + JS). **Page d'accueil** (onglet « Accueil », ouverte au lancement, bouton maison en
   haut à droite ; demandée le 20 nov. 2026) : thèmes de haut en bas (`THEMES` sauf Recherche), tuiles encadrées 2 par ligne en

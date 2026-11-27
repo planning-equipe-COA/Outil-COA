@@ -1087,8 +1087,15 @@ function openMenu(){const hid=myHidden();$("#menuList").innerHTML=[...myThemes()
 $("#menuBtn").onclick=openMenu;
 /* barre d'onglets en bas (passe design du 22 nov. 2026) : 4 rubriques les plus utilisées + « Rubriques » (menu par thème) */
 const BNAV=[["home","Accueil",'<path d="M3.5 11 12 4l8.5 7M6 9.5V20h4.5v-5.5h3V20H18V9.5"/>'],["vols","Vols",null],["wx","Météo",null],["mua","MUA",null],["more","Rubriques",'<rect x="3.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="3.5" width="7" height="7" rx="1.8"/><rect x="3.5" y="13.5" width="7" height="7" rx="1.8"/><rect x="13.5" y="13.5" width="7" height="7" rx="1.8"/>']];
+/* pastille rouge de la barre du bas : alerte en cours (vols annulés/déroutés, météo) que l'on n'a pas encore vue ; elle s'éteint
+   quand on ouvre la rubrique et ne revient que si l'alerte change (27 nov. 2026 : restait allumée après consultation) */
+function bdotSig(k){try{if(k==="vols")return volsFresh()?String(homeAlerts()||"").replace(/<[^>]+>/g," ").replace(/\b\d{1,2}:\d{2}Z?\b|dans \d+[^,]*|il y a \d+ min/g,"").replace(/\s+/g," ").trim():"";
+  if(k==="wx")return WX.metar?wxAlerts().map(a=>typeof a==="string"?a:(a.t||a.txt||a.title||JSON.stringify(a))).join("|").replace(/<[^>]+>/g,"").replace(/\d+/g,"#"):""}catch(e){}return ""}
+function bdotOn(k){if(k!=="vols"&&k!=="wx")return false;const sg=bdotSig(k);if(!sg)return false;
+  if(tab===k){try{localStorage.setItem("coa-seen-"+k,sg)}catch(e){}return false}
+  let seen="";try{seen=localStorage.getItem("coa-seen-"+k)||""}catch(e){}return sg!==seen}
 function bnavRender(){if(EDIT&&tab!=="home")EDIT=false;const BN=myBnav(),main=BN.some(([k])=>k===tab);
-  $("#bnav").innerHTML=BN.map(([k,l,ic])=>`<button type="button" data-b="${k}" class="${k===tab||(k==="more"&&!main)?"on":""}"${k===tab?' aria-current="page"':""}>${'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'}${ic||TI[k]}</svg><span>${k==="more"&&!main?esc(tabName(tab)||l):l}</span><i class="bdot${(k==="vols"&&volsFresh()&&homeAlerts())||(k==="wx"&&WX.metar&&wxAlerts().length)?" show":""}"></i></button>`).join("")}
+  $("#bnav").innerHTML=BN.map(([k,l,ic])=>`<button type="button" data-b="${k}" class="${k===tab||(k==="more"&&!main)?"on":""}"${k===tab?' aria-current="page"':""}>${'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'}${ic||TI[k]}</svg><span>${k==="more"&&!main?esc(tabName(tab)||l):l}</span><i class="bdot${bdotOn(k)?" show":""}"></i></button>`).join("")}
 $("#bnav").onclick=e=>{const b=e.target.closest("button");if(!b)return;const k=b.dataset.b;
   if(k==="more"){openMenu();return}
   if(k===tab&&!$("#q").value){scrollTo({top:0,behavior:"smooth"});return}
