@@ -115,6 +115,10 @@ L'utilisateur échange en français.
   Départs avec la pastille « AG » (`agRows`, case « aviation générale », `coa-vl-ag`). **Il faut recoller tools/notam-worker.js
   dans Cloudflare (worker coa-notam)** pour l'activer ; sans ça la case n'apparaît pas. Cache adb3 (ADB_REFRESH_MIN : la tranche en
   cours n'est relue que toutes les 6 h sur l'offre gratuite).
+  **« Vérifier en direct »** (27 nov., KL 1469 affiché « A l'heure » par le site alors que pas parti d'AMS) : bouton dans la fiche
+  d'un vol → relais `?vol=KL1469&date=AAAA-MM-JJ` (`volStatus`, AeroDataBox /flights/number, 1 appel, cache 5 min) → décollage
+  réel / estimé à la provenance, arrivée estimée, « pas encore décollé » en rouge (`vchkHtml`, `VCHK`). Nécessite aussi le
+  redéploiement du relais. Le site de l'aéroport garde « A l'heure » pour beaucoup de vols en l'air : pas d'alerte automatique.
   Test local : routes playwright vers les données réelles du relais (le relais n'autorise que l'origine github.io).
 
 - **Recherche dans une rubrique** (26 nov. 2026, demandé : immat. introuvable depuis Temps de vol) : `globalParts(q)` (même

@@ -262,6 +262,31 @@ async function vols(origin, ctx, env) {
   }
 }
 
+/* ---------- Statut en direct d'UN vol : AeroDataBox, à la demande (bouton « Vérifier » de l'appli) ----------
+   Appel : ?vol=KL1469&date=2026-11-27 → décollage réel / estimé à la provenance, arrivée estimée. 1 appel AeroDataBox,
+   réponse gardée 5 min (plusieurs téléphones = un seul appel). Ajouté le 27 nov. 2026 (le site de l'aéroport affichait
+   « A l'heure » pour un vol pas encore parti). */
+async function volStatus(origin, env, nb, date) {
+  nb = String(nb || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  if (!/^[A-Z0-9]{2}\d{1,5}[A-Z]?$/.test(nb) || !/^\d{4}-\d{2}-\d{2}$/.test(date || '')) return json({ error: 'paramètres invalides' }, 400, origin);
+  if (!env.ADB_KEY) return json({ error: 'AeroDataBox non branché (secret ADB_KEY)' }, 500, origin);
+  const cache = caches.default, key = new Request(`https://notam-cache.local/vol/${nb}/${date}`);
+  const hit = await cache.match(key);
+  if (hit) return json(await hit.json(), 200, origin, { 'X-Cache': 'HIT' });
+  const wait = adbLast + 2500 - Date.now(); if (wait > 0) await new Promise(r => setTimeout(r, wait)); adbLast = Date.now();
+  const r = await fetch(`https://aerodatabox.p.rapidapi.com/flights/number/${nb}/${date}?withAircraftImage=false&withLocation=false`,
+    { headers: { 'X-RapidAPI-Key': env.ADB_KEY, 'X-RapidAPI-Host': 'aerodatabox.p.rapidapi.com' } });
+  if (r.status === 204) { const b = { nb, date, legs: [], at: Date.now() }; await cache.put(key, new Response(JSON.stringify(b), { headers: { 'Cache-Control': 'max-age=300' } })); return json(b, 200, origin); }
+  if (!r.ok) return json({ error: 'AeroDataBox ' + r.status }, 502, origin);
+  const z = x => x && x.utc ? x.utc.slice(0, 16).replace(' ', 'T') : '';
+  const mv = m => m ? { icao: (m.airport || {}).icao || '', iata: (m.airport || {}).iata || '', ville: (m.airport || {}).municipalityName || (m.airport || {}).name || '',
+    sched: z(m.scheduledTime), rev: z(m.revisedTime), runway: z(m.runwayTime), gate: m.gate || '', term: m.terminal || '' } : null;
+  const legs = (await r.json()).map(f => ({ st: f.status || '', dep: mv(f.departure), arr: mv(f.arrival), reg: ((f.aircraft || {}).reg || '').replace(/-/g, '').toUpperCase(), model: (f.aircraft || {}).model || '' }));
+  const b = { nb, date, legs, at: Date.now(), left: r.headers.get('x-ratelimit-requests-remaining') || '' };
+  await cache.put(key, new Response(JSON.stringify(b), { headers: { 'Cache-Control': 'max-age=300' } }));
+  return json(b, 200, origin, { 'X-Cache': 'MISS' });
+}
+
 /* ---------- Météo des provenances / destinations : aviationweather.gov (NOAA), sans clé ---------- */
 // Appel : ?wx=LFPG,LFPO,EGSS (40 codes OACI au plus). Réponse gardée 10 min.
 // METAR + TAF de plusieurs terrains (cache 10 min), utilisé par la route ?wx= et par les alertes météo LFML
@@ -553,6 +578,7 @@ export default {
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors(origin) });
     const sp = new URL(request.url).searchParams;
     if (sp.has('vols')) return vols(origin, ctx, env);
+    if (sp.has('vol')) return volStatus(origin, env, sp.get('vol'), sp.get('date'));
     if (sp.has('wx')) return wxMulti(origin, ctx, sp.get('wx'));
     if (sp.has('push')) return pushApi(request, origin, env, sp.get('push'));
     const icao = (new URL(request.url).searchParams.get('icao') || 'LFML').toUpperCase();

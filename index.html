@@ -120,6 +120,8 @@ mark{background:#ffe58a;color:#000;border-radius:2px}
 .vc-chev{flex:none;color:var(--mute);font-size:13px;margin-top:4px}
 .vc-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0 0 78px;font-size:12.5px}
 .vc-chip{background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:2px 9px;white-space:nowrap;color:var(--ink)}
+.vlive{margin:6px 0;padding:8px 10px;border-radius:10px;background:var(--acc2);font-size:13.5px;line-height:1.5}
+.vlive.bad{background:color-mix(in srgb,#c62828 12%,var(--card))}
 .vc-ag{background:#5d4037;border-color:transparent;color:#fff;font-weight:800;letter-spacing:.04em}
 .vc-where{background:var(--acc2);border-color:transparent;color:var(--acc);font-weight:700}
 .vc-link{border-style:dashed}.vc-link:not(.prob){border-style:solid;border-color:color-mix(in srgb,var(--ok,#2e7d32) 45%,var(--line))}
@@ -1577,6 +1579,27 @@ let VBS={at:-1,annu:null,map:{}};
 function volsByStand(){if(!volsFresh()||!MUA.annu)return {};if(VBS.at===VL.at&&VBS.annu===MUA.annu)return VBS.map;const map={},memo={};
   VL.data.dep.forEach(v=>{if(!v.porte)return;const st=memo[v.porte]||(memo[v.porte]=standsForGate(v.porte));st.forEach(p=>(map[p]=map[p]||[]).push(v))});
   VBS={at:VL.at,annu:MUA.annu,map};return map}
+/* statut en direct d'un vol (AeroDataBox via le relais, ?vol=…, à la demande ; 27 nov. 2026 : le site affichait « A l'heure »
+   pour un KL pas encore parti d'Amsterdam) */
+const VCHK={};
+const vchkKey=v=>v.n.replace(/\s/g,"").toUpperCase()+"|"+v.t.slice(0,10);
+function vchkHtml(v,arr){const r=VCHK[vchkKey(v)];if(!r)return "";if(r.loading)return `<div class="vlive sub">Vérification en cours…</div>`;
+  if(r.err)return `<div class="vlive sub">${esc(r.err)}</div>`;
+  const leg=(r.legs||[]).find(l=>arr?(l.arr&&l.arr.iata==="MRS"):(l.dep&&l.dep.iata==="MRS"))||(r.legs||[])[0];
+  if(!leg)return `<div class="vlive sub">AeroDataBox ne connaît pas ce vol aujourd'hui.</div>`;
+  const z=t=>t?t.slice(11,16)+"Z":"",now=Date.now(),ms=t=>Date.parse(t+":00Z"),d=leg.dep||{},a=leg.arr||{};
+  const late=!d.runway&&d.sched&&now>ms(d.sched)+10*60e3;
+  const depTxt=d.runway?`<b>décollé à ${z(d.runway)}</b>`:late?`<b style="color:#c62828">pas encore décollé</b> (prévu ${z(d.sched)}${d.rev&&d.rev!==d.sched?`, estimé ${z(d.rev)}`:""})`:`prévu ${z(d.sched)}${d.rev&&d.rev!==d.sched?` · estimé <b>${z(d.rev)}</b>`:""}`;
+  const arrTxt=a.runway?`<b>atterri à ${z(a.runway)}</b>`:`prévue ${z(a.sched)}${a.rev&&a.rev!==a.sched?` · estimée <b>${z(a.rev)}</b>`:""}`;
+  return `<div class="vlive${late?" bad":""}"><div><span class="sub">Départ ${esc(d.ville||d.iata||"")}</span> ${depTxt}</div><div><span class="sub">Arrivée ${esc(a.ville||a.iata||"")}</span> ${arrTxt}</div>
+    <div class="sub">AeroDataBox · ${esc(AG_ST[leg.st]||leg.st||"statut inconnu")} · vérifié <span data-ago="${r.at}">à l'instant</span></div></div>`}
+async function vchkRun(v){const k=vchkKey(v),[nb,date]=k.split("|");VCHK[k]={loading:true};render();
+  try{const r=await fetch(`${NOTAM_URL}?vol=${encodeURIComponent(nb)}&date=${date}`,{cache:"no-store"}),j=await r.json();
+    if(j.error)throw new Error(j.error);if(!Array.isArray(j.legs))throw new Error("Le relais n'est pas encore mis à jour (recoller tools/notam-worker.js dans Cloudflare).");
+    VCHK[k]={legs:j.legs,at:Date.now()}}catch(e){VCHK[k]={err:"Vérification impossible : "+(/Failed to fetch|Load failed|NetworkError/i.test(e.message)?"pas de réseau":e.message)}}
+  render()}
+document.addEventListener("click",e=>{const b=e.target.closest("[data-vchk]");if(!b||!VL.data)return;e.preventDefault();e.stopPropagation();
+  const v=[...VL.data.arr,...VL.data.dep].find(x=>volKey(x)===b.dataset.vchk);if(v)vchkRun(v)},true);
 function volDetail(v,arr){
   const al=MRS_AL.find(r=>r[1]===v.al)||(loaded===true&&AL.find(r=>r[0]===v.al));
   const alTxt=al?(al.length===4?`${al[0]} · ${al[1]}${al[2]?" · "+al[2]:""}${al[3]?" · indicatif "+al[3]:""}`:`${al[2]} · ${al[0]}${al[1]?" · "+al[1]:""}${al[3]?" · indicatif "+al[3]:""}`):v.cie;
@@ -1593,7 +1616,8 @@ function volDetail(v,arr){
     ${arr?"":line("Banques d'enregistrement",esc(v.banques))}
     ${line("Assistant",esc(hd||""))}
     ${wxpLine(v)}
-    <div class="vbtns">${v.reg&&VL.reg!==v.reg?`<button class="glink" data-volreg="${esc(v.reg)}">Parcours de ${esc(fmtReg(v.reg))}</button>`:""}${handlerNames(hd).map(n=>`<button class="glink" data-ctq="${esc(n)}">Contacts ${esc(n)}</button>`).join("")}${st.map(p=>`<button class="glink" data-openposte="${esc(p)}">Fiche MUA ${esc(p)}</button>`).join("")}<button class="glink" data-alq="${esc(v.al)}">Fiche compagnie</button></div></div>`}
+    ${vchkHtml(v,arr)}
+    <div class="vbtns">${v.ag?"":`<button class="glink" data-vchk="${esc(volKey(v))}">Vérifier en direct</button>`}${v.reg&&VL.reg!==v.reg?`<button class="glink" data-volreg="${esc(v.reg)}">Parcours de ${esc(fmtReg(v.reg))}</button>`:""}${handlerNames(hd).map(n=>`<button class="glink" data-ctq="${esc(n)}">Contacts ${esc(n)}</button>`).join("")}${st.map(p=>`<button class="glink" data-openposte="${esc(p)}">Fiche MUA ${esc(p)}</button>`).join("")}<button class="glink" data-alq="${esc(v.al)}">Fiche compagnie</button></div></div>`}
 /* compte à rebours « dans 12 min » (3 h à l'avance au plus), « maintenant » jusqu'à 10 min après ; rafraîchi par liveTick */
 function cdText(ms){const m=Math.round((ms-Date.now())/60e3);if(m<-10||m>180)return "";if(m<=0)return "maintenant";
   return "dans "+(m<60?m+" min":Math.floor(m/60)+" h"+(m%60?" "+String(m%60).padStart(2,"0"):""))}
