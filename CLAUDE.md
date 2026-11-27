@@ -301,6 +301,12 @@ L'utilisateur échange en français.
     4.0.0_best_int (3 Mo, gardé par le navigateur) → `asmOcrFix` (O/0, I/1, T/7, B/8…, `//` mal lu, codes d'action à 1 lettre
     près, compagnie desservant MRS préférée : T0 → TO) → décodage. Tout sur le téléphone, rien n'est envoyé. Testé : télex net
     lu sans erreur (~1 s) ; photo floue et bruitée : quelques erreurs restantes → message « vérifie le texte lu ».
+  - **27 nov. 2026** (SSM Lufthansa City CNL VL1090 + NEW VL9950 photographié dans SITA Scan, jugé « pas clair ») : lignes avant
+    ASM/SSM = **enveloppe SITA** (priorité + adresses, expéditeur `.QLHQMLH 272010` → « envoyé le 27 à 20:10Z »), le reste de l'écran
+    ignoré ; **SI sur plusieurs lignes** (suite jusqu'à `//` ou une ligne de structure) ; DEI `4/VL` sur la ligne du vol ; période
+    d'un seul jour « Le vendredi 27 nov. seulement » ; service ≠ J dans le résumé ; **« En bref »** (CNL + NEW = remplacement) ;
+    explication SI avec mots-clés traduits (`SI_GLOSS`), escales (après AT/EX/TO/FROM) et immatriculations ; VL = Lufthansa City
+    Airlines (`ASM_AL_FIX`) ; OCR : R lu pour 2 dans les dates, lignes SI non « corrigées » (D/T restait 0/T).
 - Calculs → « Heure d'arrivée à Marseille » : le résultat (ETA depuis l'ED) s'affiche dans un encadré **vert** (`#cEta.ok`,
   clair et sombre ; demandé le 23 nov. 2026), seulement quand le calcul aboutit.
 - **Soleil à LFML** (`sunTimes`, équation NOAA, ~1 min ; vérifié 21/11 : lever 06:40, coucher 16:10 UTC) et **nuit aéronautique**
