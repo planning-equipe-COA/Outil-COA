@@ -146,6 +146,10 @@ L'utilisateur échange en français.
   **NOTAM « En cours maintenant »** en tête de la rubrique (`ntNowCard`, 27 nov.) : NOTAM importants en vigueur, urgences d'abord
   (« URGENT », fond rouge), nombre des autres en vigueur ; ligne rouge « NOTAM en cours » dans les alertes de l'accueil. Dates NOTAM en Z.
 
+- **Tuile « ETA depuis une ED »** (27 nov., demandée : calcul très utilisé) : rubrique `eta` (thème Outils) = `calcView("eta")`,
+  la seule carte ETA affichée (les autres calculs sont rendus `hidden` pour que `bindCalc` fonctionne). Libellé court dans la barre du
+  bas : `BSHORT` aussi pour la rubrique en cours.
+
 ## Fichiers
 - `index.html` — toute l'appli (HTML + CSS + JS). **Page d'accueil** (onglet « Accueil », ouverte au lancement, bouton maison en
   haut à droite ; demandée le 20 nov. 2026) : thèmes de haut en bas (`THEMES` sauf Recherche), tuiles encadrées 2 par ligne en
