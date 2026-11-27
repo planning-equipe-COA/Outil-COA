@@ -143,6 +143,8 @@ L'utilisateur échange en français.
   jaune = NOTAM important nouveau, même règle que les notifications du relais, `ntImportant`) ; **vol commercial à l'arrivée absent du
   tableau** = « Hors programme · dérouté ? » (`divInbound`, flag `div` dans `agRows`, ligne rouge dans les alertes de l'accueil) —
   dépend de `body.ga`, donc du redéploiement du relais. L'accueil charge aussi les NOTAM (`notamLoad` dans `homeView`).
+  **NOTAM « En cours maintenant »** en tête de la rubrique (`ntNowCard`, 27 nov.) : NOTAM importants en vigueur, urgences d'abord
+  (« URGENT », fond rouge), nombre des autres en vigueur ; ligne rouge « NOTAM en cours » dans les alertes de l'accueil. Dates NOTAM en Z.
 
 ## Fichiers
 - `index.html` — toute l'appli (HTML + CSS + JS). **Page d'accueil** (onglet « Accueil », ouverte au lancement, bouton maison en

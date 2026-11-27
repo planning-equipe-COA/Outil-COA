@@ -125,6 +125,14 @@ mark{background:#ffe58a;color:#000;border-radius:2px}
 .btn.refresh{background:#2e7d32;border-color:#2e7d32;color:#fff;font-weight:700}
 .btn.refresh:active{background:#1b5e20}
 .btn.refresh::before{content:"↻ "}
+.ntnow{background:var(--card);border:1.5px solid var(--line);border-left:5px solid #e5a000;border-radius:14px;padding:10px 12px;margin:8px 0 12px}
+.ntnow.urg{border-left-color:#c62828}
+.ntnow.ok{border-left-color:#2e7d32}
+.ntnow-h{margin-bottom:4px}
+.ntn{padding:7px 0;border-top:1px solid var(--line)}.ntn:first-of-type{border-top:0}
+.ntn.urg{background:color-mix(in srgb,#c62828 9%,transparent);margin:0 -12px;padding:7px 12px}
+.ntu{background:#c62828;color:#fff;font-size:10.5px;font-weight:800;padding:1px 6px;border-radius:999px;letter-spacing:.04em}
+.ntt{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;margin-top:3px;white-space:pre-wrap}
 .vc-div{background:#c62828;border-color:transparent;color:#fff;font-weight:800}
 .vc-ag{background:#5d4037;border-color:transparent;color:#fff;font-weight:800;letter-spacing:.04em}
 .vc-where{background:var(--acc2);border-color:transparent;color:var(--acc);font-weight:700}
@@ -1854,6 +1862,7 @@ function volsSearch(q){if(!volsFresh())return null;const c=q.replace(/\s/g,"");i
   return `<div class="vlist">${d.map(v=>volRow(v,false,"")).join("")}${a.map(v=>volRow(v,true,"")).join("")}</div>`}
 /* bandeau d'alertes de l'accueil : vols annulés et gros retards (aujourd'hui, à venir) */
 function homeAlerts(){if(!volsFresh())return "";const now=Date.now(),{dep,arr}=volsOf(VL.data.today);const items=[];
+  {const nu=ntImportant().filter(ntUrgent);if(nu.length)items.push(`<div class="wxa danger" data-go="notam"><b>NOTAM en cours</b> : ${nu.slice(0,2).map(n=>`${esc(n.id)} ${esc(String(n.text||"").replace(/\s+/g," ").slice(0,70))}`).join(" · ")}${nu.length>2?" …":""}</div>`)}
   {const dv=divInbound();if(dv.length)items.push(`<div class="wxa danger" data-go="vols"><b>Vol${dv.length>1?"s":""} hors programme à l'arrivée (dérouté${dv.length>1?"s":""} ?)</b> : ${dv.slice(0,3).map(v=>`${esc(v.n)} de ${esc(v.ville||v.code)} ${esc(volZ(v.t))}Z`).join(", ")}</div>`)}
   const hl0=volsHealth();if(hl0)items.push(hl0.replace('style="margin:8px 0"','data-go="vols"'));
   const canc=[...dep.map(v=>[v,0]),...arr.map(v=>[v,1])].filter(([v])=>v.cls==="annulee"&&volMs(v.t)>now-2*3600e3);
@@ -1875,7 +1884,17 @@ function liveTiles(){const o={};
 const NQG=[["Postes et aires de trafic",/^M[NKP]/],["Voies de circulation",/^MX/],["Pistes",/^M[RSTDUA]/],["Balisage",/^L/],["Radionavigation et ILS",/^[ING]/],
   ["Aérodrome et services",/^[FSC]/],["Procédures",/^P/],["Obstacles",/^O/],["Espace aérien",/^[ARW]/],["Autres",/./]];
 const NQC={LC:"fermé",AS:"hors service",AU:"indisponible",CH:"modifié",CA:"activé",CS:"installé",CR:"remplacé",LT:"limité",AH:"horaires modifiés",AW:"retiré",LH:"fermé sauf…",LW:"travaux",HW:"travaux",XX:""};
-function ntDate(d){if(!d||/PERM/i.test(d))return "permanent";const t=new Date(d);return isNaN(t)?d:t.toLocaleString("fr-FR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit",timeZone:"UTC"})+" UTC"}
+function ntDate(d){if(!d||/PERM/i.test(d))return "permanent";const t=new Date(d);return isNaN(t)?d:t.toLocaleString("fr-FR",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit",timeZone:"UTC"})+"Z"}
+/* en tête de la rubrique NOTAM : ce qui est EN COURS maintenant sur l'aire de mouvement et l'ILS (urgences d'abord), demandé
+   le 27 nov. 2026 ; le détail complet reste dans les groupes en dessous */
+function ntNowCard(list,now){const imp=new Set(ntImportant().map(n=>n.id));
+  const act=list.filter(n=>imp.has(n.id)&&(Date.parse(n.start)||0)<=now).sort((a,b)=>ntUrgent(b)-ntUrgent(a));
+  const others=list.filter(n=>!imp.has(n.id)&&(Date.parse(n.start)||0)<=now).length;
+  if(!act.length)return `<div class="ntnow ok"><b>Aucun NOTAM important en cours</b> <span class="sub">(pistes, voies, postes, ILS)${others?` · ${others} autre${others>1?"s":""} NOTAM en vigueur ci-dessous`:""}</span></div>`;
+  return `<div class="ntnow${act.some(ntUrgent)?" urg":""}"><div class="ntnow-h"><b>En cours maintenant</b> <span class="sub">pistes, voies, postes, ILS · ${act.length}</span></div>${act.map(n=>{const c=NQC[(n.q||"").slice(3,5)],u=ntUrgent(n);
+    const t=String(n.text||"").replace(/\s+/g," ").trim();
+    return `<div class="ntn${u?" urg":""}"><div><b>${esc(n.id)}</b>${c?` <span class="u-ext" style="margin:0">${esc(c)}</span>`:""}${u?' <span class="ntu">URGENT</span>':""} <span class="sub">${/PERM/i.test(n.end||"")?"permanent":"jusqu'au "+esc(ntDate(n.end))}</span></div><div class="ntt">${esc(t.length>160?t.slice(0,157)+"…":t)}</div></div>`}).join("")}
+    ${others?`<div class="sub" style="margin-top:6px">+ ${others} autre${others>1?"s":""} NOTAM en vigueur (balisage, procédures, obstacles…) dans les groupes ci-dessous.</div>`:""}</div>`}
 function notamView(q){
   if(!NOTAM_URL)return `<div class="card"><b>NOTAM LFML — pas encore branchés</b><p class="sub">Il faut un petit relais (gratuit) qui garde les identifiants de la source des NOTAM. Les étapes sont prêtes : demande-les dans la conversation avec Claude.</p></div>`;
   if(!NT.list)return NT.err?`<div class="info">${esc(NT.err)}</div>`:`<div class="card">${SKEL(5)}</div>`;
@@ -1890,6 +1909,7 @@ function notamView(q){
   list.forEach(n=>{const subj=(n.q||"").replace(/^Q/,"").slice(0,2);const i=NQG.findIndex(([,re])=>re.test(subj));groups[i<0?groups.length-1:i][1].push(n)});
   const age=Math.round((now-NT.at)/60e3);
   return `<div class="info">${list.length} NOTAM en vigueur ou à venir pour LFML · mis à jour <span data-ago="${NT.at}">il y a ${age} min</span>${NT.err?" · "+esc(NT.err):""} <button class="btn refresh" id="ntRefresh" style="font-size:12px;padding:3px 8px">Actualiser</button></div>
+  ${q?"":ntNowCard(list,now)}
   ${groups.filter(g=>g[1].length).map(([name,ns])=>`<details class="agrp"${q||/^(Postes|Voies|Pistes)/.test(name)?" open":""}><summary>${esc(name)} <span class="cnt">${ns.length}</span></summary><div class="abody">${ns.map(n=>{const c=NQC[(n.q||"").replace(/^Q/,"").slice(2,4)];const started=n.start&&new Date(n.start).getTime()>now;
     return `<div class="u-row" style="display:block;padding:8px 0"><div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap"><b>${hl(n.id,q)}</b>${c?`<span class="u-ext" style="margin:0">${esc(c)}</span>`:""}${started?'<span class="u-ext" style="margin:0;color:#b26a00">à venir</span>':""}<span class="sub">${!n.end||/PERM/i.test(n.end)?"depuis le "+esc(ntDate(n.start))+" · permanent":"du "+esc(ntDate(n.start))+" au "+esc(ntDate(n.end))}</span></div>
     <div style="font-family:ui-monospace,Menlo,monospace;font-size:12.5px;margin-top:4px;white-space:pre-wrap">${hl(n.text,q)}</div></div>`}).join("")}</div></details>`).join("")||'<div class="info">Aucun NOTAM.</div>'}
