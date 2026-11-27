@@ -189,6 +189,7 @@ mark{background:#ffe58a;color:#000;border-radius:2px}
   padding:calc(24px + env(safe-area-inset-top)) 12px calc(24px + env(safe-area-inset-bottom))}
 #set .setcard{max-width:420px;width:100%;margin:0 auto}
 body.noscroll{overflow:hidden}
+html.menu-open{overflow:hidden}
 #set.hide{display:none!important}
 .seg{display:inline-grid;grid-auto-flow:column;grid-auto-columns:1fr;border:1px solid var(--line);border-radius:10px;overflow:hidden;margin:4px 0}
 .seg button{border:0;background:var(--card);color:var(--ink);padding:8px 12px;font:inherit;font-size:14px;cursor:pointer}
@@ -292,7 +293,7 @@ body.noscroll{overflow:hidden}
 #menuBtn b{flex:1}
 html[data-nav=menu] #menuBtn{display:flex}
 html[data-nav=menu] nav#tabs{display:none}
-#menu{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:25;overflow-y:auto;padding:calc(60px + env(safe-area-inset-top)) 12px 24px}
+#menu{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:25;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;padding:calc(60px + env(safe-area-inset-top)) 12px 24px}
 #menu.hide{display:none}
 #menu .card{max-width:460px;margin:0 auto}
 .mtheme{margin:10px 0 4px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--acc);font-weight:700}
@@ -1238,6 +1239,8 @@ function editSet(on){EDIT=on;{const h=document.querySelector("header");if(h)docu
     if(x.dataset.tmv){const th=myThemes(),i=+x.dataset.tmv,j=i+(+x.dataset.d);if(j<0||j>=th.length)return;[th[i],th[j]]=[th[j],th[i]];persoSave(th);render()}},true);
   document.addEventListener("click",e=>{if(e.target.id==="editStart"){e.preventDefault();scrollTo(0,0);editSet(true)}});
 })();
+/* menu Rubriques ouvert : la page dessous ne défile plus (27 nov. 2026 : deux « ascenseurs » qui se chevauchaient) */
+new MutationObserver(()=>{const open=!$("#menu").classList.contains("hide");document.documentElement.classList.toggle("menu-open",open);document.body.classList.toggle("noscroll",open)}).observe($("#menu"),{attributes:true,attributeFilter:["class"]});
 $("#menu").onclick=e=>{const b=e.target.closest(".mitem");if(b){tab=b.dataset.k;location.hash=tab;render()}if(b||e.target.id==="menu")$("#menu").classList.add("hide")};
 function setSeg(id,v){document.querySelectorAll(`#${id} button`).forEach(b=>b.classList.toggle("on",b.dataset.v===v))}
 function applyTheme(v){if(v==="light"||v==="dark")document.documentElement.dataset.theme=v;else delete document.documentElement.dataset.theme;store("coa-theme",v);setSeg("themeSeg",v)}
