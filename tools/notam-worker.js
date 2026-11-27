@@ -158,12 +158,12 @@ async function fetchBoard(kind, stopDay) {
 // Chaque tranche est gardée en cache : une tranche passée n'est plus jamais redemandée (24 h), un échec bloque 30 min.
 let adbLast = 0; // l'offre gratuite n'accepte qu'un appel par seconde : appels espacés de 2,5 s, un nouvel essai si refus
 async function adbWindow(env, from, to, current) {
-  const cache = caches.default, key = new Request(`https://notam-cache.local/adb2/${from}`);
+  const cache = caches.default, key = new Request(`https://notam-cache.local/adb3/${from}`);
   const hit = await cache.match(key);
   if (hit) return hit.json();
   let body, failTtl = 1800;
   try {
-    const url = `https://aerodatabox.p.rapidapi.com/flights/airports/icao/LFML/${from}/${to}?withLeg=false&direction=Both&withCancelled=true&withCodeshared=false&withCargo=false&withPrivate=false&withLocation=false`;
+    const url = `https://aerodatabox.p.rapidapi.com/flights/airports/icao/LFML/${from}/${to}?withLeg=false&direction=Both&withCancelled=true&withCodeshared=false&withCargo=false&withPrivate=true&withLocation=false`;
     let r;
     for (let k = 0; k < 2; k++) {
       const wait = adbLast + (k ? 4000 : 2500) - Date.now();
@@ -177,13 +177,21 @@ async function adbWindow(env, from, to, current) {
     else {
       if (!r.ok) { const t = await r.text().catch(() => ''); let m = ''; try { m = JSON.parse(t).message || ''; } catch (e) { m = t.slice(0, 120); }
         throw new Error('AeroDataBox ' + r.status + (m ? ' : ' + m : '')); }
-      const j = await r.json(), regs = {};
+      const j = await r.json(), regs = {}, all = [];
       for (const [dir, list] of [['D', j.departures || []], ['A', j.arrivals || []]]) for (const f of list) {
+        /* tous les mouvements (aviation générale et vols privés compris, withPrivate=true) : ceux absents du tableau de
+           l'aéroport sont rendus à part (body.ga) */
+        { const m = f.movement || {}, ap = m.airport || {}, tm = x => x && x.local ? x.local.slice(0, 16).replace(' ', 'T') : '';
+          const t = tm(m.scheduledTime) || tm(m.revisedTime) || tm(m.runwayTime);
+          if (t) all.push({ d: dir, n: (f.number || '').toUpperCase(), cs: f.callSign || '', t, rt: tm(m.revisedTime) || tm(m.runwayTime),
+            reg: ((f.aircraft && f.aircraft.reg) || '').replace(/-/g, '').toUpperCase(), model: (f.aircraft && f.aircraft.model) || '',
+            icao: ap.icao || '', iata: ap.iata || '', ville: ap.municipalityName || ap.shortName || ap.name || '',
+            st: f.status || '', op: (f.airline && f.airline.name) || '', cargo: !!f.isCargo }); }
         const reg = f.aircraft && f.aircraft.reg, t = f.movement && f.movement.scheduledTime && f.movement.scheduledTime.local;
         if (!reg || !f.number || !t) continue;
         (regs[`${dir}|${f.number.replace(/\s/g, '').toUpperCase()}`] ||= []).push([t.slice(0, 16).replace(' ', 'T'), reg.replace(/-/g, '').toUpperCase(), (f.aircraft.model || '')]);
       }
-      body = { regs, at: Date.now(), left: r.headers.get('x-ratelimit-requests-remaining') || '' };
+      body = { regs, all, at: Date.now(), left: r.headers.get('x-ratelimit-requests-remaining') || '' };
     }
     const ttl = current ? 60 * Math.max(15, +(env.ADB_REFRESH_MIN || 360)) : 86400;
     await cache.put(key, new Response(JSON.stringify(body), { headers: { 'Cache-Control': `max-age=${ttl}` } }));
@@ -214,6 +222,11 @@ async function addRegs(env, body, now) {
     if (best) { r.reg = best[1]; r.type = best[2]; hit++; }
   });
   put(body.dep, 'D'); put(body.arr, 'A');
+  // mouvements AeroDataBox absents du tableau de l'aéroport (aviation générale, vols privés, affaires) : aujourd'hui et demain
+  const onBoard = new Set([...body.dep.map(r => 'D|' + r.n.replace(/\s/g, '').toUpperCase()), ...body.arr.map(r => 'A|' + r.n.replace(/\s/g, '').toUpperCase())]);
+  const seen = new Set();
+  body.ga = res.flatMap(x => x.all || []).filter(f => f.t.slice(0, 10) >= today && !onBoard.has(f.d + '|' + f.n.replace(/\s/g, ''))
+    && !seen.has(f.d + f.n + f.t) && seen.add(f.d + f.n + f.t)).sort((a, b) => a.t < b.t ? -1 : 1);
   const err = res.find(x => x.err);
   body.adb = { n, hit, err: err ? err.err : '', left: (res.find(x => x.left) || {}).left || '' };
 }

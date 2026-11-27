@@ -106,8 +106,9 @@ mark{background:#ffe58a;color:#000;border-radius:2px}
 .vcard.open{box-shadow:0 4px 16px rgba(0,0,0,.08);border-color:color-mix(in srgb,var(--vst) 40%,var(--line));border-left-color:var(--vst)}
 .vcard.done{background:color-mix(in srgb,var(--card) 92%,var(--line))}
 .vc-top{display:flex;gap:12px;align-items:flex-start}
-.vc-time{flex:none;width:58px;display:flex;flex-direction:column;align-items:flex-start;line-height:1.1}
+.vc-time{flex:none;width:66px;display:flex;flex-direction:column;align-items:flex-start;line-height:1.1}
 .vc-time b{font-size:21px;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.vc-time b .vz{font-size:13px;margin-left:1px;color:var(--mute);font-weight:700}
 .vc-time small{font-size:12px;color:var(--mute);margin-top:2px;font-variant-numeric:tabular-nums}
 .vc-ico{font-size:12px;color:var(--mute)}
 .vc-main{flex:1;min-width:0}
@@ -117,14 +118,15 @@ mark{background:#ffe58a;color:#000;border-radius:2px}
 .vc-city{font-size:15.5px;font-weight:600;margin-top:3px;overflow:hidden;text-overflow:ellipsis}
 .vc-city .u-ext{margin:0 0 0 4px}
 .vc-chev{flex:none;color:var(--mute);font-size:13px;margin-top:4px}
-.vc-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0 0 70px;font-size:12.5px}
+.vc-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:8px 0 0 78px;font-size:12.5px}
 .vc-chip{background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:2px 9px;white-space:nowrap;color:var(--ink)}
+.vc-ag{background:#5d4037;border-color:transparent;color:#fff;font-weight:800;letter-spacing:.04em}
 .vc-where{background:var(--acc2);border-color:transparent;color:var(--acc);font-weight:700}
 .vc-link{border-style:dashed}.vc-link:not(.prob){border-style:solid;border-color:color-mix(in srgb,var(--ok,#2e7d32) 45%,var(--line))}
 .vc-link.prob{color:var(--mute)}
 .vc-cie{color:var(--mute);flex-basis:100%;order:9}
 .vc-meta .vcd{margin:0}
-.vcard .vdet,.vcard>.risk{margin-left:70px}
+.vcard .vdet,.vcard>.risk{margin-left:78px}
 @media (max-width:360px){.vc-meta,.vcard .vdet,.vcard>.risk{margin-left:0}}
 @media (prefers-reduced-motion:reduce){.vcard{transition:none}}
 .elsewhere{margin-top:16px;padding-top:4px;border-top:2px dashed var(--line)}
@@ -1529,7 +1531,7 @@ async function notamLoad(force){
 }
 /* Vols du jour : tableau public de l'aéroport Marseille Provence, via le même relais Cloudflare que les NOTAM (?vols=1).
    Consultation seulement (pas un GANTT). Heures du site = heures locales Paris. Dernière liste gardée (coa-vols) hors connexion. */
-const VL={data:null,at:0,err:"",loading:false,failAt:0,dir:"arr",day:0,done:false,reg:""};
+const VL={data:null,at:0,err:"",loading:false,failAt:0,dir:"arr",day:0,done:false,reg:"",ag:(()=>{try{return localStorage.getItem("coa-vl-ag")!=="0"}catch(e){return true}})()};
 try{const c=JSON.parse(store("coa-vols")||"null");if(c&&c.data){VL.data=c.data;VL.at=c.at}}catch(e){}
 async function volsLoad(force){
   if(!NOTAM_URL||VL.loading||(!force&&VL.data&&Date.now()-VL.at<3*60e3))return;
@@ -1554,10 +1556,19 @@ const volDiverted=v=>/d[ée]rout|divert|d[ée]tourn/i.test(v.st+" "+v.cls);
 /* liste récente (< 30 min) : sinon l'accueil, la recherche et le MUA n'utilisent pas une vieille copie */
 const volsFresh=()=>!!(VL.data&&Date.now()-VL.at<30*60e3);
 const volKey=v=>v.n+"|"+v.t;
+/* heures écrites dans le statut du site (« Prévu à 16:45 », heure de Paris) → heure Z */
+const stZ=v=>String(v.st||"").replace(/\b(\d{1,2}):(\d{2})\b/g,(m,h,mi)=>volZ(v.t.slice(0,11)+String(h).padStart(2,"0")+":"+mi)+"Z");
 /* retard lu dans le statut (« Prévu à 00:31 », « Retardé 21:30 »…) : minutes, ou null */
 function volDelay(v){if(volDone(v)||v.cls==="annulee")return null;const m=String(v.st).match(/(\d{1,2}):(\d{2})/);if(!m)return null;
   const s0=parseHM(v.t.slice(11,16)),s1=+m[1]*60+ +m[2];let d=s1-s0;if(d<-720)d+=1440;if(d>720)d-=1440;return d>=5?d:null}
-function volsOf(day){const D=VL.data;if(!D)return {dep:[],arr:[]};return {dep:D.dep.filter(v=>v.t.slice(0,10)===day),arr:D.arr.filter(v=>v.t.slice(0,10)===day)}}
+/* aviation générale et vols hors tableau (AeroDataBox via le relais, body.ga ; demandé le 27 nov. 2026) */
+const AG_ST={Expected:"Prévu",EnRoute:"En vol",Approaching:"En approche",Arrived:"Arrivé",Departed:"Décollé",Delayed:"Retardé",Canceled:"Annulé",CanceledUncertain:"Annulé ?",Diverted:"Dérouté",Boarding:"Embarquement",GateClosed:"Porte fermée",CheckIn:"Enregistrement"};
+function agRows(day,arr){const D=VL.data;if(!D||!Array.isArray(D.ga)||VL.ag===false)return [];
+  return D.ga.filter(f=>f.d===(arr?"A":"D")&&f.t.slice(0,10)===day).map(f=>({n:f.cs||f.n,al:"",cie:f.op||"Aviation générale",t:f.t,ville:f.ville,code:f.iata||f.icao,
+    st:AG_ST[f.st]||"",cls:/^(Arrived|Departed)$/.test(f.st)?"vol-take-off":/^Canceled/.test(f.st)?"annulee":"",reg:f.reg,type:f.model,ag:1,porte:"",tapis:"",term:""}))}
+const agCount=day=>agRows(day,true).length+agRows(day,false).length;
+function volsOf(day){const D=VL.data;if(!D)return {dep:[],arr:[]};const by=(a,b)=>a.t<b.t?-1:a.t>b.t?1:0;
+  return {dep:[...D.dep.filter(v=>v.t.slice(0,10)===day),...agRows(day,false)].sort(by),arr:[...D.arr.filter(v=>v.t.slice(0,10)===day),...agRows(day,true)].sort(by)}}
 const volMatch=(v,q)=>norm([v.n,v.n.replace(/\s/g,""),v.cie,v.ville,v.code,v.porte&&"porte "+v.porte,v.tapis&&"tapis "+v.tapis,MRS_HANDLER[v.al]||"",v.reg||"",v.reg?fmtReg(v.reg):""].join(" ")).includes(q);
 /* assistants cités dans MRS_HANDLER (« Passage Air France · coordo Aviapartner » → Air France, Aviapartner) */
 const handlerNames=h=>["Aviapartner","Alyzia","Air France","Onet"].filter(n=>String(h||"").includes(n));
@@ -1575,7 +1586,7 @@ function volDetail(v,arr){
   return `<div class="vdet">${line("Compagnie",esc(alTxt))}
     ${line(arr?"Provenance":"Destination",ap?`${esc(ap[2])} · ${esc(ap[3])}, ${esc(pfr(ap[4]))} <span class="u-ext" style="margin:0">${esc(ap[0])} · ${esc(ap[1])}</span>`:esc(v.ville))}
     ${line("Temps de vol estimé",f?`≈ ${hm(arr?f.back:f.go)} · ${f.d.toLocaleString("fr")} km`:"")}
-    ${line("Horaire",`${esc(v.t.slice(11,16))} locale · ${esc(volZ(v.t))} Z${dl?` · <b style="color:#b26a00">retard ≈ ${dl} min</b>`:""}`)}
+    ${line("Horaire",`${esc(volZ(v.t))} Z · ${esc(v.t.slice(11,16))} locale${dl?` · <b style="color:#b26a00">retard ≈ ${dl} min</b>`:""}`)}
     ${line("Avion",v.reg?esc(fmtReg(v.reg)+(v.type?" · "+v.type:"")):"")}
     ${line("Statut",esc([v.st,v.emb].filter(Boolean).join(" · ")))}
     ${arr?line("Tapis bagages",esc(v.tapis)):line("Porte",esc([v.porte,v.zone&&v.zone!==v.term?"zone "+v.zone:"",v.term].filter(Boolean).join(" · ")))}
@@ -1595,11 +1606,11 @@ function volRow(v,arr,q,ico){const h=v.t.slice(11,16),z=volZ(v.t),hd=MRS_HANDLER
   const where=arr?(v.tapis?"Tapis "+v.tapis:""):[v.porte?"Porte "+v.porte:"",v.term].filter(Boolean).join(" · ");
   /* carte pleine largeur (demandée le 25 nov. 2026) : heure à gauche, vol + statut, ville en grand, infos en pastilles */
   return `<div class="vcard vrow${open?" open":""}${volDone(v)?" done":""}" data-vk="${esc(volKey(v))}" data-varr="${arr?1:0}" role="button" tabindex="0" style="--vst:${stCls}${v.cls==="annulee"?";opacity:.8":""}">
-    <div class="vc-top"><div class="vc-time">${ico?`<span class="vc-ico">${ico}</span>`:""}<b>${esc(h)}</b><small>${esc(z)}Z</small></div>
-      <div class="vc-main"><div class="vc-l1"><b class="vc-n">${hl(v.n,q)}</b>${v.st?`<span class="vc-st">${esc(v.st)}${dl&&dl>=15?` (+${dl} min)`:""}</span>`:""}</div>
+    <div class="vc-top"><div class="vc-time">${ico?`<span class="vc-ico">${ico}</span>`:""}<b>${esc(z)}<span class="vz">Z</span></b><small>${esc(h)} L</small></div>
+      <div class="vc-main"><div class="vc-l1"><b class="vc-n">${hl(v.n,q)}</b>${v.st?`<span class="vc-st">${esc(stZ(v))}${dl&&dl>=15?` (+${dl} min)`:""}</span>`:""}</div>
         <div class="vc-city">${hl(v.ville,q)} <span class="u-ext">${esc(v.code)}</span></div></div>
       <span class="vc-chev">${open?"▴":"▾"}</span></div>
-    <div class="vc-meta">${where?`<span class="vc-chip vc-where">${hl(where,q)}</span>`:""}${volDone(v)||v.cls==="annulee"?"":`<span class="vc-chip vcd" data-cd="${volMs(v.t)+(dl||0)*60e3}">${cdText(volMs(v.t)+(dl||0)*60e3)}</span>`}${volLink(v,arr)}<span class="vc-cie">${hl(v.cie,q)}${hd?" · "+hl(hd,q):""}</span>${v.reg?`<span class="vc-chip">${hl(fmtReg(v.reg),q)}${v.type?" · "+esc(v.type):""}</span>`:""}</div>
+    <div class="vc-meta">${v.ag?`<span class="vc-chip vc-ag" title="Aviation générale ou vol hors tableau de l'aéroport (AeroDataBox)">AG</span>`:""}${where?`<span class="vc-chip vc-where">${hl(where,q)}</span>`:""}${volDone(v)||v.cls==="annulee"?"":`<span class="vc-chip vcd" data-cd="${volMs(v.t)+(dl||0)*60e3}">${cdText(volMs(v.t)+(dl||0)*60e3)}</span>`}${volLink(v,arr)}<span class="vc-cie">${hl(v.cie,q)}${hd?" · "+hl(hd,q):""}</span>${v.reg?`<span class="vc-chip">${hl(fmtReg(v.reg),q)}${v.type?" · "+esc(v.type):""}</span>`:""}</div>
     ${arr?"":riskHtml(v)}${open?volDetail(v,arr):""}</div>`}
 /* vue rotations : arrivée + départ du même avion, rapprochés par compagnie, escale et numéros de vol voisins
    (AF 7342 → AF 7343), départ 20 min à 14 h après l'arrivée. Rapprochement probable, pas une donnée de l'aéroport. */
@@ -1710,9 +1721,9 @@ function rotRow(r,q){const {a,d}=r,v0=a||d;const k=a&&d?volKey(a)+"#"+volKey(d):
     const other=v.t.slice(0,10)!==VL.dayShown?(v.t.slice(0,10)<VL.dayShown?"la veille":"le lendemain"):"";
     return `<div class="rhalf ${arr?"ra":"rd"}"><div class="rlab">${arr?"↓ Arrivée de":"↑ Départ vers"}${other?` <span style="color:var(--acc)">· ${other}</span>`:""}</div>
       <div class="rcity">${hl(v.ville,q)} <span class="u-ext" style="margin:0">${esc(v.code)}</span></div>
-      <div><span class="rt">${esc(v.t.slice(11,16))}</span> <span class="sub">${esc(volZ(v.t))}Z</span></div>
+      <div><span class="rt">${esc(volZ(v.t))}Z</span> <span class="sub">${esc(v.t.slice(11,16))} L</span></div>
       <div><b>${hl(v.n,q)}</b></div>
-      ${v.st?`<div style="color:${c};font-weight:600;font-size:13px">${esc(v.st)}${dl&&dl>=15?` (+${dl} min)`:""}</div>`:""}
+      ${v.st?`<div style="color:${c};font-weight:600;font-size:13px">${esc(stZ(v))}${dl&&dl>=15?` (+${dl} min)`:""}</div>`:""}
       <div class="sub">${arr?(v.tapis?"Tapis "+esc(v.tapis):""):(v.porte?"Porte "+esc(v.porte):"")}</div>${arr?"":riskHtml(v)}</div>`};
   const ns=a&&d&&d.t.slice(0,10)!==a.t.slice(0,10);
   return `<div class="rcard vrow${open?" open":""}" data-vk="${esc(k)}" data-varr="2" role="button" tabindex="0">
@@ -1735,9 +1746,9 @@ function volsView(q){
   const trk=VL.reg||qr?regTrack(VL.reg||qr):"";
   return `${volsHealth()}${trk}<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><div class="seg" id="vlDir"><button data-v="arr" class="${arr?"on":""}">Arrivées</button><button data-v="rot" class="${rot?"on":""}">Arr. + Dép.</button><button data-v="dep" class="${!arr&&!rot?"on":""}">Départs</button></div>
     <div class="seg" id="vlDay">${dl.map((l,i)=>`<button data-v="${i}" class="${VL.day===i?"on":""}">${l}</button>`).join("")}</div>
-    <label class="sub" style="display:flex;gap:4px;align-items:center"><input type="checkbox" id="vlDone"${VL.done?" checked":""}> ${rot?"rotations terminées":arr?"vols arrivés":"vols décollés"}${rot?"":` (${fini})`}</label></div>
-  ${rot?`<div class="info">${nRot} rotations le ${day.split("-").reverse().join("/")} : arrivée ↓ et départ ↑ du même avion, reliés par l'immatriculation quand elle est connue${D.adb?` (${D.adb.hit??D.adb.n} vols avec immatriculation${D.adb.err?" · "+esc(D.adb.err):""})`:" (pas encore branchée)"}, sinon par compagnie, escale et numéros de vol (« probable »). Les vols sans rotation trouvée sont seuls. Site de l'aéroport mis à jour à ${esc(D.maj||"?")}, relu <span data-ago="${VL.at}">il y a ${age} min</span> <button class="btn" id="vlRefresh" style="font-size:12px;padding:3px 8px">Actualiser</button></div>
-  ${q?"":wxpBlock("rot")}<div class="rlist">${rots.map(r=>rotRow(r,q)).join("")||'<div class="info">Aucun vol.</div>'}</div>`:`<div class="info">${all} ${arr?"arrivées":"départs"} le ${day.split("-").reverse().join("/")}${canc?` · <b style="color:#c62828">${canc} annulé${canc>1?"s":""}</b>`:""} · heures locales (Z à côté) · touche un vol pour sa fiche · site de l'aéroport mis à jour à ${esc(D.maj||"?")}, relu <span data-ago="${VL.at}">il y a ${age} min</span>${VL.err?" · "+esc(VL.err):""} <button class="btn" id="vlRefresh" style="font-size:12px;padding:3px 8px">Actualiser</button></div>
+    <label class="sub" style="display:flex;gap:4px;align-items:center"><input type="checkbox" id="vlDone"${VL.done?" checked":""}> ${rot?"rotations terminées":arr?"vols arrivés":"vols décollés"}${rot?"":` (${fini})`}</label>${!rot&&Array.isArray(D.ga)?`<label class="sub" style="display:flex;gap:4px;align-items:center"><input type="checkbox" id="vlAg"${VL.ag!==false?" checked":""}> aviation générale${VL.ag!==false?` (${agRows(day,arr).length})`:""}</label>`:""}</div>
+  ${rot?`<div class="info">${nRot} rotations le ${day.split("-").reverse().join("/")} : arrivée ↓ et départ ↑ du même avion, reliés par l'immatriculation quand elle est connue${D.adb?` (${D.adb.hit??D.adb.n} vols avec immatriculation${D.adb.err?" · "+esc(D.adb.err):""})`:" (pas encore branchée)"}, sinon par compagnie, escale et numéros de vol (« probable »). Les vols sans rotation trouvée sont seuls. Site de l'aéroport mis à jour à ${/^\d{1,2}:\d{2}$/.test(D.maj||"")?esc(volZ(D.today+"T"+D.maj.padStart(5,"0")))+"Z":esc(D.maj||"?")}, relu <span data-ago="${VL.at}">il y a ${age} min</span> <button class="btn" id="vlRefresh" style="font-size:12px;padding:3px 8px">Actualiser</button></div>
+  ${q?"":wxpBlock("rot")}<div class="rlist">${rots.map(r=>rotRow(r,q)).join("")||'<div class="info">Aucun vol.</div>'}</div>`:`<div class="info">${all} ${arr?"arrivées":"départs"} le ${day.split("-").reverse().join("/")}${canc?` · <b style="color:#c62828">${canc} annulé${canc>1?"s":""}</b>`:""} · heures en Z (heure locale à côté) · touche un vol pour sa fiche · site de l'aéroport mis à jour à ${/^\d{1,2}:\d{2}$/.test(D.maj||"")?esc(volZ(D.today+"T"+D.maj.padStart(5,"0")))+"Z":esc(D.maj||"?")}, relu <span data-ago="${VL.at}">il y a ${age} min</span>${VL.err?" · "+esc(VL.err):""} <button class="btn" id="vlRefresh" style="font-size:12px;padding:3px 8px">Actualiser</button></div>
   ${q?"":wxpBlock(arr?"arr":"dep")}<div class="vlist">${list.map(v=>volRow(v,arr,q)).join("")||'<div class="info">Aucun vol.</div>'}</div>`}
   <p class="sub">Source : tableau public des vols de l'aéroport Marseille Provence. Consultation seulement : horaires indicatifs, le GANTT et les messages compagnie font foi.${MUA.annu?"":" Déverrouille le MUA pour voir le poste au contact des portes."}</p>`;
 }
@@ -2321,6 +2332,7 @@ function render(){
   const nr=$("#ntRefresh");if(nr)nr.onclick=()=>{nr.textContent="…";notamLoad(true)};
   const vr=$("#vlRefresh");if(vr)vr.onclick=()=>{vr.textContent="…";volsLoad(true)};
   document.querySelectorAll("#vlDir button").forEach(b=>b.onclick=()=>{VL.dir=b.dataset.v;VL.open=null;render()});
+  {const ag=$("#vlAg");if(ag)ag.onchange=()=>{VL.ag=ag.checked;try{localStorage.setItem("coa-vl-ag",ag.checked?"1":"0")}catch(e){}render()}}
   document.querySelectorAll(".vrow").forEach(r=>{const go=e=>{if(e.target.closest("button,a"))return;VL.open=VL.open===r.dataset.vk?null:r.dataset.vk;if(tab!=="vols"){VL.keep=true;VL.dir=r.dataset.varr==="1"?"arr":r.dataset.varr==="2"?"rot":"dep";VL.day=r.dataset.vk.split("|")[1].slice(0,10)===VL.data.today?0:1;tab="vols";location.hash="vols"}render()};r.onclick=go;r.onkeydown=e=>{if(e.key==="Enter")go(e)}});
   document.querySelectorAll("[data-ctq]").forEach(b=>b.onclick=()=>{$("#q").value=b.dataset.ctq;tab="ct";location.hash="ct";render();scrollTo(0,0)});
   document.querySelectorAll("[data-alq]").forEach(b=>b.onclick=()=>{$("#q").value=b.dataset.alq;tab="al";location.hash="al";render();scrollTo(0,0)});

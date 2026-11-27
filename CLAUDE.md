@@ -108,6 +108,13 @@ L'utilisateur échange en français.
   sur 4, surtout proches de l'heure) : c'est la vraie limite.
   **Heures en TU (27 nov.)** : météo des escales, liens « ↻ Repart », alerte « avion attendu… », alertes de l'accueil et départs
   aux portes (MUA) en heure Z ; les cartes de vol gardent l'heure locale en grand + Z (affichage du site de l'aéroport).
+  **Zulu partout (27 nov., « nous travaillons en Z »)** : heure Z en grand sur les cartes et rotations, heure locale « L » en petit ;
+  heures des statuts du site converties (`stZ`), heure de mise à jour du site en Z.
+  **Aviation générale** (27 nov., demandé) : le relais demande AeroDataBox avec `withPrivate=true` (même appel, pas de quota en plus)
+  et renvoie `body.ga` = mouvements absents du tableau de l'aéroport (AG, privés, affaires) ; l'appli les mêle aux Arrivées /
+  Départs avec la pastille « AG » (`agRows`, case « aviation générale », `coa-vl-ag`). **Il faut recoller tools/notam-worker.js
+  dans Cloudflare (worker coa-notam)** pour l'activer ; sans ça la case n'apparaît pas. Cache adb3 (ADB_REFRESH_MIN : la tranche en
+  cours n'est relue que toutes les 6 h sur l'offre gratuite).
   Test local : routes playwright vers les données réelles du relais (le relais n'autorise que l'origine github.io).
 
 - **Recherche dans une rubrique** (26 nov. 2026, demandé : immat. introuvable depuis Temps de vol) : `globalParts(q)` (même
