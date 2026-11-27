@@ -2373,10 +2373,13 @@ function render(){
   if(q&&!["home","all","calc"].includes(tab)){const empty=/class="info">\s*Aucun|Aucun résultat|Aucun vol|Aucun aéroport/.test(h)||!h.trim();
     let el=globalParts(q).filter(p=>p[1]!==tab);if(!empty)el=el.filter(p=>p[3]>=4);
     if(el.length){el.sort((x,y)=>y[3]-x[3]);h+=`<div class="elsewhere"><div class="elh">${empty?"Trouvé ailleurs dans l'appli":"Aussi trouvé ailleurs"}</div>`+el.slice(0,4).map(([t,k,x])=>`<h2>${t} <button class="btn" style="font-size:11px;padding:2px 8px" data-gotab="${k}">ouvrir</button></h2>${x}`).join("")+"</div>"}}
+  /* l'animation d'apparition ne joue qu'en changeant de rubrique : les mises à jour (météo, vols, NOTAM qui arrivent) ne font plus
+     clignoter la page (signalé le 27 nov. 2026 : 2-3 clignotements à l'ouverture) */
+  if(tab===lastTab)out.classList.remove("enter");
   out.innerHTML=(HELP[tab]&&!q?`<p class="tabhelp">${HELP[tab]}</p>`:"")+(q?"":quickView(tab))+h;
   bnavRender();
   liveTick();
-  if(tab!==lastTab){lastTab=tab;out.classList.remove("enter");void out.offsetWidth;out.classList.add("enter")}
+  if(tab!==lastTab){lastTab=tab;out.classList.remove("enter");void out.offsetWidth;out.classList.add("enter");clearTimeout(render._en);render._en=setTimeout(()=>out.classList.remove("enter"),650)}
   document.querySelectorAll("[data-qq]").forEach(b=>b.onclick=()=>{$("#q").value=b.dataset.qq;render();scrollTo(0,0)});
   if(tab==="ct")bindContacts();
   if(tab==="calc")bindCalc();
