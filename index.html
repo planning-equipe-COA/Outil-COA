@@ -139,10 +139,12 @@ mark{background:#ffe58a;color:#000;border-radius:2px}
 .fqs{font-weight:700;white-space:normal!important;text-align:right;max-width:52%;flex-shrink:0;line-height:1.35}
 .fqs span{white-space:nowrap}
 /* tuile d'une rubrique avec une alerte pas encore vue : cadre rouge qui pulse (27 nov. 2026) */
-.home .tile.alert{border-color:#e5484d;animation:tileAlert 1.6s ease-in-out infinite}
-@keyframes tileAlert{0%,100%{box-shadow:0 0 0 0 rgba(229,72,77,.0)}50%{box-shadow:0 0 0 4px rgba(229,72,77,.35)}}
+.home .tile.alert{--ac:229,160,0;border-color:rgb(var(--ac));animation:tileAlert 1.6s ease-in-out infinite}
+.home .tile.alert.urg{--ac:229,72,77}
+.home .tile.urg-seen{border-color:#e5484d}
+@keyframes tileAlert{0%,100%{box-shadow:0 0 0 0 rgba(var(--ac),0)}50%{box-shadow:0 0 0 4px rgba(var(--ac),.38)}}
 #out.enter .home .tile.alert{animation:riseIn .4s cubic-bezier(.2,.8,.2,1) both,tileAlert 1.6s ease-in-out .4s infinite}
-@media (prefers-reduced-motion:reduce){.home .tile.alert{animation:none!important;box-shadow:0 0 0 2px rgba(229,72,77,.4)}}
+@media (prefers-reduced-motion:reduce){.home .tile.alert{animation:none!important;box-shadow:0 0 0 2px rgba(var(--ac),.4)}}
 .tempty{grid-column:1/-1;border:2px dashed var(--line);border-radius:14px;padding:18px;text-align:center;color:var(--mute);font-size:13.5px}
 .home h2 .thmv{float:right;display:flex;gap:6px;margin-top:-4px}
 .home h2 .thmv button{width:32px;height:28px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--ink);font-size:15px;cursor:pointer}
@@ -389,7 +391,8 @@ main{padding-bottom:calc(86px + env(safe-area-inset-bottom))}
 #bnav button.on{color:var(--acc)}
 #bnav button.on svg{transform:translateY(-1px) scale(1.1)}
 #bnav button:active svg{transform:scale(.88)}
-#bnav .bdot{position:absolute;top:3px;left:calc(50% + 9px);width:8px;height:8px;border-radius:50%;background:#e5484d;box-shadow:0 0 0 2px var(--card);display:none}
+#bnav .bdot{position:absolute;top:3px;left:calc(50% + 9px);width:8px;height:8px;border-radius:50%;background:#e5a000;box-shadow:0 0 0 2px var(--card);display:none}
+#bnav .bdot.urg{background:#e5484d}
 #bnav .bdot.show{display:block;animation:bdot 2s ease-in-out infinite}
 @keyframes bdot{0%,100%{transform:scale(1)}50%{transform:scale(1.25)}}
 #menu{padding-bottom:calc(90px + env(safe-area-inset-bottom))}
@@ -1096,11 +1099,14 @@ const BNAV=[["home","Accueil",'<path d="M3.5 11 12 4l8.5 7M6 9.5V20h4.5v-5.5h3V2
    quand on ouvre la rubrique et ne revient que si l'alerte change (27 nov. 2026 : restait allumée après consultation) */
 function bdotSig(k){try{if(k==="vols")return volsFresh()?String(homeAlerts()||"").replace(/<[^>]+>/g," ").replace(/\b\d{1,2}:\d{2}Z?\b|dans \d+[^,]*|il y a \d+ min/g,"").replace(/\s+/g," ").trim():"";
   if(k==="wx")return WX.metar?wxAlerts().map(a=>typeof a==="string"?a:(a.t||a.txt||a.title||JSON.stringify(a))).join("|").replace(/<[^>]+>/g,"").replace(/\d+/g,"#"):""}catch(e){}return ""}
+/* urgence (rouge) : phénomène dangereux observé maintenant ou dans les 2 h à LFML (orage, visibilité < 800 m, givrant, grêle,
+   grains…) ; le reste (TAF, vent fort, vols annulés / déroutés) = à regarder (jaune). Demandé le 27 nov. 2026. */
+function alertUrgent(k){try{return k==="wx"&&!!WX.metar&&wxAlerts().some(a=>a.lvl==="danger"&&!/^TAF/.test(a.when||""))}catch(e){return false}}
 function bdotOn(k){if(k!=="vols"&&k!=="wx")return false;const sg=bdotSig(k);if(!sg)return false;
   if(tab===k){try{localStorage.setItem("coa-seen-"+k,sg)}catch(e){}return false}
   let seen="";try{seen=localStorage.getItem("coa-seen-"+k)||""}catch(e){}return sg!==seen}
 function bnavRender(){if(EDIT&&tab!=="home")EDIT=false;const BN=myBnav(),main=BN.some(([k])=>k===tab);
-  $("#bnav").innerHTML=BN.map(([k,l,ic])=>`<button type="button" data-b="${k}" class="${k===tab||(k==="more"&&!main)?"on":""}"${k===tab?' aria-current="page"':""}>${'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'}${ic||TI[k]}</svg><span>${k==="more"&&!main?esc(tabName(tab)||l):l}</span><i class="bdot${bdotOn(k)?" show":""}"></i></button>`).join("")}
+  $("#bnav").innerHTML=BN.map(([k,l,ic])=>`<button type="button" data-b="${k}" class="${k===tab||(k==="more"&&!main)?"on":""}"${k===tab?' aria-current="page"':""}>${'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'}${ic||TI[k]}</svg><span>${k==="more"&&!main?esc(tabName(tab)||l):l}</span><i class="bdot${bdotOn(k)?" show"+(alertUrgent(k)?" urg":""):""}"></i></button>`).join("")}
 $("#bnav").onclick=e=>{const b=e.target.closest("button");if(!b)return;const k=b.dataset.b;
   if(k==="more"){openMenu();return}
   if(k===tab&&!$("#q").value){scrollTo({top:0,behavior:"smooth"});return}
@@ -1142,7 +1148,7 @@ function homeView(){
   const extra=Object.assign({mua:MUA.sheets?`${MUA.sheets.length} fiches de postes`:"Fiches de postes (code)",ct:MUA.annu?"Annuaire COA et mes numéros":"Assistants, services, portes"},liveTiles());
   const ico=k=>`<span class="ti"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${TI[k]||""}</svg></span>`;
   const hid=myHidden(),th=myThemes();
-  const tile=([k,l,d])=>`<button class="tile${!EDIT&&bdotOn(k)?" alert":""}" data-go="${k}" data-k="${k}">${ico(k)}<b>${l}</b><small>${extra[k]||d}</small>${EDIT?`<i class="tdel" data-hide="${k}" role="button" aria-label="Masquer ${esc(l)}">−</i>`:""}</button>`;
+  const tile=([k,l,d])=>`<button class="tile${EDIT?"":bdotOn(k)?(alertUrgent(k)?" alert urg":" alert"):alertUrgent(k)?" urg-seen":""}" data-go="${k}" data-k="${k}">${ico(k)}<b>${l}</b><small>${extra[k]||d}</small>${EDIT?`<i class="tdel" data-hide="${k}" role="button" aria-label="Masquer ${esc(l)}">−</i>`:""}</button>`;
   const themes=th.map(([t,it],ti)=>{const items=it.filter(([k])=>k!=="home"&&k!=="all"&&!hid.has(k));if(!items.length&&!EDIT)return "";
     const mv=EDIT?`<span class="thmv"><button data-tmv="${ti}" data-d="-1"${ti?"":" disabled"} aria-label="Monter le thème">↑</button><button data-tmv="${ti}" data-d="1"${ti<th.length-1?"":" disabled"} aria-label="Descendre le thème">↓</button></span>`:"";
     return `<h2>${t}${t==="En direct"?'<i class="live" title="Mis à jour en continu"></i>':""}${mv}</h2><div class="tiles" data-th="${esc(t)}">${items.map(tile).join("")}${EDIT&&!items.length?'<div class="tempty">Glisse une rubrique ici</div>':""}</div>`}).join("");
