@@ -358,6 +358,12 @@ h1 .ttl.where:active{opacity:.6}
 #clk .l{font-weight:500;color:var(--mute);font-size:13px}
 #clk{display:inline-flex;flex-direction:column;align-items:center;line-height:1.15;padding:3px 10px}
 #clk .ssn{font-size:10.5px;font-weight:600;color:var(--mute);letter-spacing:.02em}
+/* heure en vert (demandé le 27 nov. 2026 : meilleure lecture) */
+#clk{--clk:#1b7a3a;--clk2:#e2f4e7;color:var(--clk);background:var(--clk2)}
+#clk .l{color:var(--clk);opacity:.85}#clk .ssn{color:var(--clk);opacity:.9}
+#clk>span:first-child,h1 #clk>span:first-child{color:var(--clk)!important;opacity:1}
+@media (prefers-color-scheme:dark){html:not([data-theme=light]) #clk{--clk:#6fd39b;--clk2:#1b3328}}
+html[data-theme=dark] #clk{--clk:#6fd39b;--clk2:#1b3328}
 #homeBtn,nav#tabs,#menuBtn,html[data-nav=menu] #menuBtn{display:none!important}
 #gear{margin-left:0!important;border-radius:999px!important}
 #q:focus{outline:2px solid var(--acc);outline-offset:-1px;border-color:transparent}
