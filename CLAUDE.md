@@ -496,4 +496,8 @@ L'utilisateur échange en français.
     30 min après le début : fermetures NOTAM (LC/AS/AU/LH, aire de mouvement et ILS) en cours ou qui commencent pendant le
     service (4 max) + météo LFML (LVP, orage, vent) observée ou prévue avec certitude d'ici la fin ; rien si rien à dire.
     Clé `ps|<link>|<début>`. Testé en local (tp4 : en service / hors service / sans horaires / validation / origine).
+- **?vol= réservé à l'appli (27/11/2026 soir, demandé par Raph)** : `volStatus` refuse toute origine autre que `ORIGINS`
+  (403 : curl, scripts, autres sites) et plafonne à `VOL_MAX_PER_HOUR` = 30 vérifications nouvelles par heure, tous téléphones
+  confondus (compteur dans le cache, clé `vol-count/<heure>` ; réponses en cache 5 min non comptées). Protège le quota
+  AeroDataBox. Testé en local (tp5). L'en-tête Origin peut être imité par un script : le plafond reste la vraie garantie.
 

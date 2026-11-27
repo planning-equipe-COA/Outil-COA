@@ -266,13 +266,20 @@ async function vols(origin, ctx, env) {
    Appel : ?vol=KL1469&date=2026-11-27 → décollage réel / estimé à la provenance, arrivée estimée. 1 appel AeroDataBox,
    réponse gardée 5 min (plusieurs téléphones = un seul appel). Ajouté le 27 nov. 2026 (le site de l'aéroport affichait
    « A l'heure » pour un vol pas encore parti). */
+const VOL_MAX_PER_HOUR = 30; // vérifications « en direct » nouvelles par heure, tous téléphones confondus (protège le quota)
 async function volStatus(origin, env, nb, date) {
   nb = String(nb || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
   if (!/^[A-Z0-9]{2}\d{1,5}[A-Z]?$/.test(nb) || !/^\d{4}-\d{2}-\d{2}$/.test(date || '')) return json({ error: 'paramètres invalides' }, 400, origin);
   if (!env.ADB_KEY) return json({ error: 'AeroDataBox non branché (secret ADB_KEY)' }, 500, origin);
+  // réservé à l'appli (consomme le quota AeroDataBox) : origine vérifiée + plafond d'appels par heure
+  if (!ORIGINS.includes(origin)) return json({ error: 'refusé' }, 403, origin);
   const cache = caches.default, key = new Request(`https://notam-cache.local/vol/${nb}/${date}`);
   const hit = await cache.match(key);
   if (hit) return json(await hit.json(), 200, origin, { 'X-Cache': 'HIT' });
+  const hourKey = new Request(`https://notam-cache.local/vol-count/${Math.floor(Date.now() / 3600e3)}`);
+  const used = +(await (await cache.match(hourKey) || new Response('0')).text()) || 0;
+  if (used >= VOL_MAX_PER_HOUR) return json({ error: `trop de vérifications cette heure-ci (${VOL_MAX_PER_HOUR} max), réessaie un peu plus tard` }, 429, origin);
+  await cache.put(hourKey, new Response(String(used + 1), { headers: { 'Cache-Control': 'max-age=3700' } }));
   const wait = adbLast + 2500 - Date.now(); if (wait > 0) await new Promise(r => setTimeout(r, wait)); adbLast = Date.now();
   const r = await fetch(`https://aerodatabox.p.rapidapi.com/flights/number/${nb}/${date}?withAircraftImage=false&withLocation=false`,
     { headers: { 'X-RapidAPI-Key': env.ADB_KEY, 'X-RapidAPI-Host': 'aerodatabox.p.rapidapi.com' } });
