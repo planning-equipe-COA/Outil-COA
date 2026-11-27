@@ -139,6 +139,10 @@ L'utilisateur échange en français.
   **Deux niveaux** (27 nov., Raph : « le rouge fait penser à une urgence ») : **jaune** = à regarder (vols annulés / déroutés, météo
   prévue au TAF, vent fort) ; **rouge** = urgence (`alertUrgent` : phénomène « danger » observé maintenant ou dans les 2 h à LFML :
   orage, visibilité < 800 m, givrant, grêle, grains). Urgence déjà vue mais toujours en cours : cadre rouge fixe (`.urg-seen`).
+  Urgences ajoutées (27 nov., accord de Raph) : **NOTAM** piste fermée / indisponible ou ILS hors service en vigueur (`ntUrgent` ;
+  jaune = NOTAM important nouveau, même règle que les notifications du relais, `ntImportant`) ; **vol commercial à l'arrivée absent du
+  tableau** = « Hors programme · dérouté ? » (`divInbound`, flag `div` dans `agRows`, ligne rouge dans les alertes de l'accueil) —
+  dépend de `body.ga`, donc du redéploiement du relais. L'accueil charge aussi les NOTAM (`notamLoad` dans `homeView`).
 
 ## Fichiers
 - `index.html` — toute l'appli (HTML + CSS + JS). **Page d'accueil** (onglet « Accueil », ouverte au lancement, bouton maison en
